@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#c7d2fe"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded Base Icon -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  
+  <!-- Outer Accent Frame -->
+  <rect x="32" y="32" width="448" height="448" rx="96" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
+  
+  <!-- Stylized Monogram "C" & Invoice Document Outline -->
+  <path d="M160 160H320C337.673 160 352 174.327 352 192V320C352 337.673 337.673 352 320 352H192C174.327 352 160 337.673 160 320V160Z" 
+        stroke="url(#accentGrad)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Invoice Balance Bars -->
+  <line x1="210" y1="220" x2="300" y2="220" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+  <line x1="210" y1="270" x2="270" y2="270" stroke="#818cf8" stroke-width="20" stroke-linecap="round"/>
+  
+  <!-- Verified Badge Tick -->
+  <circle cx="360" cy="350" r="44" fill="#10b981"/>
+  <path d="M344 350L356 362L378 340" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

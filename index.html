@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>CRUDWorks ERP &amp; Project Management</title>
+    <meta name="description" content="Sistem ERP Billing Pelanggan, Integrasi app-git, Faktur Penagihan & Lacak Pembayaran">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+    <link rel="apple-touch-icon" href="assets/icons/icon.svg">
+
+    <!-- Preconnect & DNS-Prefetch -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    <!-- Google Fonts: Inter & IBM Plex Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Remix Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        (function() {
+            try {
+                var s = localStorage.getItem('app_dark_mode') || 'light';
+                var d = s === 'dark' || (s === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (d) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+            } catch (_) {}
+        })();
+
+        window.APP_VERSION = '{{APP_VERSION}}';
+        window.APP_CACHE_BUST = '{{APP_VERSION_CACHE}}';
+        if (window.APP_VERSION.indexOf('{{') !== -1) window.APP_VERSION = '1.1.0';
+        if (window.APP_CACHE_BUST.indexOf('{{') !== -1) window.APP_CACHE_BUST = '1.1.0';
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                            400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                            800: '#3730a3', 900: '#312e81'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        };
+
+        window.THEMES = {
+            indigo:  { name: 'Indigo',  shade: '#4f46e5', p: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } },
+            orange:  { name: 'Oranye',  shade: '#ea580c', p: { 50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c' } },
+            violet:  { name: 'Violet',  shade: '#7c3aed', p: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' } },
+            blue:    { name: 'Biru',    shade: '#2563eb', p: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } },
+            cyan:    { name: 'Cyan',    shade: '#0891b2', p: { 50: '#ecfeff', 100: '#cffafe', 200: '#a5f3fc', 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2', 700: '#0e7490' } },
+            emerald: { name: 'Hijau',   shade: '#059669', p: { 50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857' } },
+            rose:    { name: 'Merah',   shade: '#e11d48', p: { 50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' } },
+            slate:   { name: 'Slate',   shade: '#475569', p: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155' } }
+        };
+
+        window.applyTheme = function (key) {
+            const t = window.THEMES[key] || window.THEMES.indigo;
+            const p = t.p, c = t.shade;
+            const rootStyle = document.documentElement.style;
+            rootStyle.setProperty('--primary-color', c);
+            rootStyle.setProperty('--primary-50', p[50]);
+            rootStyle.setProperty('--primary-100', p[100]);
+            rootStyle.setProperty('--primary-200', p[200]);
+            rootStyle.setProperty('--primary-600', p[600]);
+            rootStyle.setProperty('--primary-700', p[700]);
+
+            document.querySelectorAll('style[data-theme]').forEach((el) => el.remove());
+            const s = document.createElement('style');
+            s.setAttribute('data-theme', key);
+            s.textContent = [
+                `.bg-primary-50{background-color:${p[50]}!important}`,
+                `.bg-primary-100{background-color:${p[100]}!important}`,
+                `.bg-primary-200{background-color:${p[200]}!important}`,
+                `.bg-primary-500{background-color:${p[500]}!important}`,
+                `.bg-primary-600{background-color:${p[600]}!important}`,
+                `.bg-primary-700{background-color:${p[700]}!important}`,
+                `.hover\\:bg-primary-600:hover{background-color:${p[600]}!important}`,
+                `.hover\\:bg-primary-700:hover{background-color:${p[700]}!important}`,
+                `.text-primary-400{color:${p[400]}!important}`,
+                `.text-primary-500{color:${p[500]}!important}`,
+                `.text-primary-600{color:${p[600]}!important}`,
+                `.text-primary-700{color:${p[700]}!important}`,
+                `.border-primary-100{border-color:${p[100]}!important}`,
+                `.border-primary-200{border-color:${p[200]}!important}`,
+                `.border-primary-400{border-color:${p[400]}!important}`,
+                `.border-primary-500{border-color:${p[500]}!important}`,
+                `.border-primary-600{border-color:${p[600]}!important}`,
+                `.focus\\:border-primary-500:focus{border-color:${p[500]}!important}`
+            ].join(' ');
+            document.head.appendChild(s);
+            try { localStorage.setItem('app_theme', key); } catch (_) {}
+            window.__activeTheme = key;
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('app_theme') || 'indigo';
+            window.applyTheme(saved);
+        });
+    </script>
+
+    <!-- Chart.js, SweetAlert2, Flatpickr & jsPDF -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+
+    <link rel="stylesheet" href="assets/css/app.css?v={{APP_VERSION_CACHE}}">
+</head>
+
+<body class="bg-slate-50 font-sans text-slate-900 antialiased overflow-x-hidden layout-sidebar">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="fixed inset-0 z-[200] bg-slate-50 flex flex-col items-center justify-center transition-all duration-500 ease-in-out">
+        <div class="flex flex-col items-center gap-4 animate-fadeIn">
+            <img src="assets/icons/icon.svg" alt="Logo" class="w-16 h-16 rounded-2xl shadow-lg app-brand-logo">
+            <div class="text-center">
+                <p class="text-xs font-extrabold uppercase tracking-[0.25em] text-primary-600" id="splash-title">CRUDWorks ERP</p>
+                <p class="text-[11px] text-slate-400 mt-1" id="splash-subtitle">Memuat sistem tagihan &amp; project management...</p>
+            </div>
+            <div class="w-36 h-1 bg-slate-200 rounded-full overflow-hidden mt-1">
+                <div class="h-full bg-primary-600 rounded-full animate-pulse w-2/3"></div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Login Page -->
+    <div id="login-page" class="hidden min-h-screen bg-white flex overflow-hidden font-sans">
+        <!-- Left Panel: ERP Showcase -->
+        <div class="hidden lg:flex lg:w-[45%] bg-slate-900 relative overflow-hidden flex-col justify-between p-14 text-white">
+            <div class="absolute top-0 right-0 w-[640px] h-[640px] bg-primary-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 w-[480px] h-[480px] bg-emerald-500/10 rounded-full blur-[110px] translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
+
+            <!-- Brand Header -->
+            <div class="relative z-10 flex items-center gap-3">
+                <img src="assets/icons/icon.svg" class="w-10 h-10 rounded-xl app-brand-logo" alt="Logo">
+                <div>
+                    <span class="text-lg font-extrabold tracking-tight block leading-tight" id="login-app-name">CRUDWorks ERP</span>
+                    <span class="text-[11px] text-slate-400 font-medium">Billing &amp; Project Management</span>
+                </div>
+            </div>
+
+            <!-- Main Message -->
+            <div class="relative z-10 my-auto">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-primary-400 mb-5">
+                    <i class="ri-git-branch-line"></i> Terintegrasi dengan www/app-git
+                </span>
+                <h1 class="text-4xl xl:text-5xl font-extrabold tracking-tight leading-[1.12] mb-5">
+                    Kelola Tagihan Klien,<br>
+                    <span class="text-primary-400">Pantau Pembayaran Nyata.</span>
+                </h1>
+                <p class="text-slate-400 text-base leading-relaxed max-w-md mb-8">
+                    Cetak invoice resmi A4 untuk pelanggan, lacak status bayar lunas atau jatuh tempo, sinkronisasi repositori git klien, dan kelola tagihan berulang secara otomatis.
+                </p>
+
+                <div class="grid grid-cols-2 gap-3.5 max-w-md">
+                    <div class="p-3.5 bg-white/5 border border-white/10 rounded-2xl">
+                        <div class="flex items-center gap-2 text-primary-400 text-xs font-bold mb-1">
+                            <i class="ri-printer-line text-base"></i> Cetak Faktur Siap Pakai
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-snug">Layout cetak standar A4 dilengkapi QR Code verifikasi dan rincian item tagihan.</p>
+                    </div>
+                    <div class="p-3.5 bg-white/5 border border-white/10 rounded-2xl">
+                        <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold mb-1">
+                            <i class="ri-shield-keyhole-line text-base"></i> Redis &amp; RBAC Guard
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-snug">Sesi aman berbasis Redis, validasi CSRF otomatis, dan proteksi hak akses ketat.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative z-10 text-xs text-slate-500 font-medium flex items-center justify-between gap-3">
+                <span>&copy; <span class="copyright-year">2026</span> <a href="https://crudworks.com/" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline font-semibold">CRUDWorks.com</a> - All rights reserved.</span>
+                <span class="font-mono text-[11px] text-slate-400">v{{APP_VERSION}}</span>
+            </div>
+        </div>
+
+        <!-- Right Panel: Login Form -->
+        <div class="w-full lg:w-[55%] flex flex-col items-center justify-center p-6 sm:p-10 relative">
+            <div class="w-full max-w-sm animate-fadeIn">
+                <div class="mb-8 text-center lg:text-left">
+                    <img src="assets/icons/icon.svg" class="w-14 h-14 mx-auto lg:mx-0 mb-5 rounded-2xl shadow-sm app-brand-logo" alt="Logo">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-1.5">Masuk ke Sistem</h2>
+                    <p class="text-sm text-slate-500">Gunakan akun pengelola atau staf untuk mengakses tagihan dan proyek.</p>
+                </div>
+
+                <form id="login-form" class="space-y-5">
+                    <div>
+                        <label for="login-username" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Username</label>
+                        <div class="relative">
+                            <input type="text" id="login-username" autocomplete="username" required
+                                class="w-full pl-4 pr-11 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition text-slate-900 text-sm font-medium"
+                                placeholder="Masukkan username" value="admin">
+                            <i class="ri-user-3-line absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Password</label>
+                        <div class="relative">
+                            <input type="password" id="login-password" autocomplete="current-password" required
+                                class="w-full pl-4 pr-11 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition text-slate-900 text-sm font-medium"
+                                placeholder="••••••••" value="admin123">
+                            <button type="button" onclick="const i=document.getElementById('login-password'); i.type=i.type==='password'?'text':'password'; this.querySelector('i').className=i.type==='password'?'ri-eye-line':'ri-eye-off-line';"
+                                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1" title="Tampilkan Password">
+                                <i class="ri-eye-line"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="login-btn" type="submit"
+                        class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-slate-900/15 transition flex items-center justify-center gap-2">
+                        <span>Masuk Dashboard</span>
+                        <i class="ri-arrow-right-line"></i>
+                    </button>
+
+                    <div id="login-error" class="hidden bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+                        <i class="ri-error-warning-line text-base"></i>
+                        <span></span>
+                    </div>
+                </form>
+
+                <!-- Quick Demo Account Switcher -->
+                <div class="mt-7 pt-5 border-t border-slate-100">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">Akses Demo Cepat</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="document.getElementById('login-username').value='admin';document.getElementById('login-password').value='admin123';"
+                            class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-200 text-left transition">
+                            <div class="text-[11px] font-bold text-slate-800">Admin</div>
+                            <div class="text-[10px] font-mono text-slate-400">admin</div>
+                        </button>
+                        <button type="button" onclick="document.getElementById('login-username').value='finance';document.getElementById('login-password').value='finance123';"
+                            class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-200 text-left transition">
+                            <div class="text-[11px] font-bold text-slate-800">Finance</div>
+                            <div class="text-[10px] font-mono text-slate-400">finance</div>
+                        </button>
+                        <button type="button" onclick="document.getElementById('login-username').value='pm';document.getElementById('login-password').value='pm123';"
+                            class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-200 text-left transition">
+                            <div class="text-[11px] font-bold text-slate-800">PM</div>
+                            <div class="text-[10px] font-mono text-slate-400">pm</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Main SPA Layout -->
+    <div id="app-layout" class="hidden min-h-screen flex">
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 hidden lg:hidden" onclick="App.toggleSidebar(false)"></div>
+
+        <!-- Cloudflare-Style Sidebar -->
+        <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-50 h-screen w-[220px] bg-white border-r border-slate-200 transform -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out flex flex-col shadow-xl lg:shadow-none">
+            <!-- Sidebar Brand -->
+            <div class="flex items-center gap-2 px-3.5 h-14 border-b border-slate-100 flex-shrink-0 justify-between">
+                <a href="#/dashboard" class="flex items-center gap-2.5 overflow-hidden sidebar-brand">
+                    <img src="assets/icons/icon.svg" class="w-7 h-7 rounded-lg flex-shrink-0 app-brand-logo" alt="Logo">
+                    <div class="leading-tight flex-1 min-w-0 sidebar-brand-text">
+                        <h1 class="text-slate-900 font-extrabold text-[11px] tracking-tight uppercase truncate" id="sidebar-app-name">CRUDWorks</h1>
+                        <p class="text-[9px] text-slate-400 font-medium truncate" id="sidebar-company-name">ERP &amp; Billing</p>
+                    </div>
+                </a>
+                <button type="button" onclick="App.toggleCompactSidebar()" id="btn-toggle-compact"
+                    class="hidden lg:flex p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition flex-shrink-0"
+                    title="Lipat Sidebar (Mode Ramping)">
+                    <i class="ri-sidebar-fold-line text-sm" id="icon-toggle-compact"></i>
+                </button>
+            </div>
+
+            <!-- Sidebar Quick Filter -->
+            <div class="px-3.5 py-2 border-b border-slate-100 flex-shrink-0 sidebar-search-wrapper">
+                <div class="relative" onclick="App.isCompactSidebar && App.toggleSearch(true)">
+                    <i class="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="sidebar-search" placeholder="Filter menu..." oninput="App.filterMenu(this.value)"
+                        class="w-full pl-7 pr-2.5 py-1.5 text-[11px] bg-slate-50 border border-slate-200/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/15 focus:border-primary-400 placeholder:text-slate-400 transition font-medium">
+                </div>
+            </div>
+
+            <!-- Dynamic RBAC Navigation -->
+            <nav id="sidebar-menu" class="flex-1 overflow-y-auto py-2 scrollbar-thin"></nav>
+
+            <!-- Sidebar User Footer -->
+            <div class="px-3.5 py-3 border-t border-slate-100 flex-shrink-0 sidebar-user-wrapper">
+                <div class="flex items-center gap-2.5 sidebar-user-box">
+                    <button type="button" onclick="App.openProfileModal()" class="flex items-center gap-2.5 flex-1 min-w-0 text-left hover:bg-slate-50 rounded-xl p-1 -m-1 transition" title="Profil & Ganti Password">
+                        <div id="user-avatar" class="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">A</div>
+                        <div class="flex-1 min-w-0 sidebar-user-info">
+                            <p class="text-slate-800 text-xs font-bold truncate" id="user-name">Admin</p>
+                            <p class="text-slate-400 text-[10px] font-medium truncate" id="user-role">Administrator</p>
+                        </div>
+                    </button>
+                    <button type="button" onclick="App.logout()"
+                        class="p-1.5 hover:bg-rose-50 rounded-lg transition text-slate-400 hover:text-rose-600 sidebar-logout-btn"
+                        title="Logout">
+                        <i class="ri-logout-box-r-line text-base"></i>
+                    </button>
+                </div>
+                <div class="mt-2 flex justify-center sidebar-version-wrapper">
+                    <button type="button" onclick="App.showAboutModal('info')" id="sidebar-version"
+                        class="text-[10px] font-bold text-primary-700 bg-primary-50 hover:bg-primary-100 px-2.5 py-0.5 rounded-full transition flex items-center gap-1"
+                        title="Tentang Sistem & Catatan Rilis">
+                        <i class="ri-information-line"></i> <span id="sidebar-version-text">v{{APP_VERSION}}</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- Topbar -->
+            <header class="sticky top-0 z-30 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shadow-2xs">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <button type="button" onclick="App.toggleSidebar()" class="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition text-slate-600 dark:text-slate-300">
+                        <i class="ri-menu-line text-xl"></i>
+                    </button>
+
+                    <button type="button" onclick="App.toggleCompactSidebar()" id="topbar-compact-btn"
+                        class="hidden lg:flex p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-xl transition items-center justify-center"
+                        title="Lipat / Perluas Sidebar">
+                        <i class="ri-layout-left-line text-lg" id="topbar-compact-icon"></i>
+                    </button>
+
+                    <div class="min-w-0 ml-1">
+                        <h2 id="page-title" class="text-base sm:text-lg font-bold text-slate-800 dark:text-white truncate">Dashboard</h2>
+                        <p id="page-subtitle" class="text-[11px] text-slate-400 truncate hidden"></p>
+                    </div>
+                </div>
+
+                <!-- OmniSearch Bar -->
+                <div class="hidden md:flex items-center flex-1 max-w-md mx-6">
+                    <button type="button" onclick="App.toggleSearch(true)"
+                        class="w-full group flex items-center gap-3 px-3.5 h-9 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl hover:bg-white dark:hover:bg-slate-800 hover:border-primary-300 transition text-left">
+                        <i class="ri-search-2-line text-slate-400 group-hover:text-primary-600"></i>
+                        <span class="text-xs font-medium text-slate-400 flex-1">Cari tagihan, pelanggan, modul... (Ctrl+K)</span>
+                        <kbd class="px-1.5 py-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-[10px] font-bold text-slate-400">Ctrl+K</kbd>
+                    </button>
+                </div>
+
+                <!-- Right Toolbar: Ringkas, Teratur & Rapi -->
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="App.toggleSearch(true)" class="md:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-xl transition" title="Command Palette & Pencarian Cepat (Ctrl+K)">
+                        <i class="ri-search-2-line text-lg"></i>
+                    </button>
+
+                    <button type="button" id="topbar-install-btn" onclick="App.promptPwaInstall()" class="hidden px-2.5 py-1.5 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 hover:bg-primary-100 rounded-xl text-xs font-bold items-center gap-1.5 transition" title="Pasang Aplikasi PWA">
+                        <i class="ri-install-line text-sm"></i> <span class="hidden sm:inline">Install App</span>
+                    </button>
+
+                    <!-- Segmented Toolbar Capsule: Ringkas, Opaque & Rapi -->
+                    <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-2 py-1 gap-2 shadow-2xs">
+                        <!-- 1. Action Board Pagi Hari / Daily Brief -->
+                        <button type="button" id="topbar-daily-brief-btn" onclick="App.openDailyBriefModal()"
+                            class="relative w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-amber-500 dark:text-slate-300 dark:hover:text-amber-400 hover:bg-white dark:hover:bg-slate-700 transition shrink-0"
+                            title="Action Board Pagi Hari & Rekap Penagihan (Daily Brief)">
+                            <i class="ri-sun-line text-base pointer-events-none"></i>
+                            <span id="topbar-daily-brief-badge" class="hidden absolute min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center shadow-md pointer-events-none" style="top: -2px; right: -2px; background-color: #f59e0b !important; color: #ffffff !important; border: 2px solid #ffffff !important; z-index: 30; opacity: 1 !important; box-sizing: border-box; line-height: 1;">0</span>
+                        </button>
+
+                        <!-- 2. Notifications with Popover -->
+                        <div class="relative shrink-0" id="topbar-notif-wrapper">
+                            <button type="button" id="topbar-notif-btn" onclick="App.toggleNotifications(event)"
+                                class="relative w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-slate-700 transition"
+                                title="Notifikasi & Tagihan Jatuh Tempo">
+                                <i class="ri-notification-3-line text-base pointer-events-none"></i>
+                                <span id="topbar-notif-badge" class="hidden absolute min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center shadow-md pointer-events-none" style="top: -2px; right: -2px; background-color: #e11d48 !important; color: #ffffff !important; border: 2px solid #ffffff !important; z-index: 30; opacity: 1 !important; box-sizing: border-box; line-height: 1;">0</span>
+                            </button>
+                            <div id="topbar-notif-popover" class="hidden fixed sm:absolute right-3 sm:right-0 top-16 sm:top-10 w-[calc(100vw-24px)] sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50">
+                                <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <i class="ri-notification-3-fill text-primary-600"></i>
+                                        <h4 class="font-bold text-sm text-slate-800 dark:text-white">Tagihan Jatuh Tempo &amp; Alert</h4>
+                                    </div>
+                                    <button type="button" onclick="App.loadNotifications(true)" class="text-xs text-primary-600 hover:underline font-medium flex items-center gap-1">
+                                        <i class="ri-refresh-line"></i> Segarkan
+                                    </button>
+                                </div>
+                                <div id="topbar-notif-list" class="max-h-96 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                                    <div class="p-6 text-center text-xs text-slate-400">Memuat notifikasi...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+                        <!-- 3. Dark Mode Quick Toggle -->
+                        <button type="button" id="topbar-theme-btn" onclick="App.toggleDarkMode()"
+                            class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-amber-500 dark:text-slate-300 dark:hover:text-amber-400 hover:bg-white dark:hover:bg-slate-700 transition"
+                            title="Ganti Mode Terang / Gelap">
+                            <i class="ri-moon-line text-base" id="topbar-theme-icon"></i>
+                        </button>
+                    </div>
+
+                    <!-- User Profile Dropdown Button -->
+                    <div class="relative ml-1" id="topbar-user-menu-wrapper">
+                        <button type="button" onclick="App.toggleUserMenu(event)" id="topbar-user-menu-btn"
+                            class="flex items-center gap-2 pl-1.5 pr-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition border border-slate-200/60 dark:border-slate-800"
+                            title="Menu Pengguna & Pengaturan">
+                            <div id="topbar-user-avatar" class="w-7 h-7 bg-primary-100 dark:bg-primary-950/70 text-primary-700 dark:text-primary-400 border border-primary-200/60 dark:border-primary-800/60 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                A
+                            </div>
+                            <div class="hidden md:block text-left leading-none min-w-0 max-w-[120px]">
+                                <span id="topbar-user-name" class="block text-xs font-bold text-slate-800 dark:text-slate-100 truncate">Admin</span>
+                            </div>
+                            <i class="ri-arrow-down-s-line text-slate-400 text-xs"></i>
+                        </button>
+
+                        <div id="topbar-user-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 py-1.5 z-50 animate-fadeIn divide-y divide-slate-100 dark:divide-slate-800">
+                            <!-- User Header Info -->
+                            <div class="px-4 py-3 flex items-center gap-3 bg-slate-50/60 dark:bg-slate-800/40">
+                                <div class="w-9 h-9 bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                                    <span id="topbar-dropdown-avatar">A</span>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p id="topbar-dropdown-name" class="text-xs font-bold text-slate-800 dark:text-white truncate">Admin</p>
+                                    <p id="topbar-dropdown-role" class="text-[10px] text-slate-400 font-medium truncate">Administrator</p>
+                                </div>
+                            </div>
+
+                            <!-- Preferences & Display -->
+                            <div class="py-1">
+                                <button type="button" onclick="App.toggleNavLayoutPicker(event); App.toggleUserMenu(false);"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">
+                                    <i class="ri-layout-masonry-line text-sm text-indigo-600"></i>
+                                    <span class="flex-1">Tata Letak Menu Navigasi</span>
+                                </button>
+
+                                <button type="button" onclick="App.toggleCalculator(true); App.toggleUserMenu(false);"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">
+                                    <i class="ri-calculator-line text-sm text-primary-600"></i>
+                                    <span class="flex-1">Kalkulator Cepat Tagihan</span>
+                                    <kbd class="text-[10px] text-slate-400 font-mono">Alt+C</kbd>
+                                </button>
+
+                                <button type="button" id="topbar-density-btn" onclick="App.toggleTableDensity();" data-density-toggle="1"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between gap-2.5 transition">
+                                    <span class="flex items-center gap-2.5">
+                                        <i class="ri-table-line text-sm text-slate-500" id="topbar-density-icon"></i>
+                                        <span>Kerapatan Tabel</span>
+                                    </span>
+                                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Padat / Nyaman</span>
+                                </button>
+
+                                <button type="button" id="topbar-pref-btn" onclick="App.openPreferencesModal(); App.toggleUserMenu(false);"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">
+                                    <i class="ri-equalizer-line text-sm text-slate-500"></i>
+                                    <span class="flex-1">Preferensi Tampilan Lengkap</span>
+                                </button>
+                            </div>
+
+                            <!-- Account & About -->
+                            <div class="py-1">
+                                <button type="button" id="topbar-profile-btn" onclick="App.openProfileModal(); App.toggleUserMenu(false);"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">
+                                    <i class="ri-user-settings-line text-sm text-slate-500"></i>
+                                    <span>Profil &amp; Ganti Password</span>
+                                </button>
+                                <button type="button" onclick="App.showAboutModal('info'); App.toggleUserMenu(false);"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">
+                                    <i class="ri-information-line text-sm text-slate-500"></i>
+                                    <span>Tentang Sistem</span>
+                                </button>
+                            </div>
+
+                            <!-- Logout Action -->
+                            <div class="py-1">
+                                <button type="button" onclick="App.logout()"
+                                    class="w-full px-3.5 py-2 text-left text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2.5 transition">
+                                    <i class="ri-logout-box-r-line text-sm"></i>
+                                    <span>Keluar (Logout)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- PWA Install Banner -->
+            <div id="pwa-install-banner" class="hidden mx-4 lg:mx-6 mt-4 p-3.5 bg-slate-900 text-white rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg no-print">
+                <div class="flex items-center gap-3">
+                    <img src="assets/icons/icon.svg" class="w-9 h-9 rounded-xl app-brand-logo" alt="Logo">
+                    <div>
+                        <div class="text-xs font-bold">Pasang Aplikasi CRUDWorks ERP</div>
+                        <div class="text-[11px] text-slate-300">Akses lebih cepat langsung dari layar utama perangkat Anda.</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="App.dismissPwaBanner()" class="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-lg transition">Nanti</button>
+                    <button type="button" onclick="App.promptPwaInstall()" class="px-3.5 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                        <i class="ri-download-2-line"></i> Pasang Sekarang
+                    </button>
+                </div>
+            </div>
+
+            <!-- Page Breadcrumb Bar -->
+            <div id="page-breadcrumb-bar" class="hidden px-4 lg:px-6 pt-3 -mb-2">
+                <nav id="page-breadcrumb" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-400 shadow-2xs max-w-full overflow-hidden" aria-label="Breadcrumb"></nav>
+            </div>
+
+            <!-- Dynamic Page Content -->
+            <div id="app-content" class="flex-1 p-4 lg:p-6 overflow-auto"></div>
+
+            <!-- Footer -->
+            <footer class="py-3.5 px-6 border-t border-slate-200/80 bg-white/60 text-center text-[11px] text-slate-500 font-medium">
+                &copy; <span class="copyright-year">2026</span> <a href="https://crudworks.com/" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline font-semibold">CRUDWorks.com</a> - All rights reserved. &bull; Billing &amp; Project Management
+            </footer>
+        </main>
+
+        <!-- Windows 11 Style Taskbar (Bottom / Top Layout Mode) -->
+        <div id="windows-taskbar" class="hidden fixed left-0 right-0 z-50 h-[52px] bg-white/95 backdrop-blur-2xl border-slate-200/90 shadow-2xl flex items-center justify-between px-3 transition-all duration-300">
+            <div class="flex items-center gap-2">
+                <button type="button" id="taskbar-start-btn" onclick="App.toggleStartMenu(event)"
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary-50 text-primary-700 hover:bg-primary-100 font-bold text-xs shadow-2xs transition active:scale-95 border border-primary-200/60"
+                    title="Menu Mulai">
+                    <img src="assets/icons/icon.svg" class="w-5 h-5 rounded flex-shrink-0 app-brand-logo" alt="Logo">
+                    <span class="hidden sm:inline font-bold">Mulai</span>
+                </button>
+                <button type="button" onclick="App.toggleSearch(true)" class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100/80 hover:bg-slate-100 rounded-xl text-slate-500 text-xs transition border border-slate-200/50">
+                    <i class="ri-search-line text-xs"></i>
+                    <span class="text-[11px] font-medium">Cari... (Ctrl+K)</span>
+                </button>
+            </div>
+
+            <div id="taskbar-pinned-apps" class="flex-1 flex items-center gap-1 overflow-x-auto max-w-4xl mx-2 py-0.5 scrollbar-none"></div>
+
+            <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+                <button type="button" onclick="App.toggleCalculator()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition" title="Kalkulator Cepat">
+                    <i class="ri-calculator-line text-base"></i>
+                </button>
+                <button type="button" onclick="App.toggleNavLayoutPicker(event)" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition" title="Ubah Tata Letak Menu">
+                    <i class="ri-layout-masonry-line text-base"></i>
+                </button>
+                <button type="button" onclick="App.toggleTableDensity()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition hidden sm:flex" title="Kerapatan Tabel">
+                    <i class="ri-table-line text-base"></i>
+                </button>
+                <button type="button" onclick="App.openPreferencesModal()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition" title="Preferensi Tampilan">
+                    <i class="ri-equalizer-line text-base"></i>
+                </button>
+                <div id="taskbar-clock" class="text-right px-2 py-0.5 hover:bg-slate-100 rounded-lg hidden sm:flex flex-col justify-center leading-tight">
+                    <span id="taskbar-clock-time" class="text-xs font-bold font-mono text-slate-800">12:00</span>
+                    <span id="taskbar-clock-date" class="text-[9px] text-slate-500">18/11/2026</span>
+                </div>
+                <button type="button" onclick="window.location.hash='#/settings'" id="taskbar-user-avatar"
+                    class="w-7 h-7 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center border border-primary-200/80"
+                    title="Pengaturan">A</button>
+            </div>
+        </div>
+
+        <!-- Taskbar Flyout Panel -->
+        <div id="taskbar-flyout" class="hidden fixed z-[120] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden" style="min-width:220px;max-width:320px;max-height:70vh;">
+            <div class="flex items-center gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100">
+                <i id="taskbar-flyout-icon" class="ri-folder-line text-sm text-primary-600"></i>
+                <span id="taskbar-flyout-title" class="text-xs font-bold text-slate-700 uppercase tracking-wide"></span>
+                <button type="button" onclick="App.closeTaskbarFlyout()" class="ml-auto p-0.5 text-slate-400 hover:text-slate-700 rounded transition">
+                    <i class="ri-close-line text-sm"></i>
+                </button>
+            </div>
+            <div id="taskbar-flyout-body" class="overflow-y-auto p-2 scrollbar-thin" style="max-height:calc(70vh - 48px)"></div>
+        </div>
+
+        <!-- Windows Start Menu Popup -->
+        <div id="windows-start-menu" class="hidden fixed z-[110] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden">
+            <div class="start-menu-search-wrap">
+                <div class="relative">
+                    <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="start-menu-search" placeholder="Cari modul atau tagihan..." oninput="App.filterStartMenu(this.value)"
+                        class="start-menu-search-input w-full pl-9 pr-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium transition">
+                </div>
+            </div>
+
+            <div id="start-menu-pinned-section" class="start-menu-pinned-section">
+                <div class="flex items-center justify-between">
+                    <span class="start-menu-section-label">Akses cepat</span>
+                    <button type="button" onclick="window.location.hash='#/dashboard'; App.toggleStartMenu(false)" class="text-[11px] text-primary-600 font-semibold hover:underline">Beranda</button>
+                </div>
+                <div class="start-menu-pinned-grid" id="start-menu-pinned-grid"></div>
+            </div>
+
+            <div id="start-menu-recent" class="hidden px-4 py-2 border-b border-slate-100 bg-white"></div>
+
+            <div id="start-menu-items" class="flex-1 overflow-y-auto max-h-[340px] p-3 space-y-2.5 scrollbar-thin"></div>
+
+            <div class="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div id="start-user-avatar" class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center">A</div>
+                    <div class="leading-tight">
+                        <p class="text-xs font-bold text-slate-800" id="start-user-name">Admin</p>
+                        <p class="text-[10px] text-slate-400" id="start-user-role">Administrator</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <a href="#/changelog" onclick="App.toggleStartMenu(false)" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Catatan Rilis">
+                        <i class="ri-history-line text-sm"></i>
+                    </a>
+                    <button type="button" onclick="App.openPreferencesModal(); App.toggleStartMenu(false)" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Preferensi Tampilan">
+                        <i class="ri-equalizer-line text-sm"></i>
+                    </button>
+                    <a href="#/settings" onclick="App.toggleStartMenu(false)" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Pengaturan">
+                        <i class="ri-settings-3-line text-sm"></i>
+                    </a>
+                    <button type="button" onclick="App.logout()" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition" title="Logout">
+                        <i class="ri-shut-down-line text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Navigation Layout Picker Dropdown Popup -->
+    <div id="nav-layout-dropdown" class="hidden fixed z-[130] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-2.5 w-72 animate-fadeIn divide-y divide-slate-100 dark:divide-slate-800">
+        <div class="px-3 py-2 flex items-center justify-between">
+            <div>
+                <span class="text-xs font-bold text-slate-800 dark:text-white block">Tata Letak Navigasi</span>
+                <span class="text-[10px] text-slate-400">Pilih gaya menu &amp; docking sistem</span>
+            </div>
+            <button type="button" onclick="App.toggleNavLayoutPicker(false)" class="w-6 h-6 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition">
+                <i class="ri-close-line text-base"></i>
+            </button>
+        </div>
+        <div class="py-1.5 space-y-1">
+            <button type="button" data-layout-opt="sidebar" onclick="App.setNavLayout('sidebar')"
+                class="w-full px-3 py-2.5 rounded-xl text-left text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition group">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 flex items-center justify-center text-base shrink-0">
+                        <i class="ri-layout-left-line"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary-600">Sidebar Kiri</div>
+                        <div class="text-[10px] text-slate-400 truncate">Navigasi sidebar klasik</div>
+                    </div>
+                </div>
+                <i class="ri-check-line text-lg text-primary-600 check-icon hidden"></i>
+            </button>
+
+            <button type="button" data-layout-opt="bottom" onclick="App.setNavLayout('bottom')"
+                class="w-full px-3 py-2.5 rounded-xl text-left text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition group">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-base shrink-0">
+                        <i class="ri-layout-bottom-line"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">Taskbar Bawah</div>
+                        <div class="text-[10px] text-slate-400 truncate">Dock bawah &amp; Start Menu</div>
+                    </div>
+                </div>
+                <i class="ri-check-line text-lg text-primary-600 check-icon hidden"></i>
+            </button>
+
+            <button type="button" data-layout-opt="top" onclick="App.setNavLayout('top')"
+                class="w-full px-3 py-2.5 rounded-xl text-left text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between transition group">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base shrink-0">
+                        <i class="ri-layout-top-line"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600">Bilah Atas</div>
+                        <div class="text-[10px] text-slate-400 truncate">Taskbar di bagian atas</div>
+                    </div>
+                </div>
+                <i class="ri-check-line text-lg text-primary-600 check-icon hidden"></i>
+            </button>
+        </div>
+        <div class="pt-1.5 px-3 py-1 flex items-center justify-between">
+            <button type="button" onclick="App.openPreferencesModal(); App.toggleNavLayoutPicker(false)" class="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                <i class="ri-equalizer-line text-xs"></i>
+                <span>Preferensi Tampilan Lengkap</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[140] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Generic Modal Container -->
+    <div id="modal-container" class="fixed inset-0 z-[90] hidden">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" onclick="App.closeModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4 pointer-events-none">
+            <div id="modal-content" class="modal-card bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-h-[90vh] overflow-auto w-full max-w-2xl pointer-events-auto border border-transparent dark:border-slate-800"></div>
+        </div>
+    </div>
+
+    <!-- Slide-Over Drawer Container -->
+    <div id="drawer-container" class="fixed inset-0 z-[85] hidden pointer-events-none transition-all duration-300">
+        <div id="drawer-backdrop" class="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 pointer-events-auto" onclick="App.closeDrawer()"></div>
+        <div id="drawer-panel" class="absolute top-0 right-0 h-full w-full max-w-xl md:max-w-2xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-2xl flex flex-col transform translate-x-full pointer-events-auto z-10 border-l border-slate-200 dark:border-slate-800">
+            <div id="drawer-header" class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
+                <div id="drawer-header-left" class="flex items-center gap-3 min-w-0"></div>
+                <div id="drawer-header-right" class="flex items-center gap-2 shrink-0"></div>
+            </div>
+            <div id="drawer-content" class="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950/40"></div>
+            <div id="drawer-footer" class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shrink-0 hidden"></div>
+        </div>
+    </div>
+
+    <!-- OmniSearch Modal (Ctrl+K) -->
+    <div id="omni-search-modal" class="fixed inset-0 z-[110] hidden opacity-0 transition-all duration-200">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="App.toggleSearch(false)"></div>
+        <div class="relative flex justify-center pt-16 sm:pt-20 p-4 pointer-events-none">
+            <div id="omni-search-content" class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden transform transition-all scale-95 border border-slate-100 pointer-events-auto">
+                <div class="relative flex items-center border-b border-slate-100 px-5 py-4">
+                    <i class="ri-search-line text-xl text-slate-400"></i>
+                    <input type="text" id="omni-search-input" placeholder="Ketik nama modul, pelanggan, atau aksi... (Ctrl+K)"
+                        class="w-full pl-3.5 pr-12 py-1 text-base font-medium text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent">
+                    <kbd class="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold">ESC</kbd>
+                </div>
+                <div id="omni-search-results" class="max-h-[60vh] overflow-y-auto p-3.5 scrollbar-thin"></div>
+                <div class="bg-slate-50 px-5 py-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase">
+                    <div class="flex gap-4">
+                        <span><kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded">↑↓</kbd> Pilih</span>
+                        <span><kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded">Enter</kbd> Buka</span>
+                    </div>
+                    <span>OmniSearch</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Preferences Modal -->
+    <div id="preferences-modal" class="fixed inset-0 z-[130] hidden opacity-0 transition-opacity duration-200">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="App.closePreferencesModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4 pointer-events-none">
+            <div class="pref-dialog-card relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transform transition-transform duration-200 scale-95 flex flex-col max-h-[90vh] pointer-events-auto">
+                <div class="px-6 py-4 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 flex items-center justify-center font-bold text-lg border border-primary-200/60 dark:border-primary-800/60">
+                            <i class="ri-equalizer-line"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm sm:text-base font-bold text-slate-800 dark:text-white">Preferensi &amp; Kustomisasi Tampilan</h3>
+                            <p class="text-[11px] text-slate-400">Atur tata letak navigasi, mode terang/gelap, format angka &amp; tanggal, kerapatan tabel &amp; tema</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="App.closePreferencesModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center">
+                        <i class="ri-close-line text-lg"></i>
+                    </button>
+                </div>
+                <div id="pref-modal-body" class="p-6 overflow-y-auto flex-1 scrollbar-thin dark:bg-slate-900"></div>
+                <div class="px-6 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <button type="button" onclick="App.resetPreferences()" class="px-3.5 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition flex items-center gap-1.5">
+                        <i class="ri-restart-line"></i> Reset Default
+                    </button>
+                    <button type="button" onclick="App.closePreferencesModal()" class="px-5 py-2 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-xl shadow-sm transition">
+                        Selesai &amp; Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- About & Changelog Modal -->
+    <div id="about-modal" class="fixed inset-0 z-[130] hidden opacity-0 transition-opacity duration-200">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="App.closeAboutModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4 pointer-events-none">
+            <div class="about-dialog-card relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden transform transition-transform duration-200 scale-95 flex flex-col max-h-[90vh] pointer-events-auto">
+                <div class="px-6 py-4 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 flex items-center justify-center text-lg border border-primary-200/50 dark:border-primary-800/40">
+                            <i class="ri-information-line"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">Tentang Sistem &amp; Catatan Rilis</h3>
+                            <p class="text-[11px] text-slate-400">Informasi platform ERP &amp; riwayat versi</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="App.closeAboutModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 transition flex items-center justify-center">
+                        <i class="ri-close-line text-lg"></i>
+                    </button>
+                </div>
+                <div class="px-6 pt-2.5 bg-slate-50/40 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="App.switchAboutTab('info')" id="btn-about-tab-info" class="px-4 py-2 border-b-2 font-bold text-xs border-primary-600 text-primary-600">
+                            <i class="ri-apps-line mr-1"></i> Informasi Sistem
+                        </button>
+                        <button type="button" onclick="App.switchAboutTab('changelog')" id="btn-about-tab-changelog" class="px-4 py-2 border-b-2 font-medium text-xs text-slate-500 dark:text-slate-400 border-transparent">
+                            <i class="ri-git-repository-line mr-1"></i> Catatan Rilis
+                        </button>
+                    </div>
+                    <a href="#/changelog" onclick="App.closeAboutModal()" class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline">
+                        <span>Halaman Penuh</span> <i class="ri-arrow-right-up-line"></i>
+                    </a>
+                </div>
+                <div id="about-modal-body" class="p-6 overflow-y-auto flex-1 scrollbar-thin"></div>
+                <div class="px-6 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <span class="text-xs text-slate-400 font-mono" id="about-modal-build-info">v{{APP_VERSION}}</span>
+                    <div class="flex items-center gap-2">
+                        <a href="#/changelog" onclick="App.closeAboutModal()" class="px-3 py-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                            <i class="ri-external-link-line"></i> Buka Halaman Penuh
+                        </a>
+                        <button type="button" onclick="App.closeAboutModal()" class="px-4 py-2 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Quick Billing / Invoice Calculator Modal (Alt+C) -->
+    <div id="calculator-modal" class="fixed inset-0 z-[120] hidden opacity-0 transition-all duration-200">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-xs" onclick="App.toggleCalculator(false)"></div>
+        <div class="relative min-h-screen flex items-end sm:items-center justify-end p-4 pointer-events-none">
+            <div id="calculator-content" class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all scale-95 pointer-events-auto">
+                <div class="bg-slate-900 px-5 py-4 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-primary-500/20 border border-primary-400/30 flex items-center justify-center text-primary-400">
+                            <i class="ri-calculator-line text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold tracking-tight">Kalkulator Cepat Tagihan &amp; PPN</h3>
+                            <p class="text-[10px] text-slate-400">Hitung nilai subtotal, diskon, PPN 11% &amp; grand total</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="App.toggleCalculator(false)" class="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition">
+                        <i class="ri-close-line text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block mb-1">Nilai Subtotal Layanan (Rp)</label>
+                        <input type="number" id="qcalc-subtotal" value="5000000" min="0" step="50000" oninput="App.computeQuickInvoiceCalc()"
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-800 text-sm focus:bg-white focus:outline-none focus:border-primary-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-700 block mb-1">Diskon (Rp)</label>
+                            <input type="number" id="qcalc-diskon" value="0" min="0" step="10000" oninput="App.computeQuickInvoiceCalc()"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-800 text-sm focus:bg-white focus:outline-none focus:border-primary-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-700 block mb-1">PPN (%)</label>
+                            <input type="number" id="qcalc-ppn" value="11" min="0" max="100" step="1" oninput="App.computeQuickInvoiceCalc()"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-800 text-sm focus:bg-white focus:outline-none focus:border-primary-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5 bg-slate-900 rounded-2xl p-3.5 text-white">
+                        <div>
+                            <span class="text-[10px] text-slate-400 uppercase font-bold block">PPN Terhitung</span>
+                            <span id="qcalc-ppn-amount" class="text-sm font-mono font-bold text-amber-300">Rp 550.000</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Grand Total</span>
+                            <span id="qcalc-grand-total" class="text-sm font-mono font-bold text-emerald-400">Rp 5.550.000</span>
+                        </div>
+                    </div>
+                    <a href="#/invoices" onclick="App.toggleCalculator(false)"
+                        class="w-full py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm">
+                        <i class="ri-file-add-line"></i> Buat Invoice dari Kalkulasi Ini
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Executive Daily Brief Modal -->
+    <div id="daily-brief-modal" class="fixed inset-0 z-[120] hidden opacity-0 transition-all duration-200">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" onclick="App.closeDailyBriefModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-3 sm:p-6 pointer-events-none">
+            <div id="daily-brief-content" class="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all scale-95 pointer-events-auto flex flex-col max-h-[92vh]">
+                <!-- Header with Morning Ambient Gradient -->
+                <div class="bg-gradient-to-r from-amber-600 via-primary-600 to-indigo-700 px-6 py-5 text-white flex items-center justify-between shrink-0 relative overflow-hidden">
+                    <div class="absolute -right-12 -top-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="flex items-center gap-3.5 relative z-10">
+                        <div class="w-11 h-11 rounded-2xl bg-white/15 border border-white/20 backdrop-blur-md flex items-center justify-center text-amber-300 text-2xl shadow-inner">
+                            <i class="ri-sun-cloudy-line"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-base sm:text-lg font-extrabold tracking-tight">Action Board Pagi Hari</h3>
+                                <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs">Executive Brief</span>
+                            </div>
+                            <p class="text-xs text-amber-100/90 font-medium mt-0.5" id="daily-brief-date">Memuat tanggal...</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 relative z-10">
+                        <button type="button" onclick="App.copyDailyBriefWhatsApp()" class="hidden sm:inline-flex px-3 py-1.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl text-xs font-semibold text-white items-center gap-1.5 transition" title="Salin Ringkasan untuk WhatsApp">
+                            <i class="ri-file-copy-line"></i>
+                            <span>Salin WA</span>
+                        </button>
+                        <button type="button" onclick="App.sendDailyBriefWhatsApp()" class="hidden sm:inline-flex px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold items-center gap-1.5 shadow-sm transition" title="Kirim ke WhatsApp">
+                            <i class="ri-whatsapp-line"></i>
+                            <span>Kirim WA</span>
+                        </button>
+                        <button type="button" onclick="App.closeDailyBriefModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Quick Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100 dark:divide-slate-800 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                    <div class="p-4">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Piutang Kritis Hari Ini</span>
+                        <div id="brief-kpi-nominal" class="text-base font-extrabold font-mono text-rose-600 dark:text-rose-400">Rp 0</div>
+                    </div>
+                    <div class="p-4">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Tagihan Overdue</span>
+                        <div id="brief-kpi-inv-count" class="text-base font-extrabold font-mono text-slate-900 dark:text-white">0 Faktur</div>
+                    </div>
+                    <div class="p-4">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Milestone Siap Ditagih</span>
+                        <div id="brief-kpi-ms-count" class="text-base font-extrabold font-mono text-indigo-600 dark:text-indigo-400">0 Termin</div>
+                    </div>
+                    <div class="p-4">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">SLA & Server Kritis</span>
+                        <div id="brief-kpi-sla-count" class="text-base font-extrabold font-mono text-amber-600 dark:text-amber-400">0 Item</div>
+                    </div>
+                </div>
+
+                <!-- Modal Body with Scroll -->
+                <div class="p-6 overflow-y-auto flex-1 space-y-6 scrollbar-thin" id="daily-brief-body">
+                    <div class="py-12 text-center text-slate-400">Memuat rincian agenda hari ini...</div>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="App.copyDailyBriefWhatsApp()" class="sm:hidden px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                            <i class="ri-file-copy-line"></i> Salin WA
+                        </button>
+                        <button type="button" onclick="App.sendDailyBriefWhatsApp()" class="sm:hidden px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                            <i class="ri-whatsapp-line"></i> Kirim WA
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-3 ml-auto">
+                        <button type="button" onclick="App.refreshDailyBriefData()" class="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition flex items-center gap-1.5">
+                            <i class="ri-refresh-line"></i> Segarkan
+                        </button>
+                        <button type="button" onclick="App.closeDailyBriefModal()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs rounded-xl transition">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Core SPA ES Module Entry -->
+    <script type="module" src="assets/js/app.js?v={{APP_VERSION_CACHE}}"></script>
+
+    <!-- Splash Failsafe -->
+    <script>
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash && !splash.classList.contains('hidden')) {
+                splash.classList.add('opacity-0', 'invisible');
+                setTimeout(() => splash.classList.add('hidden'), 450);
+            }
+        }, 3500);
+    </script>
+</body>
+
+</html>

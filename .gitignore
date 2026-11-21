@@ -1,0 +1,31 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# Runtime Storage, Uploads & Temporary Scratch
+storage/*
+!storage/.gitkeep
+uploads/*
+!uploads/.gitkeep
+scratch/
+*.log
+*.tmp
+*.bak
+
+# Database Backups
+*.sql.gz
+*.sql.zip
+
+# Dependencies (if any)
+vendor/
+node_modules/
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo

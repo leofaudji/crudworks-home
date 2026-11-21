@@ -1,0 +1,212 @@
+[
+    {
+        "nama": "NAVIGASI UTAMA",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 1,
+                "nama": "Dashboard",
+                "icon": "ri-dashboard-3-line",
+                "url": "#/dashboard",
+                "perm": "dashboard.view"
+            }
+        ]
+    },
+    {
+        "nama": "PENJUALAN & CRM",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 2,
+                "nama": "Pelanggan & Prospek",
+                "icon": "ri-building-4-line",
+                "url": "#/clients",
+                "perm": "client.view"
+            },
+            {
+                "id": 14,
+                "nama": "Surat Penawaran (SPH)",
+                "icon": "ri-file-paper-2-line",
+                "url": "#/quotations",
+                "perm": "quotation.view"
+            },
+            {
+                "id": 23,
+                "nama": "Kontrak & SPK Digital",
+                "icon": "ri-file-shield-2-line",
+                "url": "#/contracts",
+                "perm": "quotation.view"
+            },
+            {
+                "id": 4,
+                "nama": "Katalog Layanan",
+                "icon": "ri-price-tag-3-line",
+                "url": "#/services",
+                "perm": "service.manage"
+            }
+        ]
+    },
+    {
+        "nama": "PROYEK & PRODUKSI",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 3,
+                "nama": "Manajemen Proyek",
+                "icon": "ri-git-branch-line",
+                "url": "#/projects",
+                "perm": "project.view"
+            },
+            {
+                "id": 17,
+                "nama": "Log Jam Kerja (Timesheet)",
+                "icon": "ri-time-line",
+                "url": "#/timesheets",
+                "perm": "timesheet.view"
+            }
+        ]
+    },
+    {
+        "nama": "OPERASIONAL & INFRASTRUKTUR",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 16,
+                "nama": "SLA & Pemantau Domain",
+                "icon": "ri-shield-check-line",
+                "url": "#/maintenance",
+                "perm": "maintenance.view"
+            },
+            {
+                "id": 22,
+                "nama": "Tiket Gangguan Klien",
+                "icon": "ri-customer-service-2-line",
+                "url": "#/tickets",
+                "perm": "maintenance.view"
+            },
+            {
+                "id": 24,
+                "nama": "Knowledge Base",
+                "icon": "ri-book-open-line",
+                "url": "#/knowledge-base",
+                "perm": "maintenance.view"
+            },
+            {
+                "id": 21,
+                "nama": "Brankas Kredensial",
+                "icon": "ri-key-2-line",
+                "url": "#/credentials",
+                "perm": "credential.view"
+            },
+            {
+                "id": 19,
+                "nama": "Aset & Langganan Cloud",
+                "icon": "ri-cloud-line",
+                "url": "#/company-assets",
+                "perm": "asset.view"
+            }
+        ]
+    },
+    {
+        "nama": "KEUANGAN & PENAGIHAN",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 5,
+                "nama": "Tagihan & Faktur",
+                "icon": "ri-file-list-3-line",
+                "url": "#/invoices",
+                "perm": "invoice.view"
+            },
+            {
+                "id": 7,
+                "nama": "Tagihan Berulang",
+                "icon": "ri-repeat-line",
+                "url": "#/recurring",
+                "perm": "recurring.manage"
+            },
+            {
+                "id": 6,
+                "nama": "Pembayaran Masuk",
+                "icon": "ri-money-dollar-circle-line",
+                "url": "#/payments",
+                "perm": "payment.view"
+            },
+            {
+                "id": 15,
+                "nama": "Beban & Pengeluaran",
+                "icon": "ri-hand-coin-line",
+                "url": "#/expenses",
+                "perm": "expense.view"
+            },
+            {
+                "id": 13,
+                "nama": "Rekening Bank Resmi",
+                "icon": "ri-bank-card-line",
+                "url": "#/bank-accounts",
+                "perm": "bank.view"
+            }
+        ]
+    },
+    {
+        "nama": "LAPORAN & ANALISIS",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 20,
+                "nama": "Laba Rugi & Profit",
+                "icon": "ri-scales-3-line",
+                "url": "#/profit-loss",
+                "perm": "report.view"
+            },
+            {
+                "id": 8,
+                "nama": "Laporan Finansial",
+                "icon": "ri-pie-chart-2-line",
+                "url": "#/reports",
+                "perm": "report.view"
+            }
+        ]
+    },
+    {
+        "nama": "SISTEM & PENGATURAN",
+        "is_header": 1,
+        "children": [
+            {
+                "id": 9,
+                "nama": "Manajemen Pengguna",
+                "icon": "ri-user-settings-line",
+                "url": "#/users",
+                "perm": "user.manage"
+            },
+            {
+                "id": 10,
+                "nama": "Hak Akses (RBAC)",
+                "icon": "ri-shield-user-line",
+                "url": "#/roles",
+                "perm": "role.manage"
+            },
+            {
+                "id": 11,
+                "nama": "Pengaturan Sistem",
+                "icon": "ri-settings-4-line",
+                "url": "#/settings",
+                "perm": "settings.edit"
+            },
+            {
+                "id": 12,
+                "nama": "Jejak Audit",
+                "icon": "ri-history-line",
+                "url": "#/audit",
+                "perm": "audit.view"
+            },
+            {
+                "id": 18,
+                "nama": "Cadangan Database",
+                "icon": "ri-database-2-line",
+                "url": "#/backup",
+                "perm": "database.backup"
+            }
+        ]
+    }
+]

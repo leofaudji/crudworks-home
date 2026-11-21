@@ -1,0 +1,96 @@
+# 07 — Desain Antarmuka, Layout & PWA
+
+Dokumen ini memuat spesifikasi desain antarmuka pengguna (UI), sistem tata letak (layout), kapabilitas Progressive Web App (PWA), serta mekanisme kustomisasi preferensi tampilan.
+
+---
+
+## 1. Filosofi Desain (Anti-AI Slop)
+
+Desain CRUDWorks ERP mengedepankan fungsionalitas dan kejelasan informasi bagi staf keuangan dan manajer proyek:
+- **Tipografi Berpresisi**: Menggunakan font **Inter** untuk teks antarmuka dan **IBM Plex Mono** untuk angka nominal finansial (tabular figures), nomor faktur, dan kode rekening agar angka tersusun rapi secara vertikal.
+- **Hierarki Visual Jelas**: Batas elemen menggunakan garis tepi halus (`border-slate-200` / `border-slate-800`), bukan bayangan kartu tebal yang berlebihan.
+- **Tingkat Kepadatan Data Efisien (Compact Financial View)**: Tabel data dirancang rapat namun nyaman dibaca, dengan baris belang halus (zebra striping) dan status badge berwarna pastel kontras tinggi.
+- **Keterbacaan Mobile**: Ukuran font input form minimal 16px untuk mencegah zooming otomatis pada peramban iOS/Android saat form difokuskan.
+
+---
+
+## 2. Paradigma Tata Letak Navigasi (Layout Preferences)
+
+Sistem menyediakan 3 opsi mode tata letak navigasi yang dapat dipilih operator melalui menu preferensi dan disimpan pada `localStorage.getItem('app_nav_layout')`:
+
+```mermaid
+flowchart LR
+    subgraph Mode1["1. Cloudflare Dock Sidebar (Default)"]
+        Side["Sidebar Gelap Tetap di Kiri (Kompak/Ekspansi)"] --> Content1["Area Konten Utama"]
+    end
+    
+    subgraph Mode2["2. Windows Bottom Taskbar"]
+        Content2["Area Konten Full Width"] --> Taskbar["Taskbar Bawah + Start Menu Modal"]
+    end
+
+    subgraph Mode3["3. Windows Top Taskbar"]
+        TopBar["Taskbar Atas + Menu Dropdown Klasik"] --> Content3["Area Konten Full Width"]
+    end
+```
+
+### 2.1 Mode 1: Cloudflare Dock Sidebar (Default)
+- **Karakteristik**: Mengadopsi gaya dashboard Cloudflare dengan latar belakang samping gelap (`bg-slate-900`), ikon Remix Icons berjarak rapi, serta indikator aktif bergaris vertikal di sisi kiri item.
+- **Submenu Akordeon**: Menu induk yang memiliki anak (misal: Tagihan & Pembayaran) dapat dibuka-tutup dengan transisi halus tanpa me-refresh halaman.
+- **Responsive Mobile**: Pada layar `< 1024px`, sidebar disembunyikan dalam drawer geser (slide-over) yang dipicu oleh tombol hamburger di header atas.
+
+### 2.2 Mode 2 & 3: Windows-like Taskbar & Menu
+- Mengadopsi standar komponen CSS termutakhir dari `app-keuangan`:
+  - **Compact Dock Sidebar**: Sidebar ramping 64px dengan ikon, flyout submenu, dan organic tree lines.
+  - **Bottom Taskbar**: Menempatkan bilah navigasi di bagian bawah layar menyerupai Windows 11. Tombol "Start" di sudut kiri membuka menu pop-up terstruktur dengan pinned cards dan grid aplikasi.
+  - **Top Taskbar**: Menempatkan bilah di bagian atas dengan menu drop-down horizontal.
+  - **Universal Datatable**: Kerapatan tabel dinamis (dense/spacious), freeze header, dan column quick search.
+
+---
+
+## 3. Sistem Palet Warna & Dark Mode
+
+Sistem mendukung dark mode otomatis (mengikuti setelan sistem operasi) serta penguncian manual melalui tombol toggle di bilah atas.
+
+| Token Warna | Light Mode | Dark Mode | Fungsi |
+|---|---|---|---|
+| `bg-main` | `#f8fafc` (slate-50) | `#0f172a` (slate-900) | Latar belakang dasar aplikasi |
+| `card-bg` | `#ffffff` (white) | `#1e293b` (slate-800) | Panel kartu, tabel, dan formulir |
+| `border-col`| `#e2e8f0` (slate-200) | `#334155` (slate-700) | Garis pemisah tabel dan input |
+| `primary` | `#4f46e5` (indigo-600) | `#6366f1` (indigo-500) | Tombol aksi utama, tautan aktif |
+| `success` | `#059669` (emerald-600) | `#10b981` (emerald-500) | Status lunas, verifikasi sukses |
+| `warning` | `#d97706` (amber-600) | `#f59e0b` (amber-500) | Status sebagian, draft |
+| `danger` | `#dc2626` (red-600) | `#ef4444` (red-500) | Tagihan jatuh tempo, aksi hapus |
+
+---
+
+## 4. Spesifikasi Progressive Web App (PWA)
+
+Aplikasi dapat diinstal langsung ke homescreen ponsel Android/iOS atau desktop Windows/macOS sebagai standalone app tanpa bilah URL peramban.
+
+### 4.1 Web App Manifest (`manifest.json`)
+- `name`: "CRUDWorks ERP — Billing & Projects"
+- `short_name`: "CRUDWorks"
+- `display`: "standalone"
+- `start_url`: "./index.html"
+- `background_color`: "#0f172a"
+- `theme_color`: "#4f46e5"
+- `icons`:
+  - `assets/icons/icon-192.png` (192x192, PNG, purpose: any maskable)
+  - `assets/icons/icon-512.png` (512x512, PNG, purpose: any maskable)
+
+### 4.2 Strategi Service Worker (`sw.js`)
+- **App Shell Cache (Cache-First)**: Aset statis seperti `index.html`, stylesheet font, pustaka ikon, dan skrip core `assets/js/app.js` disimpan dalam cache untuk menjamin aplikasi terbuka instan (< 200ms).
+- **API Network-First**: Permintaan dinamis ke endpoint `/api/*` selalu mengutamakan jaringan langsung. Jika perangkat offline, service worker mengembalikan fallback error terstruktur yang ditangani ramah oleh UI.
+
+---
+
+## 5. Komponen UI Standar
+
+1. **Modal Dialog Helper (`App.modal`)**:
+   - Menampilkan formulir popup atau konfirmasi hapus data dengan animasi backdrop blur.
+2. **Toast Notification (`App.toast`)**:
+   - Notifikasi mengambang di pojok kanan atas untuk umpan balik instan (sukses, peringatan, error).
+3. **Table Data Helper (`App.renderTable`)**:
+   - Menghasilkan tabel HTML otomatis lengkap dengan status skeleton loading, empty state ilustratif, header penyortiran kolom, dan navigasi paginasi.
+4. **Print Engine Modal (`App.printInvoice`)**:
+   - Area render khusus berukuran kertas A4 standar yang mengisolasi elemen tagihan dari elemen navigasi sistem saat dialog cetak browser (`Ctrl+P`) dipanggil.

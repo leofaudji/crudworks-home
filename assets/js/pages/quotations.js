@@ -1,0 +1,1084 @@
+// assets/js/pages/quotations.js
+import { App } from '../app.js';
+
+let state = {
+    page: 1,
+    per_page: 15,
+    status: '',
+    client_id: '',
+    search: ''
+};
+
+let clients = [];
+let projects = [];
+let services = [];
+
+const DEFAULT_SALAM_PEMBUKA = `Dengan hormat,
+
+Bersama surat ini, kami dari tim teknis & pengembangan mengajukan proposal penawaran kerja sama pengembangan dan implementasi sistem aplikasi sesuai kebutuhan operasional perusahaan Bapak/Ibu. Proposal ini disusun sebagai acuan ruang lingkup pekerjaan, daftar fitur utama, estimasi investasi biaya, serta hak dan kewajiban para pihak.`;
+
+const DEFAULT_RUANG_LINGKUP_FITUR = `1. Modul Autentikasi & Hak Akses Pengguna (RBAC)
+   - Manajemen akun staf, pembagian peran, serta log aktivitas keamanan.
+2. Modul Master Data & Operasional Utama
+   - Pengelolaan data inti, pencarian cepat, filter, dan ekspor laporan.
+3. Modul Transaksi, Tagihan & Pelaporan Keuangan
+   - Pencatatan transaksi otomatis, pembuatan dokumen PDF resmi, dan rekapitulasi laporan.
+4. Pengujian Sistem, Pelatihan Pengguna & Dokumentasi
+   - Uji coba UAT bersama tim klien, pelatihan penggunaan sistem, dan deploy ke server produksi.`;
+
+const DEFAULT_TIMELINE_PENGERJAAN = `1. Analisis Kebutuhan & Perancangan Desain (Bulan 1)
+- Penggalian proses bisnis klien, perancangan prototipe antarmuka UI/UX, dan penyusunan skema database.
+2. Pengembangan Inti Sistem & Integrasi Modul (Bulan 2 – 3)
+- Pengkodean modul utama aplikasi, logika bisnis, hak akses pengguna (RBAC), dan pengujian internal tim developer.
+3. Pengujian Bersama, UAT & Revisi Minor (Bulan 4)
+- User Acceptance Testing (UAT) bersama pihak klien, penyesuaian evaluasi alur kerja, dan persiapan rilis.
+4. Deployment Server, Pelatihan Staf & BAST (Bulan 4)
+- Pemasangan sistem di server produksi klien/cloud, pelatihan staf pengguna (*user training*), dan Berita Acara Serah Terima (BAST).
+5. Pendampingan, Garansi & Pemeliharaan Sistem (Bulan 5 – 9)
+- Pemantauan stabilitas sistem dan pendampingan penggunaan aplikasi selama masa pemeliharaan resmi.`;
+
+const DEFAULT_PASAL_HAK_KEWAJIBAN = `PASAL 1 — HAK DAN KEWAJIBAN PIHAK PERTAMA (PENYEDIA JASA)
+1. Pihak Pertama berkewajiban menyelesaikan pengembangan dan implementasi fitur sistem sesuai ruang lingkup yang disepakati dalam surat penawaran ini secara tepat waktu dan profesional.
+2. Pihak Pertama berkewajiban menjaga kerahasiaan seluruh data, informasi bisnis, dan kredensial server milik Pihak Kedua dengan standar keamanan terbaik.
+3. Pihak Pertama berhak menerima pembayaran penuh secara tepat waktu sesuai termin dan tahapan yang tercantum pada syarat pembayaran penawaran ini.
+
+PASAL 2 — LISENSI PEMAKAI AKHIR & KETENTUAN KODE SUMBER (SOURCE CODE)
+1. Pihak Kedua berhak memperoleh hak akses penggunaan sistem aplikasi semata-mata sebagai Pemakai Akhir (End-User License / Hak Pakai Operasional) untuk kebutuhan operasional bisnis internal Pihak Kedua.
+2. Pihak Kedua TIDAK MENERIMA dan TIDAK MEMILIKI hak kepemilikan atas Source Code (Kode Sumber), hak kekayaan intelektual (HAKI), algoritma, arsitektur, maupun kerangka dasar sistem perangkat lunak yang dibangun oleh Pihak Pertama.
+3. Seluruh Source Code, hak cipta, dan hak milik industri tetap menjadi hak milik mutlak dan eksklusif Pihak Pertama. Pihak Kedua dilarang keras menyalin, membongkar (reverse engineer), mendekompilasi, memodifikasi kode sumber tanpa izin tertulis, mendistribusikan ulang, menyewakan, atau menjual kembali aplikasi maupun bagian dari kode sistem kepada pihak ketiga mana pun.
+4. Pihak Kedua berkewajiban menunjuk perwakilan PIC resmi untuk koordinasi teknis, memberikan data/materi yang diperlukan tepat waktu, serta melakukan pengujian serah terima (UAT).
+5. Permintaan penambahan fitur di luar daftar ruang lingkup penawaran ini akan dicatat sebagai pekerjaan tambahan (Change Request) dengan estimasi biaya dan waktu terpisah.
+
+PASAL 3 — GARANSI SISTEM & DUKUNGAN PEMELIHARAAN
+1. Pihak Pertama memberikan garansi perbaikan kerusakan teknis (bug/error) secara cuma-cuma selama masa pemeliharaan terhitung sejak tanggal serah terima sistem (BAST), selama tidak terjadi perubahan alur atau modifikasi dari pihak luar.`;
+
+const DEFAULT_SYARAT_KETENTUAN = `1. Penawaran harga ini berlaku selama 14 (empat belas) hari kalender sejak tanggal diterbitkan.
+2. Pembayaran Uang Muka (DP) sebesar 50% dibayarkan setelah penawaran disetujui / SPK diterbitkan, dan pelunasan 50% setelah sistem siap serah terima (UAT).
+3. Estimasi waktu pengerjaan dimulai sejak pembayaran DP diterima dan kebutuhan materi/data awal dari klien tersedia.`;
+
+export async function init(container) {
+    container.innerHTML = `
+        <div class="space-y-6 animate-fadeIn">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Surat Penawaran Harga (Quotations)</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Penerbitan proposal penawaran, persetujuan klien, dan konversi 1-klik ke faktur tagihan.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-create-quotation" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm shadow-primary-500/20 transition">
+                        <i class="ri-add-line text-base"></i>
+                        <span>Buat Penawaran Baru</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="quo-kpi-cards">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Draft Disiapkan</span>
+                    <div id="kpi-quo-draft" class="text-xl font-black font-mono text-slate-700 dark:text-slate-200 mt-1">0</div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terkirim ke Klien</span>
+                    <div id="kpi-quo-sent" class="text-xl font-black font-mono text-primary-600 mt-1">0</div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disetujui Klien</span>
+                    <div id="kpi-quo-approved" class="text-xl font-black font-mono text-emerald-600 mt-1">0</div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Telah Jadi Faktur</span>
+                    <div id="kpi-quo-converted" class="text-xl font-black font-mono text-indigo-600 mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- Status Tabs & Filter Toolbar -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-xs flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                    <button class="quo-tab px-3 py-1.5 rounded-xl text-xs font-bold transition bg-primary-600 text-white shadow-xs" data-status="">Semua</button>
+                    <button class="quo-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-status="draft">Draft</button>
+                    <button class="quo-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-status="terkirim">Terkirim</button>
+                    <button class="quo-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-status="disetujui">Disetujui</button>
+                    <button class="quo-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-status="dikonversi">Dikonversi</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="relative w-48 sm:w-64">
+                        <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="filter-quo-search" placeholder="Cari penawaran, klien..."
+                               class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="data-table w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/70 dark:bg-slate-800/40 text-[10px] font-bold uppercase text-slate-500 font-mono border-b border-slate-200/80 dark:border-slate-800">
+                                <th class="py-3 px-6">No. Penawaran</th>
+                                <th class="py-3 px-4">Tanggal</th>
+                                <th class="py-3 px-4">Berlaku s/d</th>
+                                <th class="py-3 px-4">Calon Klien & Proyek</th>
+                                <th class="py-3 px-4 text-right">Nilai Estimasi (Rp)</th>
+                                <th class="py-3 px-4 text-center">Status</th>
+                                <th class="py-3 px-6 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotation-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <tr><td colspan="7" class="py-12 text-center text-slate-400">Memuat data penawaran...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="quotation-pagination" class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500"></div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Quotation Modal Form (Tabbed Interactive Editor) -->
+        <div id="quotation-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div class="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 sm:p-8 animate-fadeIn border border-slate-100 dark:border-slate-800 my-auto max-h-[92vh] flex flex-col">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                    <div>
+                        <h3 id="quo-modal-title" class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="ri-file-paper-2-line text-primary-600"></i> Buat Surat Penawaran Harga Baru
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Lengkapi setiap tab secara berurutan atau lompat langsung ke bagian yang ingin diubah.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="btn-fill-quo-template" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-primary-600 dark:text-primary-400 rounded-xl text-[11px] font-bold flex items-center gap-1 transition" title="Isi ulang naskah dengan template standar">
+                            <i class="ri-magic-line"></i> <span class="hidden sm:inline">Template Standar</span>
+                        </button>
+                        <button type="button" onclick="document.getElementById('quotation-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Step Tabs -->
+                <div id="quo-editor-tabs" class="grid grid-cols-2 sm:grid-cols-5 gap-2 py-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                    <button type="button" data-quo-tab="klien" class="quo-editor-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition bg-primary-600 text-white shadow-xs">
+                        <i class="ri-user-3-line"></i>
+                        <span>1. Klien &amp; Pengantar</span>
+                    </button>
+                    <button type="button" data-quo-tab="fitur" class="quo-editor-tab px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200">
+                        <i class="ri-list-check-2"></i>
+                        <span>2. Fitur Digarap</span>
+                    </button>
+                    <button type="button" data-quo-tab="timeline" class="quo-editor-tab px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200">
+                        <i class="ri-calendar-todo-line"></i>
+                        <span>3. Timeline Kerja</span>
+                    </button>
+                    <button type="button" data-quo-tab="biaya" class="quo-editor-tab px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200">
+                        <i class="ri-money-dollar-circle-line"></i>
+                        <span>4. Rincian Biaya</span>
+                    </button>
+                    <button type="button" data-quo-tab="pasal" class="quo-editor-tab px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200">
+                        <i class="ri-scales-3-line"></i>
+                        <span>5. Ketentuan &amp; Hak</span>
+                    </button>
+                </div>
+
+                <form id="quotation-form" novalidate class="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+                    <input type="hidden" id="form-quo-id">
+
+                    <!-- TAB 1: Klien & Salam Pengantar -->
+                    <div data-quo-panel="klien" class="quo-editor-panel space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400">Calon Pelanggan / Klien *</label>
+                                    <span class="text-[10px] text-slate-400">Termasuk Calon Pelanggan (Prospek)</span>
+                                </div>
+                                <select id="form-quo-client" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Rencana Proyek (Opsional)</label>
+                                <select id="form-quo-project" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+                                    <option value="">Tanpa Proyek Tertentu</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Tanggal Penawaran *</label>
+                                <input type="date" id="form-quo-date" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Berlaku Hingga *</label>
+                                <input type="date" id="form-quo-expiry" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Salam Pembuka &amp; Pengantar Proposal</label>
+                            <textarea id="form-quo-salam" rows="6" placeholder="Dengan hormat, bersama surat ini kami mengajukan penawaran..."
+                                      class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs leading-relaxed"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Fitur yang Digarap -->
+                    <div data-quo-panel="fitur" class="quo-editor-panel hidden space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Daftar Fitur &amp; Modul yang Digarap</label>
+                                <p class="text-[11px] text-slate-400">Jelaskan ruang lingkup fitur, modul aplikasi, dan deliverable yang akan dikerjakan.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-[10px] font-bold uppercase text-slate-400 mr-1">Sisipkan Cepat:</span>
+                            <button type="button" data-append-feature="Modul Autentikasi &amp; Hak Akses (RBAC) — Manajemen pengguna, peran, dan audit aktivitas." class="btn-feature-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Autentikasi &amp; RBAC</button>
+                            <button type="button" data-append-feature="Modul Dashboard &amp; Analitik — Ringkasan KPI, grafik tren real-time, dan ekspor laporan PDF/Excel." class="btn-feature-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Dashboard &amp; Laporan</button>
+                            <button type="button" data-append-feature="Integrasi Notifikasi WhatsApp &amp; Email SMTP — Pengingat otomatis dan pengiriman dokumen ke klien." class="btn-feature-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Integrasi WA &amp; Email</button>
+                            <button type="button" data-append-feature="Pengujian UAT, Pelatihan Admin &amp; Deployment Produksi — Uji coba bersama tim klien serta setup server." class="btn-feature-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ UAT &amp; Deployment</button>
+                        </div>
+
+                        <textarea id="form-quo-fitur" rows="11" placeholder="1. Modul ...\n2. Modul ..."
+                                  class="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs leading-relaxed font-sans"></textarea>
+                    </div>
+
+                    <!-- TAB 3: Timeline Pengerjaan -->
+                    <div data-quo-panel="timeline" class="quo-editor-panel hidden space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Rencana Tahapan &amp; Timeline Waktu Pengerjaan</label>
+                                <p class="text-[11px] text-slate-400">Jelaskan estimasi durasi (minggu/bulan), deliverable per tahap pengerjaan, hingga masa garansi sistem.</p>
+                            </div>
+                        </div>
+
+                        <!-- Live Visual Roadmap Diagram Preview -->
+                        <div class="p-3 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                    <i class="ri-calendar-schedule-line text-amber-500"></i> Diagram Matriks Jadwal Kerja &amp; Linimasa (Gantt Chart)
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-medium">Tampil otomatis pada PDF &amp; Portal Klien</span>
+                            </div>
+                            <div id="quo-timeline-diagram-preview" class="transition-all overflow-x-auto"></div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-[10px] font-bold uppercase text-slate-400 mr-1">Sisipkan Cepat:</span>
+                            <button type="button" data-append-timeline="1. Instalasi, penyesuaian, sosialisasi (Bulan 4)&#10;2. Pendampingan dan penggunaan aplikasi (Bulan 5 – 9)" class="btn-timeline-chip px-2.5 py-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg text-[11px] font-semibold transition border border-amber-200/80 dark:border-amber-800/50">+ Format Matriks: Bulan 4 &amp; 5–9</button>
+                            <button type="button" data-append-timeline="1. Analisis Kebutuhan &amp; Perancangan Desain (Bulan 1)&#10;- Wawancara proses bisnis dan penyusunan prototipe wireframe UI/UX." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 1: Desain &amp; Analisis</button>
+                            <button type="button" data-append-timeline="2. Pengembangan Inti Sistem &amp; Integrasi Modul (Bulan 2 – 3)&#10;- Pengkodean modul utama, logika bisnis dan hak akses RBAC." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 2–3: Development</button>
+                            <button type="button" data-append-timeline="3. Pengujian Bersama, UAT &amp; Pelatihan Staf (Bulan 4)&#10;- User Acceptance Testing bersama klien dan pelatihan operasional." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 4: UAT &amp; Go-Live</button>
+                            <button type="button" data-append-timeline="4. Pendampingan, Garansi &amp; Pemeliharaan (Bulan 5 – 9)&#10;- Pendampingan teknis dan perbaikan kendala gratis selama garansi." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 5–9: Pendampingan</button>
+                        </div>
+
+                        <textarea id="form-quo-timeline" rows="7" placeholder="1. Instalasi, penyesuaian, sosialisasi (Bulan 4)&#10;2. Pendampingan dan penggunaan aplikasi (Bulan 5 – 9)"
+                                  class="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs leading-relaxed font-sans font-mono"></textarea>
+                    </div>
+
+                    <!-- TAB 4: Rincian Biaya -->
+                    <div data-quo-panel="biaya" class="quo-editor-panel hidden space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Rincian Item Layanan &amp; Estimasi Biaya</label>
+                                <p class="text-[11px] text-slate-400">Pilih dari katalog layanan atau ketik deskripsi item penawaran secara manual.</p>
+                            </div>
+                            <button type="button" id="btn-add-quo-item" class="px-3.5 py-1.5 bg-primary-50 hover:bg-primary-100 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                                <i class="ri-add-line text-sm"></i> <span>Tambah Baris</span>
+                            </button>
+                        </div>
+
+                        <datalist id="quotation-services-datalist"></datalist>
+
+                        <div class="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-50 dark:bg-slate-800/60 font-mono text-[10px] text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700">
+                                    <tr>
+                                        <th class="py-2.5 px-3">Deskripsi Layanan / Item</th>
+                                        <th class="py-2.5 px-2 w-20 text-center">Qty</th>
+                                        <th class="py-2.5 px-2 w-24">Satuan</th>
+                                        <th class="py-2.5 px-3 w-36 text-right">Harga Satuan (Rp)</th>
+                                        <th class="py-2.5 px-3 w-36 text-right">Total Subtotal</th>
+                                        <th class="py-2.5 px-2 w-10 text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quo-items-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <div class="w-full sm:w-96 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2 text-xs">
+                                <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span>Subtotal Nilai:</span>
+                                    <span id="quo-calc-subtotal" class="font-mono font-bold text-slate-900 dark:text-white">Rp 0</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-slate-600 dark:text-slate-400">Potongan Diskon:</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <select id="form-quo-diskon-tipe" class="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono">
+                                            <option value="nominal">Rp</option>
+                                            <option value="persen">%</option>
+                                        </select>
+                                        <input type="number" id="form-quo-diskon-val" value="0" min="0" class="w-28 px-2 py-1 text-right bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-xs">
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                                    <div class="flex items-center gap-1.5">
+                                        <span>PPN (%):</span>
+                                        <input type="number" id="form-quo-pajak-persen" min="0" step="any" value="0" placeholder="0"
+                                               class="w-16 px-2 py-1 text-right bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-xs focus:ring-1 focus:ring-primary-500"
+                                               title="Persentase PPN (isi 0 atau kosongkan jika tanpa pajak)">
+                                    </div>
+                                    <span id="quo-calc-pajak" class="font-mono text-slate-900 dark:text-white">Rp 0</span>
+                                </div>
+                                <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                                    <span>Total Estimasi Penawaran:</span>
+                                    <span id="quo-calc-total" class="font-mono text-indigo-600 dark:text-indigo-400">Rp 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: Pasal Hak & Kewajiban + Syarat Ketentuan -->
+                    <div data-quo-panel="pasal" class="quo-editor-panel hidden space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Pasal-Pasal Hak &amp; Kewajiban Para Pihak</label>
+                            <textarea id="form-quo-pasal" rows="7" placeholder="PASAL 1 - HAK DAN KEWAJIBAN PIHAK PERTAMA..."
+                                      class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs leading-relaxed text-slate-700 dark:text-slate-200"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Syarat &amp; Ketentuan Pembayaran</label>
+                                <textarea id="form-quo-syarat" rows="4" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-sans text-slate-600 dark:text-slate-300"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Catatan Klien (Opsional)</label>
+                                <textarea id="form-quo-catatan" rows="4" placeholder="Catatan tambahan atau lampiran penawaran"
+                                          class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Modal Footer with Step Navigation & Save -->
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <button type="button" id="btn-quo-prev-tab" class="hidden px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold items-center gap-1 transition">
+                            <i class="ri-arrow-left-s-line"></i> Sebelumnya
+                        </button>
+                        <div class="text-xs font-semibold text-slate-500">
+                            Estimasi: <span id="quo-footer-total" class="font-mono font-black text-indigo-600 dark:text-indigo-400">Rp 0</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="document.getElementById('quotation-modal').classList.add('hidden')"
+                                class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold">Batal</button>
+                        <button type="button" id="btn-quo-next-tab" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 transition">
+                            <span>Lanjut</span> <i class="ri-arrow-right-s-line"></i>
+                        </button>
+                        <button type="submit" form="quotation-form" id="btn-save-quo"
+                                class="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5">
+                            <i class="ri-save-3-line"></i>
+                            <span>Simpan Penawaran</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Load master data
+    await Promise.all([loadMasterClients(), loadMasterProjects(), loadMasterServices()]);
+
+    // Bindings
+    const btnCreateQuo = document.getElementById('btn-create-quotation');
+    if (btnCreateQuo) {
+        btnCreateQuo.onclick = () => openQuotationEditor();
+    }
+
+    const btnAddQuo = document.getElementById('btn-add-quo-item');
+    if (btnAddQuo) {
+        let isAddingQuo = false;
+        btnAddQuo.onclick = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            if (isAddingQuo) return;
+            isAddingQuo = true;
+            setTimeout(() => { isAddingQuo = false; }, 300);
+            addQuoItemRow();
+        };
+    }
+    document.getElementById('quotation-form')?.addEventListener('submit', handleSaveQuotation);
+    document.getElementById('btn-fill-quo-template')?.addEventListener('click', () => {
+        document.getElementById('form-quo-salam').value = DEFAULT_SALAM_PEMBUKA;
+        document.getElementById('form-quo-fitur').value = DEFAULT_RUANG_LINGKUP_FITUR;
+        document.getElementById('form-quo-timeline').value = DEFAULT_TIMELINE_PENGERJAAN;
+        document.getElementById('form-quo-pasal').value = DEFAULT_PASAL_HAK_KEWAJIBAN;
+        document.getElementById('form-quo-syarat').value = DEFAULT_SYARAT_KETENTUAN;
+        updateQuoTimelineDiagramPreview();
+        App.toast('Template naskah proposal standar berhasil dimuat', 'info', 1800);
+    });
+
+    // Interactive Editor Tabs
+    document.querySelectorAll('.quo-editor-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchQuoEditorTab(btn.getAttribute('data-quo-tab'));
+        });
+    });
+
+    const tabOrder = ['klien', 'fitur', 'timeline', 'biaya', 'pasal'];
+    document.getElementById('btn-quo-prev-tab')?.addEventListener('click', () => {
+        const cur = document.querySelector('.quo-editor-panel:not(.hidden)')?.getAttribute('data-quo-panel') || 'klien';
+        const idx = tabOrder.indexOf(cur);
+        if (idx > 0) switchQuoEditorTab(tabOrder[idx - 1]);
+    });
+    document.getElementById('btn-quo-next-tab')?.addEventListener('click', () => {
+        const cur = document.querySelector('.quo-editor-panel:not(.hidden)')?.getAttribute('data-quo-panel') || 'klien';
+        const idx = tabOrder.indexOf(cur);
+        if (idx < tabOrder.length - 1) switchQuoEditorTab(tabOrder[idx + 1]);
+    });
+
+    // Quick-insert feature chips
+    document.querySelectorAll('.btn-feature-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const ta = document.getElementById('form-quo-fitur');
+            if (!ta) return;
+            const snippet = chip.getAttribute('data-append-feature') || '';
+            const current = ta.value.trim();
+            const nextNum = current ? (current.split('\n').filter(l => /^\d+\./.test(l.trim())).length + 1) : 1;
+            ta.value = current ? `${current}\n${nextNum}. ${snippet}` : `${nextNum}. ${snippet}`;
+            ta.focus();
+        });
+    });
+
+    // Quick-insert timeline chips & live diagram preview sync
+    document.querySelectorAll('.btn-timeline-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const ta = document.getElementById('form-quo-timeline');
+            if (!ta) return;
+            const snippet = chip.getAttribute('data-append-timeline') || '';
+            const current = ta.value.trim();
+            ta.value = current ? `${current}\n\n${snippet}` : snippet;
+            ta.focus();
+            updateQuoTimelineDiagramPreview();
+        });
+    });
+
+    const timelineInput = document.getElementById('form-quo-timeline');
+    if (timelineInput) {
+        timelineInput.addEventListener('input', () => updateQuoTimelineDiagramPreview());
+        timelineInput.addEventListener('change', () => updateQuoTimelineDiagramPreview());
+    }
+
+    document.querySelectorAll('.quo-tab').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('.quo-tab').forEach(x => {
+                x.className = 'quo-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800';
+            });
+            b.className = 'quo-tab px-3 py-1.5 rounded-xl text-xs font-bold transition bg-primary-600 text-white shadow-xs';
+            state.status = b.getAttribute('data-status');
+            state.page = 1;
+            loadQuotations();
+        });
+    });
+
+    let sTimer;
+    document.getElementById('filter-quo-search')?.addEventListener('input', (e) => {
+        clearTimeout(sTimer);
+        sTimer = setTimeout(() => {
+            state.search = e.target.value.trim();
+            state.page = 1;
+            loadQuotations();
+        }, 300);
+    });
+
+    document.getElementById('form-quo-diskon-tipe')?.addEventListener('change', calculateQuoTotals);
+    document.getElementById('form-quo-diskon-val')?.addEventListener('input', calculateQuoTotals);
+    document.getElementById('form-quo-pajak-persen')?.addEventListener('input', calculateQuoTotals);
+
+    await loadQuotations();
+}
+
+async function loadMasterClients() {
+    const res = await App.api('clients?all=1&include_prospects=1');
+    if (res && res.success && Array.isArray(res.data)) {
+        clients = res.data;
+        const sel = document.getElementById('form-quo-client');
+        if (sel) {
+            const prospects = clients.filter(c => c.status === 'prospek');
+            const actives = clients.filter(c => c.status === 'aktif');
+            const others = clients.filter(c => c.status !== 'prospek' && c.status !== 'aktif');
+
+            let html = '<option value="">Pilih Calon Pelanggan / Klien...</option>';
+
+            if (prospects.length > 0) {
+                html += `<optgroup label="Calon Pelanggan / Prospek (${prospects.length})">` +
+                    prospects.map(c => `
+                        <option value="${c.id}">⭐ ${c.nama_perusahaan} (${c.kode_klien}) · [Calon Pelanggan / Prospek]</option>
+                    `).join('') + `</optgroup>`;
+            }
+
+            if (actives.length > 0) {
+                html += `<optgroup label="Pelanggan Tetap / Aktif (${actives.length})">` +
+                    actives.map(c => `
+                        <option value="${c.id}">${c.nama_perusahaan} (${c.kode_klien})</option>
+                    `).join('') + `</optgroup>`;
+            }
+
+            if (others.length > 0) {
+                html += `<optgroup label="Lainnya">` +
+                    others.map(c => `
+                        <option value="${c.id}">${c.nama_perusahaan} (${c.kode_klien})</option>
+                    `).join('') + `</optgroup>`;
+            }
+
+            sel.innerHTML = html;
+        }
+    }
+}
+
+async function loadMasterProjects() {
+    const res = await App.api('projects?all=1');
+    if (res && res.success && Array.isArray(res.data)) {
+        projects = res.data;
+        const sel = document.getElementById('form-quo-project');
+        if (sel) {
+            sel.innerHTML = `<option value="">Tanpa Proyek Tertentu</option>` + projects.map(p => `
+                <option value="${p.id}">${p.nama_project} (${p.client_nama || p.nama_perusahaan || ''})</option>
+            `).join('');
+        }
+    }
+}
+
+async function loadMasterServices() {
+    const res = await App.api('services?all=1');
+    if (res && res.success && Array.isArray(res.data)) {
+        services = res.data;
+        renderQuoServicesDatalist();
+    }
+}
+
+function renderQuoServicesDatalist() {
+    const dl = document.getElementById('quotation-services-datalist');
+    if (dl && Array.isArray(services)) {
+        dl.innerHTML = services.map(s => `
+            <option value="${App.escapeHtml(s.nama_layanan)}">${App.formatIDR(s.harga_standar)}</option>
+        `).join('');
+    }
+}
+
+async function loadQuotations() {
+    const tbody = document.getElementById('quotation-tbody');
+    if (!tbody) return;
+
+    let q = `quotations?page=${state.page}&per_page=${state.per_page}`;
+    if (state.status) q += `&status=${encodeURIComponent(state.status)}`;
+    if (state.search) q += `&search=${encodeURIComponent(state.search)}`;
+
+    const res = await App.api(q);
+    if (!res || !res.success) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500">Gagal memuat surat penawaran</td></tr>`;
+        return;
+    }
+
+    const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+    const pagination = res.pagination || res.data?.pagination || { page: 1, total_pages: 1, total: items.length };
+    const kpi = res.kpi || res.extra?.kpi || res.data?.extra?.kpi;
+
+    // Update KPI cards
+    if (kpi) {
+        const dEl = document.getElementById('kpi-quo-draft');
+        const sEl = document.getElementById('kpi-quo-sent');
+        const aEl = document.getElementById('kpi-quo-approved');
+        const cEl = document.getElementById('kpi-quo-converted');
+        if (dEl) dEl.textContent = kpi.count_draft || 0;
+        if (sEl) sEl.textContent = kpi.count_terkirim || 0;
+        if (aEl) aEl.textContent = kpi.count_disetujui || 0;
+        if (cEl) cEl.textContent = kpi.count_dikonversi || 0;
+    }
+
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400">Belum ada surat penawaran ditemukan</td></tr>`;
+        renderPagination(pagination);
+        return;
+    }
+
+    tbody.innerHTML = items.map(q => `
+        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition">
+            <td class="py-3.5 px-6 font-mono font-bold text-slate-900 dark:text-white">
+                ${q.nomor_penawaran}
+                ${q.converted_invoice_no ? `<div class="text-[10px] text-indigo-600 font-sans">Faktur: <a href="#/invoices" class="hover:underline">${q.converted_invoice_no}</a></div>` : ''}
+            </td>
+            <td class="py-3.5 px-4 font-mono text-slate-500">
+                ${App.formatDate(q.tanggal_penawaran)}
+            </td>
+            <td class="py-3.5 px-4 font-mono text-rose-600">
+                ${App.formatDate(q.berlaku_hingga)}
+            </td>
+            <td class="py-3.5 px-4 font-sans">
+                <div class="font-bold text-slate-900 dark:text-white">${q.nama_perusahaan}</div>
+                <div class="text-[11px] text-slate-400">UP: ${q.penanggung_jawab || '-'} ${q.nama_project ? `· Proyek: ${q.nama_project}` : ''}</div>
+            </td>
+            <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                ${App.formatIDR(q.total_penawaran)}
+            </td>
+            <td class="py-3.5 px-4 text-center">
+                ${App.renderStatusBadge(q.status, 'quotation')}
+            </td>
+            <td class="py-3.5 px-6 text-right">
+                <button type="button" onclick="App.toggleTableActionMenu(this, event, [
+                    { label: 'Pratinjau PDF', icon: 'ri-file-pdf-2-line', iconColor: 'text-rose-600', action: 'window.printQuotationPdf(${q.id}, \\'bloburl\\')' },
+                    { label: 'Unduh PDF', icon: 'ri-download-line', iconColor: 'text-emerald-600', action: 'window.printQuotationPdf(${q.id}, \\'download\\')' },
+                    { label: 'Unduh Format Word (.doc / Editable)', icon: 'ri-file-word-2-line', iconColor: 'text-blue-600', action: 'window.downloadQuotationWordDoc(${q.id})' },
+                    { label: 'Buka Portal E-Sign', icon: 'ri-external-link-line', iconColor: 'text-indigo-600', action: 'window.openPublicQuotation(\\'${q.public_token || q.nomor_penawaran}\\')' },
+                    { label: 'Salin Tautan E-Sign Klien', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicQuotationLink(\\'${q.public_token || q.nomor_penawaran}\\')' },
+                    { label: 'Kirim WhatsApp', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendQuotationWA(${q.id})' },
+                    ${q.status !== 'dikonversi' ? `{ label: 'Edit Naskah & Rincian', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editQuotation(${q.id})' },` : ''}
+                    ${q.status === 'draft' ? `{ label: 'Tandai Terkirim', icon: 'ri-send-plane-line', iconColor: 'text-sky-600', action: 'window.updateQuotationStatus(${q.id}, \\'terkirim\\')' },` : ''}
+                    ${['draft', 'terkirim'].includes(q.status) ? `{ label: 'Tandai Disetujui', icon: 'ri-check-line', iconColor: 'text-emerald-600', action: 'window.updateQuotationStatus(${q.id}, \\'disetujui\\')' },` : ''}
+                    ${q.status !== 'dikonversi' ? `{ label: 'Jadikan Faktur', icon: 'ri-arrow-right-circle-line', iconColor: 'text-indigo-600', action: 'window.convertQuotationToInvoice(${q.id}, \\'${App.escapeHtml(q.nomor_penawaran)}\\')' },` : ''}
+                    ${['disetujui', 'dikonversi'].includes(q.status) ? `{ label: 'Buat SPK / Kontrak Digital', icon: 'ri-file-shield-2-line', iconColor: 'text-emerald-600', action: 'window.createContractFromQuotation(${q.id})' },` : ''}
+                    { divider: true },
+                    { label: 'Hapus Penawaran', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteQuotation(${q.id}, \\'${App.escapeHtml(q.nomor_penawaran)}\\')' }
+                ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
+                    <span>Aksi</span>
+                    <i class="ri-more-2-fill text-slate-400"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    renderPagination(pagination);
+}
+
+function renderPagination(p) {
+    const cont = document.getElementById('quotation-pagination');
+    if (!cont || !p) return;
+    if (p.total_pages <= 1) {
+        cont.innerHTML = `<span>Menampilkan ${p.total || 0} data</span>`;
+        return;
+    }
+    cont.innerHTML = `
+        <span>Halaman ${p.page} dari ${p.total_pages} (${p.total} penawaran)</span>
+        <div class="flex items-center gap-1">
+            <button onclick="window.changeQuoPage(${p.page - 1})" ${p.page <= 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Sebelumnya</button>
+            <button onclick="window.changeQuoPage(${p.page + 1})" ${p.page >= p.total_pages ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Berikutnya</button>
+        </div>
+    `;
+}
+
+function updateQuoTimelineDiagramPreview() {
+    const previewEl = document.getElementById('quo-timeline-diagram-preview');
+    if (!previewEl) return;
+    const text = document.getElementById('form-quo-timeline')?.value || '';
+    if (window.App && typeof window.App.renderTimelineDiagramHtml === 'function') {
+        previewEl.innerHTML = window.App.renderTimelineDiagramHtml(text);
+    }
+}
+
+function switchQuoEditorTab(tabName) {
+    const tabOrder = ['klien', 'fitur', 'timeline', 'biaya', 'pasal'];
+    const target = tabOrder.includes(tabName) ? tabName : 'klien';
+
+    document.querySelectorAll('.quo-editor-tab').forEach(btn => {
+        const isMatch = btn.getAttribute('data-quo-tab') === target;
+        btn.className = isMatch
+            ? 'quo-editor-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition bg-primary-600 text-white shadow-xs'
+            : 'quo-editor-tab px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200';
+    });
+
+    document.querySelectorAll('.quo-editor-panel').forEach(panel => {
+        panel.classList.toggle('hidden', panel.getAttribute('data-quo-panel') !== target);
+    });
+
+    if (target === 'timeline') {
+        updateQuoTimelineDiagramPreview();
+    }
+
+    const idx = tabOrder.indexOf(target);
+    const prevBtn = document.getElementById('btn-quo-prev-tab');
+    const nextBtn = document.getElementById('btn-quo-next-tab');
+    if (prevBtn) {
+        prevBtn.classList.toggle('hidden', idx <= 0);
+        prevBtn.classList.toggle('inline-flex', idx > 0);
+    }
+    if (nextBtn) {
+        nextBtn.classList.toggle('hidden', idx >= tabOrder.length - 1);
+        nextBtn.classList.toggle('inline-flex', idx < tabOrder.length - 1);
+    }
+}
+
+function openQuotationEditor(quo = null) {
+    const modal = document.getElementById('quotation-modal');
+    const titleEl = document.getElementById('quo-modal-title');
+    document.getElementById('form-quo-id').value = quo ? quo.id : '';
+    document.getElementById('form-quo-client').value = quo ? quo.client_id : '';
+    document.getElementById('form-quo-project').value = quo ? (quo.project_id || '') : '';
+    document.getElementById('form-quo-date').value = quo ? quo.tanggal_penawaran : new Date().toISOString().slice(0, 10);
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + 14);
+    document.getElementById('form-quo-expiry').value = quo ? quo.berlaku_hingga : expDate.toISOString().slice(0, 10);
+
+    document.getElementById('form-quo-salam').value = quo ? (quo.salam_pembuka || DEFAULT_SALAM_PEMBUKA) : DEFAULT_SALAM_PEMBUKA;
+    document.getElementById('form-quo-fitur').value = quo ? (quo.ruang_lingkup_fitur || DEFAULT_RUANG_LINGKUP_FITUR) : DEFAULT_RUANG_LINGKUP_FITUR;
+    document.getElementById('form-quo-timeline').value = quo ? (quo.timeline_pengerjaan || DEFAULT_TIMELINE_PENGERJAAN) : DEFAULT_TIMELINE_PENGERJAAN;
+    document.getElementById('form-quo-pasal').value = quo ? (quo.pasal_hak_kewajiban || DEFAULT_PASAL_HAK_KEWAJIBAN) : DEFAULT_PASAL_HAK_KEWAJIBAN;
+    document.getElementById('form-quo-catatan').value = quo ? (quo.catatan_klien || '') : '';
+    document.getElementById('form-quo-syarat').value = quo ? (quo.syarat_ketentuan || DEFAULT_SYARAT_KETENTUAN) : DEFAULT_SYARAT_KETENTUAN;
+
+    const diskonTipe = quo ? (quo.diskon_tipe || 'nominal') : 'nominal';
+    document.getElementById('form-quo-diskon-tipe').value = diskonTipe;
+    if (quo && diskonTipe === 'persen' && Number(quo.subtotal) > 0) {
+        document.getElementById('form-quo-diskon-val').value = Math.round((Number(quo.diskon_nilai) / Number(quo.subtotal)) * 100);
+    } else {
+        document.getElementById('form-quo-diskon-val').value = quo ? (quo.diskon_nilai || 0) : '0';
+    }
+
+    const pajakPersenInput = document.getElementById('form-quo-pajak-persen');
+    if (pajakPersenInput) {
+        if (quo) {
+            const pVal = (quo.pajak_persen !== null && quo.pajak_persen !== undefined && quo.pajak_persen !== '') ? parseFloat(quo.pajak_persen) : 0;
+            pajakPersenInput.value = isNaN(pVal) ? '' : pVal;
+        } else {
+            const defaultTax = (window.App?.settings && window.App.settings.invoice_tax_percent !== undefined && window.App.settings.invoice_tax_percent !== '') 
+                ? window.App.settings.invoice_tax_percent 
+                : '0';
+            pajakPersenInput.value = defaultTax;
+        }
+    }
+
+    if (titleEl) {
+        titleEl.innerHTML = quo
+            ? `<i class="ri-edit-line text-primary-600"></i> Edit Surat Penawaran ${quo.nomor_penawaran}`
+            : `<i class="ri-file-paper-2-line text-primary-600"></i> Buat Surat Penawaran Harga Baru`;
+    }
+
+    // Refresh datalist
+    renderQuoServicesDatalist();
+
+    const tbody = document.getElementById('quo-items-tbody');
+    tbody.innerHTML = '';
+    if (quo && Array.isArray(quo.items) && quo.items.length > 0) {
+        quo.items.forEach(it => addQuoItemRow(it));
+    } else {
+        addQuoItemRow();
+    }
+    calculateQuoTotals();
+    updateQuoTimelineDiagramPreview();
+    switchQuoEditorTab('klien');
+
+    modal.classList.remove('hidden');
+}
+
+function addQuoItemRow(item = null) {
+    const tbody = document.getElementById('quo-items-tbody');
+    const tr = document.createElement('tr');
+    tr.className = 'quo-item-row hover:bg-slate-50/50 dark:hover:bg-slate-800/20';
+
+    let deskripsi = item ? (item.deskripsi || '') : '';
+    let serviceId = item ? (item.service_id || '') : '';
+    let qty = item ? item.kuantitas : '1';
+    let rawU = item ? item.satuan : 'Paket';
+    let cleanU = (rawU === 'one_time' || rawU === 'onetime') ? 'One Time' : (rawU ? rawU.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Paket');
+    let price = item ? item.harga_satuan : '0';
+
+    // If serviceId is provided without description, lookup from services catalog
+    if (serviceId && !deskripsi && Array.isArray(services)) {
+        const s = services.find(x => x.id == serviceId);
+        if (s) {
+            deskripsi = s.nama_layanan;
+            if (!price || price == 0) price = s.harga_standar;
+            const u = s.siklus_tagihan || 'paket';
+            cleanU = (u === 'one_time' || u === 'onetime') ? 'One Time' : u.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+    }
+
+    tr.innerHTML = `
+        <td class="py-2.5 px-3">
+            <input type="text" list="quotation-services-datalist" class="quo-item-desc w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary-500" required placeholder="Pilih katalog atau ketik deskripsi modul / paket..." value="${App.escapeHtml(deskripsi)}">
+            <input type="hidden" class="quo-item-service" value="${serviceId || ''}">
+        </td>
+        <td class="py-2.5 px-2 text-center align-middle">
+            <input type="number" class="quo-item-qty w-16 px-2 py-2 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono" min="0.1" step="0.1" value="${qty}">
+        </td>
+        <td class="py-2.5 px-2 align-middle">
+            <input type="text" class="quo-item-unit w-24 px-2 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-center" value="${App.escapeHtml(cleanU)}">
+        </td>
+        <td class="py-2.5 px-3 text-right align-middle">
+            <input type="number" class="quo-item-price w-36 px-3 py-2 text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono" min="0" step="any" placeholder="0" value="${price}">
+        </td>
+        <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200 quo-item-total align-middle">
+            Rp 0
+        </td>
+        <td class="py-2.5 px-2 text-center align-middle">
+            <button type="button" onclick="this.closest('tr').remove(); window.calculateQuoTotals();" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Hapus Baris">
+                <i class="ri-delete-bin-line text-sm"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+
+    const descInput = tr.querySelector('.quo-item-desc');
+    const serviceIdInput = tr.querySelector('.quo-item-service');
+    const priceInput = tr.querySelector('.quo-item-price');
+    const unitInput = tr.querySelector('.quo-item-unit');
+
+    descInput.addEventListener('input', () => {
+        const val = descInput.value.trim().toLowerCase();
+        if (Array.isArray(services)) {
+            const matched = services.find(s => s.nama_layanan.toLowerCase() === val);
+            if (matched) {
+                serviceIdInput.value = matched.id;
+                priceInput.value = matched.harga_standar;
+                const rawU = matched.siklus_tagihan || 'paket';
+                const cleanU = (rawU === 'one_time' || rawU === 'onetime') ? 'One Time' : (rawU.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+                unitInput.value = cleanU;
+            } else {
+                serviceIdInput.value = '';
+            }
+        }
+        calculateQuoTotals();
+    });
+
+    tr.querySelector('.quo-item-qty')?.addEventListener('input', calculateQuoTotals);
+    tr.querySelector('.quo-item-price')?.addEventListener('input', calculateQuoTotals);
+    calculateQuoTotals();
+}
+
+function calculateQuoTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('.quo-item-row').forEach(tr => {
+        const qty = parseFloat(tr.querySelector('.quo-item-qty')?.value) || 0;
+        const price = parseFloat(tr.querySelector('.quo-item-price')?.value) || 0;
+        const total = qty * price;
+        subtotal += total;
+        const totCell = tr.querySelector('.quo-item-total');
+        if (totCell) totCell.textContent = App.formatIDR(total);
+    });
+
+    const diskonTipe = document.getElementById('form-quo-diskon-tipe')?.value || 'nominal';
+    const diskonVal = parseFloat(document.getElementById('form-quo-diskon-val')?.value) || 0;
+    const diskonNominal = diskonTipe === 'persen' ? (subtotal * (diskonVal / 100)) : diskonVal;
+    const dpp = Math.max(0, subtotal - diskonNominal);
+
+    const pajInput = document.getElementById('form-quo-pajak-persen');
+    const pajRaw = pajInput ? pajInput.value.trim() : '';
+    const pajakPersen = pajRaw === '' ? 0 : (parseFloat(pajRaw) || 0);
+    const pajak = dpp * (pajakPersen / 100);
+    const grandTotal = dpp + pajak;
+
+    const subEl = document.getElementById('quo-calc-subtotal');
+    const pajEl = document.getElementById('quo-calc-pajak');
+    const totEl = document.getElementById('quo-calc-total');
+    const footTotEl = document.getElementById('quo-footer-total');
+
+    if (subEl) subEl.textContent = App.formatIDR(subtotal);
+    if (pajEl) pajEl.textContent = App.formatIDR(pajak);
+    if (totEl) totEl.textContent = App.formatIDR(grandTotal);
+    if (footTotEl) footTotEl.textContent = App.formatIDR(grandTotal);
+}
+
+window.calculateQuoTotals = calculateQuoTotals;
+
+async function handleSaveQuotation(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-save-quo');
+
+    const clientId = document.getElementById('form-quo-client')?.value;
+    const tglPenawaran = document.getElementById('form-quo-date')?.value;
+    const berlakuHingga = document.getElementById('form-quo-expiry')?.value;
+
+    if (!clientId) {
+        switchQuoEditorTab('klien');
+        App.toast('Pilih calon pelanggan terlebih dahulu', 'warning');
+        document.getElementById('form-quo-client')?.focus();
+        return;
+    }
+    if (!tglPenawaran || !berlakuHingga) {
+        switchQuoEditorTab('klien');
+        App.toast('Tanggal penawaran dan masa berlaku wajib diisi', 'warning');
+        return;
+    }
+
+    const items = [];
+
+    document.querySelectorAll('.quo-item-row').forEach(tr => {
+        const serviceId = tr.querySelector('.quo-item-service')?.value || null;
+        const desc = tr.querySelector('.quo-item-desc')?.value.trim();
+        const qty = parseFloat(tr.querySelector('.quo-item-qty')?.value) || 1;
+        const unit = tr.querySelector('.quo-item-unit')?.value.trim() || 'paket';
+        const price = parseFloat(tr.querySelector('.quo-item-price')?.value) || 0;
+        if (desc) {
+            items.push({ service_id: serviceId, deskripsi: desc, kuantitas: qty, satuan: unit, harga_satuan: price });
+        }
+    });
+
+    if (items.length === 0) {
+        switchQuoEditorTab('biaya');
+        App.toast('Minimal cantumkan satu rincian layanan penawaran pada tab Rincian Biaya', 'warning');
+        return;
+    }
+
+    const id = document.getElementById('form-quo-id').value;
+    const pajInput = document.getElementById('form-quo-pajak-persen');
+    const pajRaw = pajInput ? pajInput.value.trim() : '';
+    const pajakPersen = pajRaw === '' ? 0 : (parseFloat(pajRaw) || 0);
+
+    const payload = {
+        client_id: document.getElementById('form-quo-client').value,
+        project_id: document.getElementById('form-quo-project').value || null,
+        tanggal_penawaran: document.getElementById('form-quo-date').value,
+        berlaku_hingga: document.getElementById('form-quo-expiry').value,
+        salam_pembuka: document.getElementById('form-quo-salam').value.trim(),
+        ruang_lingkup_fitur: document.getElementById('form-quo-fitur').value.trim(),
+        timeline_pengerjaan: document.getElementById('form-quo-timeline').value.trim(),
+        pasal_hak_kewajiban: document.getElementById('form-quo-pasal').value.trim(),
+        catatan_klien: document.getElementById('form-quo-catatan').value.trim(),
+        syarat_ketentuan: document.getElementById('form-quo-syarat').value.trim(),
+        diskon_tipe: document.getElementById('form-quo-diskon-tipe').value,
+        diskon_nilai: document.getElementById('form-quo-diskon-val').value,
+        pajak_persen: pajakPersen,
+        items
+    };
+
+    App.btnLoading(btn, true, 'Menyimpan...');
+    try {
+        const url = id ? `quotations/${id}` : 'quotations';
+        const method = id ? 'PUT' : 'POST';
+        const res = await App.api(url, { method, body: payload });
+        if (res && res.success) {
+            App.toast(res.message, 'success');
+            document.getElementById('quotation-modal').classList.add('hidden');
+            await loadQuotations();
+        }
+    } finally {
+        App.btnLoading(btn, false);
+    }
+}
+
+window.editQuotation = async (id) => {
+    const res = await App.api(`quotations/${id}`);
+    if (res && res.success && res.data) {
+        openQuotationEditor(res.data);
+    }
+};
+
+window.updateQuotationStatus = async (id, status) => {
+    const res = await App.api(`quotations/${id}/status`, {
+        method: 'POST',
+        body: { status }
+    });
+    if (res && res.success) {
+        App.toast(res.message, 'success');
+        await loadQuotations();
+    }
+};
+
+window.printQuotationPdf = async (id, output = 'bloburl') => {
+    try {
+        const res = await App.api(`quotations/${id}`);
+        if (!res || !res.success) {
+            App.toast('Gagal memuat penawaran harga', 'error');
+            return;
+        }
+        const quo = res.data;
+        const pdfRes = await App.generateQuotationPdf(quo, output);
+        if (output === 'bloburl' && pdfRes?.blobUrl) {
+            App.openPdfModal({
+                title: `Surat Penawaran — ${quo.nomor_penawaran}`,
+                filename: pdfRes.filename,
+                blobUrl: pdfRes.blobUrl,
+                onEdit: quo.status !== 'dikonversi' ? () => window.editQuotation(quo.id) : null,
+                editLabel: 'Edit Naskah & Nilai',
+                downloadWordFn: () => App.downloadQuotationWord(quo),
+                wordLabel: 'Unduh Format Word (.doc / Editable)'
+            });
+        } else if (output === 'download') {
+            App.toast('Dokumen PDF penawaran berhasil diunduh', 'success');
+        }
+    } catch (err) {
+        App.toast(err?.message || 'Gagal membuat dokumen penawaran PDF', 'error');
+    }
+};
+
+window.downloadQuotationWordDoc = async (id) => {
+    try {
+        const res = await App.api(`quotations/${id}`);
+        if (res && res.success && res.data) {
+            App.downloadQuotationWord(res.data);
+        } else {
+            App.toast('Gagal memuat data penawaran', 'error');
+        }
+    } catch (err) {
+        App.toast(err?.message || 'Gagal mengunduh dokumen Word', 'error');
+    }
+};
+
+window.sendQuotationWA = async (id) => {
+    const res = await App.api(`quotations/${id}`);
+    if (res && res.success) {
+        App.openWhatsAppQuotation(res.data);
+    }
+};
+
+window.convertQuotationToInvoice = async (id, no) => {
+    const conf = await App.confirm(
+        'Konversi Penawaran ke Faktur',
+        `Apakah Anda yakin ingin mengonversi penawaran "${no}" menjadi Faktur Tagihan resmi? Faktur baru akan otomatis diterbitkan.`
+    );
+    if (!conf) return;
+
+    const res = await App.api(`quotations/${id}/convert`, { method: 'POST' });
+    if (res && res.success) {
+        const ok = await App.confirm(
+            'Faktur Berhasil Diterbitkan!',
+            `${res.message}\nNomor Faktur: ${res.data.nomor_invoice}. Apakah Anda ingin langsung melihat daftar Faktur Tagihan?`
+        );
+        if (ok) window.location.hash = '#/invoices';
+        else await loadQuotations();
+    }
+};
+
+window.deleteQuotation = async (id, no) => {
+    const conf = await App.confirm('Hapus Penawaran', `Apakah Anda yakin ingin menghapus surat penawaran "${no}"?`);
+    if (!conf) return;
+
+    const res = await App.api(`quotations/${id}`, { method: 'DELETE' });
+    if (res && res.success) {
+        App.toast(res.message, 'success');
+        await loadQuotations();
+    }
+};
+
+window.changeQuoPage = (p) => {
+    state.page = p;
+    loadQuotations();
+};
+
+window.openPublicQuotation = (token) => {
+    window.open(`#/public-quotation?token=${encodeURIComponent(token)}`, '_blank');
+};
+
+window.copyPublicQuotationLink = (token) => {
+    const baseUrl = window.location.href.split('#')[0];
+    const fullUrl = `${baseUrl}#/public-quotation?token=${encodeURIComponent(token)}`;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            App.toast('Tautan persetujuan & e-sign berhasil disalin ke clipboard!', 'success');
+        });
+    } else {
+        App.toast('Tautan: ' + fullUrl, 'info');
+    }
+};
+
+window.createContractFromQuotation = async (quotationId) => {
+    const ok = await App.confirmAction('Buat SPK Digital?', 'Sistem akan membuat dokumen Kontrak Kerja (SPK) dengan pasal standar dan mengirimkannya ke Portal Klien.');
+    if (!ok) return;
+    const res = await App.api('contracts/from-quotation', {
+        method: 'POST',
+        body: { quotation_id: quotationId }
+    });
+    if (res?.success) {
+        App.toast(res.message || 'SPK berhasil dibuat', 'success');
+    }
+};
+
+export default { init };

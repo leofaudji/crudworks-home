@@ -1,4 +1,5 @@
 // assets/js/core/pdf/reports.js — Ekspor PDF Laporan Finansial
+import { formatDateTime } from "../utils.js";
 import { _ensurePdfLibs, _PDF_TONES, _CRUDWORKS_OFFICIAL_LOGO_BASE64, _safeFormatDate } from "./shared.js";
 
 /**

@@ -193,6 +193,16 @@ export async function init(container) {
         }, 300);
     });
 
+    // Deep-link filter from Dashboard (#/projects?fase=... or ?status=...)
+    const hashQuery = (window.location.hash.split('?')[1] || '');
+    const hashParams = new URLSearchParams(hashQuery);
+    state.fase = hashParams.get('fase') || '';
+    state.status = hashParams.get('status') || '';
+    const statusSel = document.getElementById('project-filter-status');
+    const faseSel = document.getElementById('project-filter-fase');
+    if (statusSel) statusSel.value = state.status;
+    if (faseSel) faseSel.value = state.fase;
+
     document.getElementById('project-filter-status').addEventListener('change', (e) => {
         state.status = e.target.value;
         state.page = 1;
@@ -203,6 +213,31 @@ export async function init(container) {
         state.fase = e.target.value;
         state.page = 1;
         loadProjects();
+    });
+
+    document.getElementById('projects-tbody')?.addEventListener('click', (e) => {
+        const trigger = e.target.closest('[data-project-menu]');
+        if (!trigger) return;
+        const p = projectsById.get(Number(trigger.dataset.projectMenu));
+        if (!p) return;
+        App.toggleTableActionMenu(trigger, e, [
+            { label: 'Papan Kanban Tugas', icon: 'ri-kanban-view', iconColor: 'text-primary-600', fn: () => window.openProjectKanban(p.id) },
+            { label: 'Termin & Milestone', icon: 'ri-calendar-todo-line', iconColor: 'text-amber-500', fn: () => window.manageProjectMilestones(p.id) },
+            { label: 'Berita Acara (BAST)', icon: 'ri-file-shield-2-line', iconColor: 'text-emerald-600', fn: () => window.openProjectBasts(p.id) },
+            {
+                label: 'Teknis & Analisis',
+                icon: 'ri-settings-4-line',
+                iconColor: 'text-indigo-600',
+                children: [
+                    { label: 'Cek Uptime & SSL', icon: 'ri-pulse-line', iconColor: 'text-rose-500', fn: () => window.checkProjectHealth(p.id) },
+                    { label: 'Analisis Profitabilitas (P&L)', icon: 'ri-pie-chart-2-line', iconColor: 'text-indigo-600', fn: () => window.viewProjectProfitability(p.id) },
+                    { label: 'Sinkronkan Status Git', icon: 'ri-refresh-line', iconColor: 'text-emerald-600', fn: () => window.syncGitProject(p.id) }
+                ]
+            },
+            { label: 'Edit Rincian Proyek', icon: 'ri-edit-line', iconColor: 'text-primary-600', fn: () => window.editProject(p.id) },
+            { divider: true },
+            { label: 'Hapus Proyek', icon: 'ri-delete-bin-line', danger: true, fn: () => window.deleteProject(p.id, p.nama_project) }
+        ]);
     });
 
     // Populate clients in modal select
@@ -218,6 +253,8 @@ async function populateClientOptions() {
         `).join('');
     }
 }
+
+const projectsById = new Map();
 
 async function loadProjects() {
     const tbody = document.getElementById('projects-tbody');
@@ -235,6 +272,8 @@ async function loadProjects() {
     }
 
     const { data: projects, pagination } = res;
+    projectsById.clear();
+    projects.forEach((p) => projectsById.set(Number(p.id), p));
 
     if (projects.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400">Tidak ada proyek yang terdaftar</td></tr>`;
@@ -295,19 +334,7 @@ async function loadProjects() {
                     </div>
                 </td>
                 <td class="py-4 px-6 text-right">
-                    <button type="button" onclick="App.toggleTableActionMenu(this, event, [
-                        { label: 'Cek Uptime & SSL', icon: 'ri-pulse-line', iconColor: 'text-rose-500', action: 'window.checkProjectHealth(${p.id})' },
-                        { label: 'Analisis Profitabilitas (P&L)', icon: 'ri-pie-chart-2-line', iconColor: 'text-indigo-600', action: 'window.viewProjectProfitability(${p.id})' },
-                        { label: 'Termin & Milestone', icon: 'ri-calendar-todo-line', iconColor: 'text-amber-500', action: 'window.manageProjectMilestones(${p.id})' },
-                        { divider: true },
-                        { label: 'Papan Kanban Tugas', icon: 'ri-kanban-view', iconColor: 'text-primary-600', action: 'window.openProjectKanban(${p.id})' },
-                        { label: 'Berita Acara (BAST)', icon: 'ri-file-shield-2-line', iconColor: 'text-emerald-600', action: 'window.openProjectBasts(${p.id})' },
-                        { divider: true },
-                        { label: 'Sinkronkan Status Git', icon: 'ri-refresh-line', iconColor: 'text-emerald-600', action: 'window.syncGitProject(${p.id})' },
-                        { label: 'Edit Rincian Proyek', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editProject(${p.id})' },
-                        { divider: true },
-                        { label: 'Hapus Proyek', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteProject(${p.id}, \\'${App.escapeHtml(p.nama_project)}\\')' }
-                    ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
+                    <button type="button" data-table-action-trigger data-project-menu="${p.id}" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
                         <span>Aksi</span>
                         <i class="ri-more-2-fill text-slate-400"></i>
                     </button>

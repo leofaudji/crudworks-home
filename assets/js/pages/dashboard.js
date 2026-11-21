@@ -10,8 +10,20 @@ export async function init(container) {
                     <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Ringkasan Finansial & Operasional</h1>
                     <p class="text-sm text-slate-500 dark:text-slate-400">Pantau performa piutang, realisasi penagihan, dan status proyek aktif.</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <a href="#/invoices" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md shadow-primary-500/20 flex items-center gap-2 transition">
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="#/quotations" class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <i class="ri-file-paper-2-line text-amber-500"></i>
+                        <span>+ Penawaran</span>
+                    </a>
+                    <a href="#/projects" class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <i class="ri-git-branch-line text-indigo-500"></i>
+                        <span>+ Proyek</span>
+                    </a>
+                    <a href="#/expenses" class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <i class="ri-wallet-line text-rose-500"></i>
+                        <span>+ Pengeluaran</span>
+                    </a>
+                    <a href="#/invoices" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md shadow-primary-500/20 flex items-center gap-1.5 transition">
                         <i class="ri-add-line"></i>
                         <span>Buat Tagihan Baru</span>
                     </a>
@@ -68,7 +80,7 @@ export async function init(container) {
                         </div>
                     </div>
                     <div id="kpi-bayar" class="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">Rp 0</div>
-                    <div class="text-xs text-slate-400 mt-2">Total kas masuk bulan berjalan</div>
+                    <div id="kpi-cashflow-sub" class="text-xs text-slate-400 mt-2">Total kas masuk bulan berjalan</div>
                 </div>
 
                 <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
@@ -108,6 +120,35 @@ export async function init(container) {
                 </div>
                 <div id="action-queue-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="col-span-full py-6 text-center text-xs text-slate-400">Memeriksa antrean tindakan...</div>
+                </div>
+            </div>
+
+            <!-- Pipeline Siklus Proyek & Top 5 Klien -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div class="lg:col-span-3 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Pipeline Siklus Proyek</h2>
+                            <p class="text-xs text-slate-400">Sebaran proyek aktif berdasarkan fase pengerjaan & penagihan</p>
+                        </div>
+                        <a href="#/projects" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Kelola Proyek &rarr;</a>
+                    </div>
+                    <div id="project-pipeline-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="col-span-full py-6 text-center text-xs text-slate-400">Memuat pipeline proyek…</div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Top 5 Klien Kontributor</h2>
+                            <p class="text-xs text-slate-400">Berdasarkan total pembayaran terverifikasi</p>
+                        </div>
+                        <a href="#/clients" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Semua Klien &rarr;</a>
+                    </div>
+                    <div id="top-clients-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <div class="py-6 text-center text-xs text-slate-400">Memuat data klien…</div>
+                    </div>
                 </div>
             </div>
 
@@ -192,6 +233,12 @@ export async function init(container) {
         const d = statsRes.data;
         document.getElementById('kpi-piutang').textContent = App.formatIDR(d.total_piutang);
         document.getElementById('kpi-bayar').textContent = App.formatIDR(d.total_bayar_bulan_ini);
+        const cashSubEl = document.getElementById('kpi-cashflow-sub');
+        if (cashSubEl && d.total_pengeluaran_bulan_ini !== undefined) {
+            const net = Number(d.arus_kas_bersih_bulan_ini || 0);
+            const netCls = net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+            cashSubEl.innerHTML = `Keluar: <span class="font-mono font-semibold text-slate-600 dark:text-slate-300">${App.formatIDR(d.total_pengeluaran_bulan_ini)}</span> · Bersih: <span class="font-mono font-bold ${netCls}">${App.formatIDR(net)}</span>`;
+        }
         document.getElementById('kpi-overdue').textContent = App.formatIDR(d.total_overdue);
         document.getElementById('kpi-overdue-count').textContent = `${d.count_overdue} tagihan melewati jatuh tempo`;
         document.getElementById('kpi-clients').textContent = `${d.total_klien_aktif} Klien`;
@@ -221,6 +268,61 @@ export async function init(container) {
     if (queueRes && queueRes.success && queueRes.data) {
         renderActionQueue(queueRes.data);
     }
+
+    // Fetch Project Pipeline & Top Clients
+    const extraRes = await App.api('dashboard/overview_extra');
+    if (extraRes && extraRes.success && extraRes.data) {
+        renderProjectPipeline(extraRes.data.pipeline || {});
+        renderTopClients(extraRes.data.top_clients || []);
+    }
+}
+
+function renderProjectPipeline(p) {
+    const grid = document.getElementById('project-pipeline-grid');
+    if (!grid) return;
+
+    const stages = [
+        { key: 'penawaran', href: '#/projects?fase=penawaran', label: 'Penawaran', icon: 'ri-file-paper-2-line', cls: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900' },
+        { key: 'spk', href: '#/projects?fase=spk', label: 'Menunggu SPK', icon: 'ri-file-shield-2-line', cls: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-900' },
+        { key: 'digarap', href: '#/projects?fase=digarap', label: 'Sedang Digarap', icon: 'ri-kanban-view', cls: 'text-sky-600 bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-900' },
+        { key: 'belum_bast', href: '#/projects?fase=belum_bast', label: 'Belum BAST', icon: 'ri-quill-pen-line', cls: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900' },
+        { key: 'termin_bayar', href: '#/projects?fase=termin_bayar', label: 'Termin Bayar', icon: 'ri-bill-line', cls: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900' },
+        { key: 'belum_dibayar', href: '#/projects?fase=belum_dibayar', label: 'Belum Dibayar', icon: 'ri-alarm-warning-line', cls: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900' },
+        { key: 'selesai', href: '#/projects?status=selesai', label: 'Lunas & Selesai', icon: 'ri-checkbox-circle-line', cls: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900' }
+    ];
+
+    grid.innerHTML = stages.map((st) => `
+        <a href="${st.href}" class="p-3 rounded-2xl border ${st.cls} hover:shadow-xs transition flex flex-col justify-between gap-1.5">
+            <div class="flex items-center justify-between gap-1">
+                <i class="${st.icon} text-base"></i>
+                <span class="text-lg font-black font-mono">${Number(p[st.key] || 0)}</span>
+            </div>
+            <div class="text-[11px] font-bold truncate">${st.label}</div>
+        </a>
+    `).join('');
+}
+
+function renderTopClients(clients) {
+    const el = document.getElementById('top-clients-list');
+    if (!el) return;
+
+    if (!clients.length) {
+        el.innerHTML = `<div class="py-6 text-center text-xs text-slate-400">Belum ada data klien aktif.</div>`;
+        return;
+    }
+
+    el.innerHTML = clients.map((c, idx) => `
+        <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
+            <div class="min-w-0 flex items-center gap-2.5">
+                <span class="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">${idx + 1}</span>
+                <div class="min-w-0">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 truncate">${App.escapeHtml(c.nama_perusahaan)}</div>
+                    <div class="text-[11px] text-slate-400 font-mono">${c.active_projects || 0} proyek aktif${Number(c.total_unpaid) > 0 ? ` · Piutang ${App.formatIDR(c.total_unpaid)}` : ''}</div>
+                </div>
+            </div>
+            <div class="font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">${App.formatIDR(c.total_paid || 0)}</div>
+        </div>
+    `).join('');
 }
 
 function renderActionQueue(q) {

@@ -464,12 +464,19 @@ async function loadInvoices() {
                 </td>
                 <td class="py-4 px-6 text-right">
                     <button type="button" onclick="App.toggleTableActionMenu(this, event, [
-                        { label: 'Cetak / Unduh PDF', icon: 'ri-file-pdf-2-line', iconColor: 'text-rose-600', action: 'window.printInvoicePdf(${inv.id})' },
                         { label: 'Rincian Lembar Faktur', icon: 'ri-file-list-3-line', iconColor: 'text-primary-600', action: 'window.viewInvoiceSheet(${inv.id})' },
-                        { label: 'Kirim Pengingat WA', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendInvoiceWA(${inv.id})' },
-                        { label: 'Buka Portal Publik', icon: 'ri-external-link-line', iconColor: 'text-indigo-600', action: 'window.openPublicPortal(\\'${inv.public_token || inv.nomor_invoice}\\')' },
-                        { label: 'Salin Tautan Portal', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicPortalLink(\\'${inv.public_token || inv.nomor_invoice}\\')' },
                         ${Number(inv.sisa_tagihan) > 0 ? `{ label: 'Catat Pembayaran', icon: 'ri-money-dollar-circle-line', iconColor: 'text-emerald-600', action: 'window.recordPaymentDirect(${inv.id}, \\'${inv.nomor_invoice}\\', ${inv.sisa_tagihan})' },` : ''}
+                        {
+                            label: 'Dokumen & Portal',
+                            icon: 'ri-file-pdf-2-line',
+                            iconColor: 'text-rose-600',
+                            children: [
+                                { label: 'Cetak / Unduh PDF', icon: 'ri-file-pdf-2-line', iconColor: 'text-rose-600', action: 'window.printInvoicePdf(${inv.id})' },
+                                { label: 'Buka Portal Publik', icon: 'ri-external-link-line', iconColor: 'text-indigo-600', action: 'window.openPublicPortal(\\'${inv.public_token || inv.nomor_invoice}\\')' },
+                                { label: 'Salin Tautan Portal', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicPortalLink(\\'${inv.public_token || inv.nomor_invoice}\\')' }
+                            ]
+                        },
+                        { label: 'Kirim Pengingat WA', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendInvoiceWA(${inv.id})' },
                         { divider: true },
                         { label: 'Hapus Faktur', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteInvoice(${inv.id}, \\'${inv.nomor_invoice}\\')' }
                     ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">

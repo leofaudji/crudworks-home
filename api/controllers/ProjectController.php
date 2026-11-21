@@ -2,6 +2,7 @@
 // ProjectController.php
 
 authCheck();
+require_once __DIR__ . '/../config/project_helpers.php';
 $db = Database::getInstance();
 
 if ($id && is_numeric($id)) {
@@ -487,19 +488,9 @@ if ($method === 'GET') {
     $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
     $countQuery = "SELECT COUNT(*) FROM projects p JOIN clients c ON p.client_id = c.id $whereSql";
+    $lifecycleCols = projectLifecycleSubqueriesSql('p');
     $query = "SELECT p.*, c.nama_perusahaan as client_nama,
-                     (SELECT COUNT(*) FROM invoices WHERE project_id = p.id) as total_invoices,
-                     (SELECT COUNT(*) FROM quotations q WHERE q.project_id = p.id AND q.status IN ('draft','terkirim')) as quo_pending,
-                     (SELECT COUNT(*) FROM quotations q WHERE q.project_id = p.id AND q.status IN ('disetujui','dikonversi')) as quo_approved,
-                     (SELECT COUNT(*) FROM contracts k WHERE k.project_id = p.id AND k.status IN ('draft','terkirim')) as spk_pending,
-                     (SELECT COUNT(*) FROM contracts k WHERE k.project_id = p.id AND k.status = 'ditandatangani') as spk_signed,
-                     (SELECT COUNT(*) FROM project_tasks pt WHERE pt.project_id = p.id) as tasks_total,
-                     (SELECT COUNT(*) FROM project_tasks pt WHERE pt.project_id = p.id AND pt.status = 'done') as tasks_done,
-                     (SELECT COUNT(*) FROM project_basts b WHERE b.project_id = p.id AND b.status = 'draft') as bast_draft,
-                     (SELECT COUNT(*) FROM project_basts b WHERE b.project_id = p.id AND b.status = 'ditandatangani') as bast_signed,
-                     (SELECT COUNT(*) FROM project_milestones pm WHERE pm.project_id = p.id AND pm.status = 'rencana' AND pm.invoice_id IS NULL) as ms_unbilled,
-                     (SELECT COUNT(*) FROM invoices i WHERE i.project_id = p.id AND i.sisa_tagihan > 0 AND i.status NOT IN ('batal','dibatalkan')) as inv_unpaid,
-                     (SELECT COALESCE(SUM(i.sisa_tagihan),0) FROM invoices i WHERE i.project_id = p.id AND i.sisa_tagihan > 0 AND i.status NOT IN ('batal','dibatalkan')) as inv_unpaid_amount
+                     $lifecycleCols
               FROM projects p 
               JOIN clients c ON p.client_id = c.id 
               $whereSql 

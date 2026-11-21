@@ -382,6 +382,49 @@ async function loadClients() {
         return;
     }
 
+    const clientsById = new Map();
+    clients.forEach((c) => clientsById.set(Number(c.id), c));
+
+    if (!tbody.dataset.menuBound) {
+        tbody.dataset.menuBound = '1';
+        tbody.addEventListener('click', (e) => {
+            const trigger = e.target.closest('[data-client-menu]');
+            if (!trigger) return;
+            const c = clientsById.get(Number(trigger.dataset.clientMenu));
+            if (!c) return;
+            App.toggleTableActionMenu(trigger, e, [
+                { label: 'Edit Profil Klien', icon: 'ri-edit-line', iconColor: 'text-primary-600', fn: () => window.editClient(c.id) },
+                { label: 'Catatan Follow-Up CRM', icon: 'ri-chat-history-line', iconColor: 'text-sky-600', fn: () => window.openClientFollowups(c.id, c.nama_perusahaan) },
+                {
+                    label: 'Portal & Kredensial',
+                    icon: 'ri-global-line',
+                    iconColor: 'text-indigo-600',
+                    children: [
+                        { label: 'Buka Portal Klien', icon: 'ri-external-link-line', iconColor: 'text-sky-600', fn: () => window.openClientPortal(c.portal_token || '') },
+                        { label: 'Salin Tautan Portal', icon: 'ri-file-copy-line', iconColor: 'text-indigo-600', fn: () => window.copyClientPortalLink(c.portal_token || '') },
+                        { label: 'Portal Mandiri (PWA)', icon: 'ri-smartphone-line', iconColor: 'text-teal-600', fn: () => window.openClientPortalPwa() },
+                        { label: c.portal_access_active == 1 ? 'Reset / Cabut Akses Login' : 'Aktifkan Akses Login Portal', icon: 'ri-key-2-line', iconColor: 'text-amber-600', fn: () => window.manageClientPortalAccess(c.id, c.nama_perusahaan, c.portal_access_active == 1 ? 1 : 0) },
+                        { label: 'Kirim Portal via WA', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-600', fn: () => window.sendClientPortalWhatsApp(c.portal_token || '', c.nama_perusahaan, c.telepon || '', c.penanggung_jawab || '') },
+                        { label: 'Brankas Kredensial', icon: 'ri-lock-password-line', iconColor: 'text-amber-500', fn: () => { window.location.hash = `#/credentials?client_id=${c.id}`; } }
+                    ]
+                },
+                {
+                    label: 'Keuangan & Dokumen',
+                    icon: 'ri-file-list-3-line',
+                    iconColor: 'text-emerald-600',
+                    children: [
+                        { label: 'Rekening Koran (PDF)', icon: 'ri-file-chart-line', iconColor: 'text-indigo-600', fn: () => window.printClientStatement(c.id) },
+                        { label: 'Kelola Deposit / Retainer', icon: 'ri-wallet-3-line', iconColor: 'text-amber-600', fn: () => window.openClientDepositModal(c.id, c.nama_perusahaan) },
+                        { label: 'Buat Faktur Baru', icon: 'ri-file-add-line', iconColor: 'text-indigo-600', fn: () => { window.location.hash = '#/invoices'; } },
+                        { label: 'Buat Penawaran Baru', icon: 'ri-draft-line', iconColor: 'text-emerald-600', fn: () => { window.location.hash = '#/quotations'; } }
+                    ]
+                },
+                { divider: true },
+                { label: 'Hapus Klien', icon: 'ri-delete-bin-line', danger: true, fn: () => window.deleteClient(c.id, c.nama_perusahaan) }
+            ]);
+        });
+    }
+
     tbody.innerHTML = clients.map(c => {
         const piutangClass = Number(c.total_piutang) > 0 ? 'text-amber-600 font-bold font-mono' : 'text-slate-400 font-mono';
 
@@ -411,24 +454,7 @@ async function loadClients() {
                     ${App.renderStatusBadge(c.status, 'client')}
                 </td>
                 <td class="py-4 px-6 text-right">
-                    <button type="button" onclick="App.toggleTableActionMenu(this, event, [
-                        { label: 'Buka Portal Klien', icon: 'ri-external-link-line', iconColor: 'text-sky-600', action: 'window.openClientPortal(\\'${c.portal_token || ''}\\')' },
-                        { label: 'Salin Tautan Portal', icon: 'ri-file-copy-line', iconColor: 'text-indigo-600', action: 'window.copyClientPortalLink(\\'${c.portal_token || ''}\\')' },
-                        { label: 'Portal Mandiri (PWA)', icon: 'ri-smartphone-line', iconColor: 'text-teal-600', action: 'window.openClientPortalPwa()' },
-                        { label: '${c.portal_access_active == 1 ? 'Reset / Cabut Akses Login' : 'Aktifkan Akses Login Portal'}', icon: 'ri-key-2-line', iconColor: 'text-amber-600', action: 'window.manageClientPortalAccess(${c.id}, \\'${App.escapeHtml(c.nama_perusahaan)}\\', ${c.portal_access_active == 1 ? 1 : 0})' },
-                        { label: 'Kirim Portal via WA', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-600', action: 'window.sendClientPortalWhatsApp(\\'${c.portal_token || ''}\\', \\'${App.escapeHtml(c.nama_perusahaan)}\\', \\'${c.telepon || ''}\\', \\'${App.escapeHtml(c.penanggung_jawab || '')}\\')' },
-                        { divider: true },
-                        { label: 'Brankas Kredensial', icon: 'ri-key-2-line', iconColor: 'text-amber-500', action: 'window.location.hash = \\'#/credentials?client_id=${c.id}\\'' },
-                        { label: 'Catatan Follow-Up CRM', icon: 'ri-chat-history-line', iconColor: 'text-sky-600', action: 'window.openClientFollowups(${c.id}, \\'${App.escapeHtml(c.nama_perusahaan)}\\')' },
-                        { divider: true },
-                        { label: 'Edit Profil Klien', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editClient(${c.id})' },
-                        { label: 'Rekening Koran (PDF)', icon: 'ri-file-chart-line', iconColor: 'text-indigo-600', action: 'window.printClientStatement(${c.id})' },
-                        { label: 'Buat Faktur Baru', icon: 'ri-file-add-line', iconColor: 'text-indigo-600', action: 'window.location.hash = \\'#/invoices\\'' },
-                        { label: 'Buat Penawaran Baru', icon: 'ri-draft-line', iconColor: 'text-emerald-600', action: 'window.location.hash = \\'#/quotations\\'' },
-                        { label: 'Kelola Deposit / Retainer', icon: 'ri-wallet-3-line', iconColor: 'text-amber-600', action: 'window.openClientDepositModal(${c.id}, \\'${App.escapeHtml(c.nama_perusahaan)}\\')' },
-                        { divider: true },
-                        { label: 'Hapus Klien', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteClient(${c.id}, \\'${App.escapeHtml(c.nama_perusahaan)}\\')' }
-                    ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
+                    <button type="button" data-table-action-trigger data-client-menu="${c.id}" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
                         <span>Aksi</span>
                         <i class="ri-more-2-fill text-slate-400"></i>
                     </button>

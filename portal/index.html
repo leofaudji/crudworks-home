@@ -18,6 +18,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
 
@@ -50,7 +51,25 @@
     </script>
     <style>
         html { -webkit-text-size-adjust: 100%; }
+        html.dark { color-scheme: dark; }
+        html.dark select { background-color: #0f172a; color: #f8fafc; }
         body { font-family: 'Inter', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        button, a, input, select, textarea, [role="button"] { touch-action: manipulation; }
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #4f46e5;
+            outline-offset: 2px;
+        }
+        h1, h2, h3 { text-wrap: balance; }
+        #modal-root [data-modal-body] { overscroll-behavior: contain; }
+        @media (pointer: fine) { html { overscroll-behavior: none; } }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
         @keyframes portalFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
         .fade-in { animation: portalFade .18s ease-out both; }
         @keyframes portalSheet { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -65,10 +84,10 @@
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 antialiased">
     <div id="app">
         <div class="min-h-screen flex items-center justify-center">
-            <i class="ri-loader-4-line text-4xl text-primary-600 animate-spin"></i>
+            <i class="ri-loader-4-line text-4xl text-primary-600 animate-spin" aria-hidden="true"></i>
         </div>
     </div>
-    <div id="toast-root" class="fixed top-3 inset-x-0 z-[90] flex flex-col items-center gap-2 px-4 pointer-events-none"></div>
+    <div id="toast-root" aria-live="polite" aria-atomic="true" class="fixed top-3 inset-x-0 z-[90] flex flex-col items-center gap-2 px-4 pointer-events-none"></div>
     <div id="modal-root"></div>
     <noscript><p style="padding:2rem;text-align:center">Portal Klien memerlukan JavaScript aktif.</p></noscript>
     <script type="module" src="app.js"></script>

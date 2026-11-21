@@ -625,17 +625,39 @@ async function loadQuotations() {
             </td>
             <td class="py-3.5 px-6 text-right">
                 <button type="button" onclick="App.toggleTableActionMenu(this, event, [
-                    { label: 'Pratinjau PDF', icon: 'ri-file-pdf-2-line', iconColor: 'text-rose-600', action: 'window.printQuotationPdf(${q.id}, \\'bloburl\\')' },
-                    { label: 'Unduh PDF', icon: 'ri-download-line', iconColor: 'text-emerald-600', action: 'window.printQuotationPdf(${q.id}, \\'download\\')' },
-                    { label: 'Unduh Format Word (.doc / Editable)', icon: 'ri-file-word-2-line', iconColor: 'text-blue-600', action: 'window.downloadQuotationWordDoc(${q.id})' },
-                    { label: 'Buka Portal E-Sign', icon: 'ri-external-link-line', iconColor: 'text-indigo-600', action: 'window.openPublicQuotation(\\'${q.public_token || q.nomor_penawaran}\\')' },
-                    { label: 'Salin Tautan E-Sign Klien', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicQuotationLink(\\'${q.public_token || q.nomor_penawaran}\\')' },
-                    { label: 'Kirim WhatsApp', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendQuotationWA(${q.id})' },
                     ${q.status !== 'dikonversi' ? `{ label: 'Edit Naskah & Rincian', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editQuotation(${q.id})' },` : ''}
-                    ${q.status === 'draft' ? `{ label: 'Tandai Terkirim', icon: 'ri-send-plane-line', iconColor: 'text-sky-600', action: 'window.updateQuotationStatus(${q.id}, \\'terkirim\\')' },` : ''}
-                    ${['draft', 'terkirim'].includes(q.status) ? `{ label: 'Tandai Disetujui', icon: 'ri-check-line', iconColor: 'text-emerald-600', action: 'window.updateQuotationStatus(${q.id}, \\'disetujui\\')' },` : ''}
-                    ${q.status !== 'dikonversi' ? `{ label: 'Jadikan Faktur', icon: 'ri-arrow-right-circle-line', iconColor: 'text-indigo-600', action: 'window.convertQuotationToInvoice(${q.id}, \\'${App.escapeHtml(q.nomor_penawaran)}\\')' },` : ''}
-                    ${['disetujui', 'dikonversi'].includes(q.status) ? `{ label: 'Buat SPK / Kontrak Digital', icon: 'ri-file-shield-2-line', iconColor: 'text-emerald-600', action: 'window.createContractFromQuotation(${q.id})' },` : ''}
+                    {
+                        label: 'Dokumen & Ekspor',
+                        icon: 'ri-file-pdf-2-line',
+                        iconColor: 'text-rose-600',
+                        children: [
+                            { label: 'Pratinjau PDF', icon: 'ri-file-pdf-2-line', iconColor: 'text-rose-600', action: 'window.printQuotationPdf(${q.id}, \\'bloburl\\')' },
+                            { label: 'Unduh PDF', icon: 'ri-download-line', iconColor: 'text-emerald-600', action: 'window.printQuotationPdf(${q.id}, \\'download\\')' },
+                            { label: 'Unduh Format Word (.doc)', icon: 'ri-file-word-2-line', iconColor: 'text-blue-600', action: 'window.downloadQuotationWordDoc(${q.id})' }
+                        ]
+                    },
+                    {
+                        label: 'Bagikan & E-Sign',
+                        icon: 'ri-share-forward-line',
+                        iconColor: 'text-indigo-600',
+                        children: [
+                            { label: 'Buka Portal E-Sign', icon: 'ri-external-link-line', iconColor: 'text-indigo-600', action: 'window.openPublicQuotation(\\'${q.public_token || q.nomor_penawaran}\\')' },
+                            { label: 'Salin Tautan E-Sign Klien', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicQuotationLink(\\'${q.public_token || q.nomor_penawaran}\\')' },
+                            { label: 'Kirim WhatsApp', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendQuotationWA(${q.id})' }
+                        ]
+                    },
+                    {
+                        label: 'Status & Konversi',
+                        icon: 'ri-arrow-left-right-line',
+                        iconColor: 'text-emerald-600',
+                        children: [
+                            ${q.status === 'draft' ? `{ label: 'Tandai Terkirim', icon: 'ri-send-plane-line', iconColor: 'text-sky-600', action: 'window.updateQuotationStatus(${q.id}, \\'terkirim\\')' },` : ''}
+                            ${['draft', 'terkirim'].includes(q.status) ? `{ label: 'Tandai Disetujui', icon: 'ri-check-line', iconColor: 'text-emerald-600', action: 'window.updateQuotationStatus(${q.id}, \\'disetujui\\')' },` : ''}
+                            ${q.status !== 'dikonversi' ? `{ label: 'Jadikan Faktur', icon: 'ri-arrow-right-circle-line', iconColor: 'text-indigo-600', action: 'window.convertQuotationToInvoice(${q.id}, \\'${App.escapeHtml(q.nomor_penawaran)}\\')' },` : ''}
+                            ${['disetujui', 'dikonversi'].includes(q.status) ? `{ label: 'Buat SPK / Kontrak Digital', icon: 'ri-file-shield-2-line', iconColor: 'text-emerald-600', action: 'window.createContractFromQuotation(${q.id})' },` : ''}
+                            null
+                        ].filter(Boolean)
+                    },
                     { divider: true },
                     { label: 'Hapus Penawaran', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteQuotation(${q.id}, \\'${App.escapeHtml(q.nomor_penawaran)}\\')' }
                 ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">

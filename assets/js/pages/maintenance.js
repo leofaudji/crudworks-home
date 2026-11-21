@@ -359,10 +359,16 @@ async function loadMaintenanceList() {
                 <td class="py-3.5 px-6 text-right">
                     <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                         { label: 'Uji Uptime & SSL Sekarang', icon: 'ri-pulse-line', iconColor: 'text-emerald-600', action: 'window.checkSlaHealth(${m.id})' },
-                        { label: 'Kirim Pengingat WA Perpanjangan', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendSlaReminderWA(\\'${App.escapeHtml(m.nama_aset)}\\', \\'${App.escapeHtml(m.nama_perusahaan)}\\', \\'${App.escapeHtml(m.telepon || '')}\\', ${sisa}, \\'${App.formatDate(m.tanggal_berakhir)}\\', ${Number(m.biaya_perpanjangan || 0)})' },
-                        { divider: true },
-                        { label: 'Terbitkan Faktur Perpanjangan', icon: 'ri-file-add-line', iconColor: 'text-indigo-600', action: 'window.createRenewalInvoice(${m.id}, \\'${App.escapeHtml(m.nama_aset)}\\')' },
                         { label: 'Edit Kontrak SLA / Domain', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editSla(${m.id})' },
+                        {
+                            label: 'Penagihan & Pengingat',
+                            icon: 'ri-bill-line',
+                            iconColor: 'text-indigo-600',
+                            children: [
+                                { label: 'Terbitkan Faktur Perpanjangan', icon: 'ri-file-add-line', iconColor: 'text-indigo-600', action: 'window.createRenewalInvoice(${m.id}, \\'${App.escapeHtml(m.nama_aset)}\\')' },
+                                { label: 'Kirim Pengingat WA Perpanjangan', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendSlaReminderWA(\\'${App.escapeHtml(m.nama_aset)}\\', \\'${App.escapeHtml(m.nama_perusahaan)}\\', \\'${App.escapeHtml(m.telepon || '')}\\', ${sisa}, \\'${App.formatDate(m.tanggal_berakhir)}\\', ${Number(m.biaya_perpanjangan || 0)})' }
+                            ]
+                        },
                         { divider: true },
                         { label: 'Hapus Layanan', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteSla(${m.id}, \\'${App.escapeHtml(m.nama_aset)}\\')' }
                     ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">

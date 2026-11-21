@@ -3842,3 +3842,58 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 #topbar-notif-badge.hidden {
     display: none !important;
 }
+
+/* ===== Web Interface Guidelines & Enterprise Design Compliance ===== */
+html.dark {
+    color-scheme: dark;
+}
+
+.dark select {
+    background-color: #0f172a;
+    color: #f8fafc;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+    touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--primary-color, #4f46e5);
+    outline-offset: 2px;
+}
+
+h1, h2, h3 {
+    text-wrap: balance;
+}
+
+[id$="-modal"] > div,
+.app-dialog-box {
+    overscroll-behavior: contain;
+}
+
+@media (pointer: fine) {
+    html {
+        overscroll-behavior: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

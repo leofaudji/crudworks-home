@@ -3,6 +3,7 @@
 
 authCheck();
 checkPermission('dashboard.view');
+require_once __DIR__ . '/../config/project_helpers.php';
 
 $db = Database::getInstance();
 
@@ -49,9 +50,21 @@ switch ($id) {
         // 5. Total Proyek Aktif
         $projectCount = (int)$db->count("SELECT COUNT(*) FROM projects WHERE status = 'aktif'");
 
+        // 6. Pengeluaran Operasional Bulan Ini
+        $pengeluaranRow = $db->fetch(
+            "SELECT COALESCE(SUM(jumlah), 0) as total_pengeluaran
+             FROM expenses
+             WHERE DATE_FORMAT(tanggal, '%Y-%m') = ? AND status != 'dibatalkan'",
+            [$currentMonth]
+        );
+        $totalPengeluaranBulanIni = (float)($pengeluaranRow['total_pengeluaran'] ?? 0);
+        $arusKasBersih = $totalBayarBulanIni - $totalPengeluaranBulanIni;
+
         $data = [
             'total_piutang' => $totalPiutang,
             'total_bayar_bulan_ini' => $totalBayarBulanIni,
+            'total_pengeluaran_bulan_ini' => $totalPengeluaranBulanIni,
+            'arus_kas_bersih_bulan_ini' => $arusKasBersih,
             'total_overdue' => $totalOverdue,
             'count_overdue' => $countOverdue,
             'total_klien_aktif' => $klienCount,
@@ -392,6 +405,50 @@ switch ($id) {
             'open_tickets' => $openTickets,
             'ready_projects' => $readyProjects,
             'expiring_domains' => $expiringDomains
+        ]);
+        break;
+
+    case 'overview_extra':
+        $lifecycleCols = projectLifecycleSubqueriesSql('p');
+        $projRows = $db->fetchAll(
+            "SELECT p.id, p.status,
+                    $lifecycleCols
+             FROM projects p
+             WHERE p.status != 'dibatalkan'"
+        );
+
+        $pipeline = [
+            'penawaran' => 0,
+            'spk' => 0,
+            'digarap' => 0,
+            'belum_bast' => 0,
+            'termin_bayar' => 0,
+            'belum_dibayar' => 0,
+            'selesai' => 0
+        ];
+
+        foreach ($projRows as $pr) {
+            $phase = resolveProjectLifecyclePhase($pr);
+            if (isset($pipeline[$phase])) {
+                $pipeline[$phase]++;
+            }
+        }
+
+        $topClients = $db->fetchAll(
+            "SELECT c.id, c.kode_klien, c.nama_perusahaan,
+                    COALESCE((SELECT SUM(py.jumlah_bayar) FROM payments py JOIN invoices inv ON py.invoice_id = inv.id WHERE inv.client_id = c.id), 0) as total_paid,
+                    COALESCE((SELECT SUM(inv.sisa_tagihan) FROM invoices inv WHERE inv.client_id = c.id AND inv.status != 'batal'), 0) as total_unpaid,
+                    (SELECT COUNT(*) FROM projects p WHERE p.client_id = c.id AND p.status = 'aktif') as active_projects
+             FROM clients c
+             WHERE c.status = 'aktif'
+             ORDER BY total_paid DESC, active_projects DESC
+             LIMIT 5"
+        );
+
+        successResponse([
+            'pipeline' => $pipeline,
+            'total_projects' => count($projRows),
+            'top_clients' => $topClients
         ]);
         break;
 

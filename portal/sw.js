@@ -1,5 +1,5 @@
 // CRUDWorks Portal Klien — Service Worker (scope: /portal/)
-const CACHE_NAME = 'crudworks-portal-v1.5.29';
+const CACHE_NAME = 'crudworks-portal-v1.5.30';
 const SHELL = [
     './',
     './index.html',

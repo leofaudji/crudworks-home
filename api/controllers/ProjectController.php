@@ -40,10 +40,7 @@ if ($id && is_numeric($id)) {
             $status = 'failed';
         }
 
-        $db->execute(
-            "UPDATE projects SET last_deploy_status = ?, last_deploy_at = NOW() WHERE id = ?",
-            [$status, $projectId]
-        );
+        $db->execute("UPDATE projects SET last_deploy_status = ?, last_deploy_at = NOW() WHERE id = ?", [$status, $projectId]);
 
         logActivity('git_sync', 'projects', $projectId, null, ['status' => $status, 'commit' => $commitHash]);
 
@@ -53,6 +50,132 @@ if ($id && is_numeric($id)) {
             'commit_hash' => $commitHash,
             'synced_at' => date('Y-m-d H:i:s')
         ], 'Status deployment berhasil disinkronkan');
+    }
+
+    // Tracker Masa Garansi & Adendum / Change Request
+    if ($action === 'change-requests') {
+        $project = $db->fetch("SELECT * FROM projects WHERE id = ?", [$projectId]);
+        if (!$project) errorResponse('Proyek tidak ditemukan', 404);
+
+        $subId = isset($segments[3]) && is_numeric($segments[3]) ? (int)$segments[3] : 0;
+        $subAction = $segments[4] ?? null;
+
+        if ($method === 'GET') {
+            checkPermission('project.view');
+            $wRow = $db->fetch(
+                "SELECT COALESCE((SELECT MAX(k.garansi_hari) FROM contracts k WHERE k.project_id = ? AND k.status != 'dibatalkan'), 0) as warranty_days,
+                        (SELECT MAX(COALESCE(DATE(b.signed_at), b.tanggal_bast)) FROM project_basts b WHERE b.project_id = ? AND b.status = 'ditandatangani') as warranty_start",
+                [$projectId, $projectId]
+            );
+            $warranty = computeProjectWarranty((int)($wRow['warranty_days'] ?? 0), $wRow['warranty_start'] ?? null);
+            $items = $db->fetchAll(
+                "SELECT cr.*, i.nomor_invoice, i.status as invoice_status
+                 FROM project_change_requests cr
+                 LEFT JOIN invoices i ON cr.invoice_id = i.id
+                 WHERE cr.project_id = ?
+                 ORDER BY cr.id DESC",
+                [$projectId]
+            );
+            successResponse(['project' => $project, 'warranty' => $warranty, 'items' => $items]);
+        }
+
+        if ($method === 'POST' && $subId > 0 && $subAction === 'invoice') {
+            checkPermission('invoice.create');
+            $cr = $db->fetch("SELECT * FROM project_change_requests WHERE id = ? AND project_id = ?", [$subId, $projectId]);
+            if (!$cr) errorResponse('Adendum tidak ditemukan', 404);
+            if (!empty($cr['invoice_id'])) errorResponse('Adendum ini sudah diterbitkan fakturnya', 422);
+            if ((float)$cr['biaya'] <= 0) errorResponse('Biaya adendum harus lebih dari Rp 0 untuk ditagihkan', 422);
+
+            $userId = (int)($_SESSION['user_id'] ?? 1);
+            $dueDays = (int)(($db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'invoice_due_days'")['nilai'] ?? 14));
+            $pajakPersen = (float)(($db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'default_pajak_persen'")['nilai'] ?? 0));
+            $subtotal = (float)$cr['biaya'];
+            $pajakNominal = round($subtotal * ($pajakPersen / 100), 2);
+            $totalTagihan = $subtotal + $pajakNominal;
+            $nomorInvoice = generateInvoiceNumber();
+            $publicToken = generatePublicToken();
+
+            $pdo = $db->getPdo();
+            $pdo->beginTransaction();
+            try {
+                $stmtInv = $pdo->prepare(
+                    "INSERT INTO invoices (`nomor_invoice`, `public_token`, `client_id`, `project_id`, `tanggal_invoice`, `tanggal_jatuh_tempo`, `subtotal`, `diskon_tipe`, `diskon_nilai`, `pajak_persen`, `pajak_nominal`, `total_tagihan`, `total_dibayar`, `sisa_tagihan`, `status`, `catatan_klien`, `created_by`)
+                     VALUES (?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY), ?, 'nominal', 0.00, ?, ?, ?, 0.00, ?, 'dikirim', ?, ?)"
+                );
+                $catatanKlien = "Pembayaran Adendum {$cr['nomor_adendum']}: {$cr['judul']} ({$project['nama_project']})";
+                $stmtInv->execute([$nomorInvoice, $publicToken, $project['client_id'], $projectId, $dueDays, $subtotal, $pajakPersen, $pajakNominal, $totalTagihan, $totalTagihan, $catatanKlien, $userId]);
+                $newInvId = (int)$pdo->lastInsertId();
+
+                $pdo->prepare(
+                    "INSERT INTO invoice_items (`invoice_id`, `deskripsi`, `kuantitas`, `satuan`, `harga_satuan`, `total_harga`, `urutan`)
+                     VALUES (?, ?, 1.00, 'adendum', ?, ?, 1)"
+                )->execute([$newInvId, "Adendum {$cr['nomor_adendum']}: {$cr['judul']}", $subtotal, $subtotal]);
+
+                $newStatus = $cr['status'] === 'draft' ? 'disetujui' : $cr['status'];
+                $pdo->prepare("UPDATE project_change_requests SET invoice_id = ?, status = ? WHERE id = ?")
+                    ->execute([$newInvId, $newStatus, $subId]);
+
+                $pdo->commit();
+                clearCache(['invoices', 'projects', 'dashboard']);
+                logActivity('create', 'invoices', $newInvId, null, ['nomor_invoice' => $nomorInvoice, 'change_request_id' => $subId]);
+                successResponse(['invoice_id' => $newInvId, 'nomor_invoice' => $nomorInvoice], "Faktur Adendum {$nomorInvoice} berhasil diterbitkan", 201);
+            } catch (\Throwable $e) {
+                $pdo->rollBack();
+                errorResponse('Gagal menerbitkan faktur adendum: ' . $e->getMessage(), 500);
+            }
+        }
+
+        if ($method === 'POST') {
+            checkPermission('project.edit');
+            $judul = trim($params['judul'] ?? '');
+            $deskripsi = trim($params['deskripsi'] ?? '');
+            $biaya = (float)($params['biaya'] ?? 0);
+            $estimasiHari = (int)($params['estimasi_hari'] ?? 0);
+            $status = in_array($params['status'] ?? '', ['draft', 'disetujui', 'dikerjakan', 'selesai', 'ditolak'], true) ? $params['status'] : 'draft';
+            if ($judul === '') errorResponse('Judul adendum / change request wajib diisi', 422);
+
+            $prefix = 'ADD-' . date('Ym') . '-';
+            $last = $db->fetch("SELECT nomor_adendum FROM project_change_requests WHERE nomor_adendum LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
+            $seq = $last ? ((int)substr($last['nomor_adendum'], -4) + 1) : 1;
+            $nomor = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+            $userId = (int)($_SESSION['user_id'] ?? 1);
+
+            $newCrId = (int)$db->insert(
+                "INSERT INTO project_change_requests (project_id, nomor_adendum, judul, deskripsi, biaya, estimasi_hari, status, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [$projectId, $nomor, $judul, $deskripsi ?: null, $biaya, $estimasiHari, $status, $userId]
+            );
+            clearCache(['projects']);
+            successResponse(['id' => $newCrId, 'nomor_adendum' => $nomor], 'Adendum proyek berhasil ditambahkan', 201);
+        }
+
+        if ($method === 'PUT' && $subId > 0) {
+            checkPermission('project.edit');
+            $cr = $db->fetch("SELECT * FROM project_change_requests WHERE id = ? AND project_id = ?", [$subId, $projectId]);
+            if (!$cr) errorResponse('Adendum tidak ditemukan', 404);
+            $status = in_array($params['status'] ?? '', ['draft', 'disetujui', 'dikerjakan', 'selesai', 'ditolak'], true) ? $params['status'] : $cr['status'];
+            $judul = isset($params['judul']) ? trim($params['judul']) : $cr['judul'];
+            $deskripsi = array_key_exists('deskripsi', $params) ? trim((string)$params['deskripsi']) : $cr['deskripsi'];
+            $biaya = isset($params['biaya']) ? (float)$params['biaya'] : (float)$cr['biaya'];
+            $estimasiHari = isset($params['estimasi_hari']) ? (int)$params['estimasi_hari'] : (int)$cr['estimasi_hari'];
+
+            $db->execute(
+                "UPDATE project_change_requests SET judul = ?, deskripsi = ?, biaya = ?, estimasi_hari = ?, status = ? WHERE id = ?",
+                [$judul, $deskripsi ?: null, $biaya, $estimasiHari, $status, $subId]
+            );
+            clearCache(['projects']);
+            successResponse(null, 'Adendum proyek diperbarui');
+        }
+
+        if ($method === 'DELETE' && $subId > 0) {
+            checkPermission('project.edit');
+            $cr = $db->fetch("SELECT * FROM project_change_requests WHERE id = ? AND project_id = ?", [$subId, $projectId]);
+            if (!$cr) errorResponse('Adendum tidak ditemukan', 404);
+            if (!empty($cr['invoice_id'])) errorResponse('Adendum yang sudah ditagihkan tidak dapat dihapus', 422);
+            $db->execute("DELETE FROM project_change_requests WHERE id = ?", [$subId]);
+            clearCache(['projects']);
+            successResponse(null, 'Adendum proyek dihapus');
+        }
     }
 
     // Health & Uptime Checker (Poin 4)

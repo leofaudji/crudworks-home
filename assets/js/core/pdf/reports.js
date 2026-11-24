@@ -26,9 +26,9 @@ export async function exportPdf({
 
     const appName = window.App?.getSetting?.('app_name', 'CRUDWorks ERP') || 'CRUDWorks ERP';
     const companyName = window.App?.getSetting?.('company_name', 'PT CRUDWorks Media Tama') || 'PT CRUDWorks Media Tama';
+    const companyTagline = window.App?.getSetting?.('company_tagline', '') || '';
     const companyAddress = window.App?.getSetting?.('company_address', 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920') || 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920';
     const companyPhone = window.App?.getSetting?.('company_phone', '(021) 555-0199') || '(021) 555-0199';
-    const companyNpwp = window.App?.getSetting?.('company_npwp', '01.234.567.8-012.000') || '01.234.567.8-012.000';
     const companyLeader = window.App?.getSetting?.('company_leader', 'Direktur Operasional') || 'Direktur Operasional';
     const companyLeaderTitle = window.App?.getSetting?.('company_leader_title', 'Finance & Operation') || 'Finance & Operation';
     const printedBy = window.App?.user?.nama_lengkap || window.App?.user?.username || 'Sistem';
@@ -69,21 +69,30 @@ export async function exportPdf({
     doc.setTextColor(67, 56, 202);
     doc.text(badgeText, badgeX + 4, rY + 3.6);
 
-    rY += badgeH + 4.2;
+    rY += badgeH + 5.2;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139);
     doc.text(`Dicetak: ${printedAt}`, pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.8;
+    rY += 4.2;
     doc.text(`${appName} · Oleh: ${printedBy}`, pageWidth - margin, rY, { align: 'right' });
 
-    // Left: Company Address & Contact below logo
-    let compY = y + logoH + 3.5;
+    // Left: Company Tagline, Address & Contact below logo (flush-left aligned)
+    let compY = y + logoH + 3.2;
+    if (companyTagline) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.2);
+        doc.setTextColor(71, 85, 105);
+        const tagLines = doc.splitTextToSize(String(companyTagline).trim(), contentWidth * 0.58);
+        tagLines.forEach((tl) => {
+            doc.text(tl, margin, compY);
+            compY += 3.5;
+        });
+    }
     const contactParts = [];
     if (companyAddress) contactParts.push(companyAddress);
     if (companyPhone) contactParts.push(`Telp: ${companyPhone}`);
-    if (companyNpwp) contactParts.push(`NPWP: ${companyNpwp}`);
     if (contactParts.length > 0) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.2);

@@ -1,6 +1,13 @@
 // portal/pages/projects.js — Progres Proyek, Milestone & BAST Digital
 import { generateBastPdf } from '../../assets/js/core/utils.js';
-import { $, esc, fdate, badge, sectionTitle, panel, empty, api, toast, openModal, openPdfPreviewModal, closeModal, state, hooks } from '../ctx.js';
+import { $, esc, money, fdate, badge, sectionTitle, panel, empty, api, toast, openModal, openPdfPreviewModal, closeModal, state, hooks } from '../ctx.js';
+
+function renderWarrantyBadge(w) {
+    if (!w || !w.days) return '';
+    if (w.status === 'active') return badge(`Garansi Aktif · ${w.days_left} hr (s/d ${fdate(w.end)})`, 'green');
+    if (w.status === 'expired') return badge(`Garansi Berakhir (${fdate(w.end)})`, 'slate');
+    return badge(`Garansi ${w.days} Hari (Pasca-BAST)`, 'amber');
+}
 
 export function renderProjects(d) {
     const projects = d.projects || [];
@@ -21,6 +28,7 @@ export function renderProjects(d) {
                                     <span class="font-mono text-[11px] font-semibold text-slate-500">${esc(p.kode_project)}</span>
                                     ${badge(p.status, p.status === 'selesai' ? 'green' : 'indigo')}
                                     ${p.last_health_status === 'online' ? badge('Online', 'green') : ''}
+                                    ${renderWarrantyBadge(p.warranty)}
                                 </div>
                                 <h3 class="text-sm font-bold text-slate-900 dark:text-white mt-1">${esc(p.nama_project)}</h3>
                                 ${p.app_url ? `<a href="${esc(p.app_url)}" target="_blank" rel="noopener" class="text-xs font-mono text-primary-600 hover:underline inline-flex items-center gap-1 mt-0.5 break-all">${esc(p.app_url)} <i class="ri-external-link-line text-[11px]"></i></a>` : ''}
@@ -80,6 +88,47 @@ export function renderProjects(d) {
                                                 <span class="text-slate-700 dark:text-slate-300 truncate">${esc(rel.message)}</span>
                                             </div>
                                             <span class="font-mono text-[11px] text-slate-400 shrink-0">${esc(rel.date)}</span>
+                                        </div>`).join('')}
+                                </div>
+                            </div>` : ''}
+
+                        ${((p.documents?.quotations?.length || 0) + (p.documents?.contracts?.length || 0) + (p.documents?.basts?.length || 0)) > 0 ? `
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <i class="ri-folder-zip-line text-primary-500"></i><span>Bundel Dokumen Proyek</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${(p.documents?.quotations || []).map((q) => `
+                                        <button type="button" data-action="quo-pdf" data-token="${esc(q.public_token || q.nomor_penawaran)}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-xs font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5">
+                                            <i class="ri-file-paper-2-line text-amber-600"></i><span>SPH ${esc(q.nomor_penawaran)}</span>
+                                        </button>`).join('')}
+                                    ${(p.documents?.contracts || []).map((ct) => `
+                                        <button type="button" data-action="contract-pdf" data-id="${ct.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-xs font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5">
+                                            <i class="ri-file-shield-2-line text-indigo-600"></i><span>SPK ${esc(ct.nomor_kontrak)}</span>
+                                        </button>`).join('')}
+                                    ${(p.documents?.basts || []).map((b) => `
+                                        <button type="button" data-action="bast-pdf" data-id="${b.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-xs font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5">
+                                            <i class="ri-file-check-line text-emerald-600"></i><span>BAST ${esc(b.nomor_bast)}</span>
+                                        </button>`).join('')}
+                                </div>
+                            </div>` : ''}
+
+                        ${(p.change_requests || []).length ? `
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <i class="ri-git-pull-request-line text-amber-500"></i><span>Adendum / Perubahan Lingkup</span>
+                                </div>
+                                <div class="space-y-1.5">
+                                    ${p.change_requests.map((cr) => `
+                                        <div class="flex flex-wrap items-center justify-between gap-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+                                            <div class="min-w-0">
+                                                <span class="font-mono font-bold text-slate-700 dark:text-slate-200">${esc(cr.nomor_adendum)}</span>
+                                                <span class="text-slate-600 dark:text-slate-300 ml-1.5">${esc(cr.judul)}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">${money(cr.biaya)}</span>
+                                                ${badge(cr.status, cr.status === 'selesai' || cr.status === 'disetujui' ? 'green' : 'amber')}
+                                            </div>
                                         </div>`).join('')}
                                 </div>
                             </div>` : ''}

@@ -606,11 +606,7 @@ export class NavigationManager {
         this._initOpenedWindowsTabs();
 
         const existingIndex = this.openedWindowsTabs.findIndex((t) => t.url === baseHash);
-        if (existingIndex !== -1) {
-            const [existing] = this.openedWindowsTabs.splice(existingIndex, 1);
-            if (baseHash === '#/dashboard') this.openedWindowsTabs.unshift(existing);
-            else this.openedWindowsTabs.push(existing);
-        } else {
+        if (existingIndex === -1) {
             let meta = this._flatMenuItems.find((m) => m.url === baseHash);
             if (!meta) {
                 const fallbackNames = {

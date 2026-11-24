@@ -18,8 +18,36 @@ function projectLifecycleSubqueriesSql(string $alias = 'p'): string
         (SELECT COUNT(*) FROM project_basts b WHERE b.project_id = {$alias}.id AND b.status = 'ditandatangani') as bast_signed,
         (SELECT COUNT(*) FROM project_milestones pm WHERE pm.project_id = {$alias}.id AND pm.status = 'rencana' AND pm.invoice_id IS NULL) as ms_unbilled,
         (SELECT COUNT(*) FROM invoices i WHERE i.project_id = {$alias}.id AND i.sisa_tagihan > 0 AND i.status NOT IN ('batal','dibatalkan')) as inv_unpaid,
-        (SELECT COALESCE(SUM(i.sisa_tagihan),0) FROM invoices i WHERE i.project_id = {$alias}.id AND i.sisa_tagihan > 0 AND i.status NOT IN ('batal','dibatalkan')) as inv_unpaid_amount
+        (SELECT COALESCE(SUM(i.sisa_tagihan),0) FROM invoices i WHERE i.project_id = {$alias}.id AND i.sisa_tagihan > 0 AND i.status NOT IN ('batal','dibatalkan')) as inv_unpaid_amount,
+        COALESCE((SELECT MAX(k.garansi_hari) FROM contracts k WHERE k.project_id = {$alias}.id AND k.status != 'dibatalkan'), 0) as warranty_days,
+        (SELECT MAX(COALESCE(DATE(b.signed_at), b.tanggal_bast)) FROM project_basts b WHERE b.project_id = {$alias}.id AND b.status = 'ditandatangani') as warranty_start,
+        (SELECT COUNT(*) FROM project_change_requests cr WHERE cr.project_id = {$alias}.id) as cr_count
     ";
+}
+
+function computeProjectWarranty(int $warrantyDays, ?string $warrantyStart): array
+{
+    if ($warrantyDays <= 0) {
+        return ['active' => false, 'status' => 'none', 'days' => 0, 'start' => null, 'end' => null, 'days_left' => 0];
+    }
+    if (empty($warrantyStart)) {
+        return ['active' => false, 'status' => 'pending_bast', 'days' => $warrantyDays, 'start' => null, 'end' => null, 'days_left' => $warrantyDays];
+    }
+    $startTs = strtotime($warrantyStart);
+    if ($startTs === false) {
+        return ['active' => false, 'status' => 'pending_bast', 'days' => $warrantyDays, 'start' => null, 'end' => null, 'days_left' => $warrantyDays];
+    }
+    $endTs = strtotime("+{$warrantyDays} days", $startTs);
+    $todayTs = strtotime(date('Y-m-d'));
+    $daysLeft = (int)floor(($endTs - $todayTs) / 86400);
+    return [
+        'active' => $daysLeft >= 0,
+        'status' => $daysLeft >= 0 ? 'active' : 'expired',
+        'days' => $warrantyDays,
+        'start' => date('Y-m-d', $startTs),
+        'end' => date('Y-m-d', $endTs),
+        'days_left' => $daysLeft
+    ];
 }
 
 function resolveProjectLifecyclePhase(array $row): string

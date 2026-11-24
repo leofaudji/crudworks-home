@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS `users` (
     `telepon` VARCHAR(30) NULL,
     `avatar` VARCHAR(255) NULL,
     `status` ENUM('aktif', 'nonaktif') DEFAULT 'aktif',
+    `totp_secret` VARCHAR(64) NULL,
+    `totp_enabled` TINYINT(1) NOT NULL DEFAULT 0,
     `last_login` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -827,4 +829,37 @@ CREATE TABLE IF NOT EXISTS `knowledge_base` (
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_kb_client` (`client_id`),
     INDEX `idx_kb_pub` (`is_published`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Tabel Adendum / Change Request Proyek
+CREATE TABLE IF NOT EXISTS `project_change_requests` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `project_id` INT UNSIGNED NOT NULL,
+    `nomor_adendum` VARCHAR(50) NOT NULL,
+    `judul` VARCHAR(200) NOT NULL,
+    `deskripsi` TEXT NULL,
+    `biaya` DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    `estimasi_hari` INT NOT NULL DEFAULT 0,
+    `status` ENUM('draft', 'disetujui', 'dikerjakan', 'selesai', 'ditolak') NOT NULL DEFAULT 'draft',
+    `invoice_id` INT UNSIGNED NULL,
+    `created_by` INT UNSIGNED NOT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_pcr_project` (`project_id`),
+    INDEX `idx_pcr_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabel Manajemen Sesi Aktif Pengguna
+CREATE TABLE IF NOT EXISTS `user_sessions` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT UNSIGNED NOT NULL,
+    `session_id` VARCHAR(128) NOT NULL UNIQUE,
+    `ip_address` VARCHAR(45) NULL,
+    `user_agent` VARCHAR(255) NULL,
+    `is_revoked` TINYINT(1) NOT NULL DEFAULT 0,
+    `last_activity` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_us_user` (`user_id`),
+    INDEX `idx_us_revoked` (`is_revoked`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

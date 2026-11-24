@@ -19,7 +19,7 @@ export async function generateBastPdf(bast, output = 'bloburl') {
         address: c.company_address || window.App?.getSetting?.('company_address', 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920') || 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920',
         phone: c.company_phone || window.App?.getSetting?.('company_phone', '(021) 555-0199') || '(021) 555-0199',
         email: c.company_email || window.App?.getSetting?.('company_email', 'billing@crudworks.com') || 'billing@crudworks.com',
-        npwp: c.company_npwp || window.App?.getSetting?.('company_npwp', '01.234.567.8-012.000') || ''
+        tagline: c.company_tagline || window.App?.getSetting?.('company_tagline', '') || ''
     };
 
     // Single crisp dark top rule (Minimalist Executive)
@@ -46,28 +46,27 @@ export async function generateBastPdf(bast, output = 'bloburl') {
     doc.setTextColor(isSigned ? 15 : 71, isSigned ? 23 : 85, isSigned ? 42 : 105);
     doc.text(bStatusText, badgeX + 3.5, rY + 3.1);
 
-    rY += badgeH + 3.8;
+    rY += badgeH + 4.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
-    doc.setTextColor(79, 70, 229);
     doc.text('BERITA ACARA SERAH TERIMA', pageWidth - margin, rY, { align: 'right' });
 
-    rY += 4.0;
+    rY += 4.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.8);
     doc.setTextColor(30, 41, 59);
     doc.text(String(bast.nomor_bast || 'BAST-DRAFT'), pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.4;
+    rY += 3.8;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
+    doc.setFontSize(7.0);
     doc.setTextColor(100, 116, 139);
     doc.text(`Tanggal Terbit: ${_safeFormatDate(bast.tanggal_bast)}`, pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.0;
+    rY += 3.4;
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(isSigned ? 4 : 79, isSigned ? 120 : 70, isSigned ? 87 : 229);
+    doc.setTextColor(isSigned ? 4 : 71, isSigned ? 120 : 85, isSigned ? 87 : 105);
     doc.text(bast.kode_project ? `Kode Proyek: ${bast.kode_project}` : 'Dokumen Pengesahan Resmi', pageWidth - margin, rY, { align: 'right' });
 
     y = Math.max(leftEndY, rY) + 4;

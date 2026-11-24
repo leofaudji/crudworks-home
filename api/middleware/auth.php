@@ -18,6 +18,31 @@ function authCheck()
         exit;
     }
 
+    // Validasi apakah sesi belum dicabut oleh Manajemen Sesi Aktif
+    try {
+        $sid = session_id();
+        if ($sid && class_exists('Database')) {
+            $db = Database::getInstance();
+            $sessRow = $db->fetch("SELECT is_revoked FROM user_sessions WHERE session_id = ? LIMIT 1", [$sid]);
+            if ($sessRow && (int)$sessRow['is_revoked'] === 1) {
+                $_SESSION = [];
+                session_destroy();
+                http_response_code(401);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Sesi Anda telah dicabut dari perangkat lain. Silakan login kembali.',
+                    'code' => 401
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            if ($sessRow) {
+                $db->execute("UPDATE user_sessions SET last_activity = NOW() WHERE session_id = ?", [$sid]);
+            }
+        }
+    } catch (\Throwable $e) {
+        // Abaikan bila tabel user_sessions belum dimigrasi
+    }
+
     return $_SESSION;
 }
 

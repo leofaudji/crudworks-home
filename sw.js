@@ -1,5 +1,5 @@
 // CRUDWorks ERP — Service Worker
-const CACHE_NAME = 'crudworks-erp-v1.7.82';
+const CACHE_NAME = 'crudworks-erp-v1.7.96';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -58,8 +58,14 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. Navigation requests (HTML shell): Network-First, fallback to cached index.html
-    if (event.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    // 2. Navigation & Code assets (HTML, JS, CSS): Network-First, fallback to cache when offline
+    if (
+        event.request.mode === 'navigate'
+        || url.pathname.endsWith('.html')
+        || url.pathname.endsWith('/')
+        || url.pathname.endsWith('.js')
+        || url.pathname.endsWith('.css')
+    ) {
         event.respondWith(
             fetch(event.request).then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {

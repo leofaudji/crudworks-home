@@ -1,4 +1,6 @@
 <?php
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 // Ambil versi terbaru dari CHANGELOG.md
 $version = '1.0.0';
 $changelogPath = __DIR__ . '/CHANGELOG.md';

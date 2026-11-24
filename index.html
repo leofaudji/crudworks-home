@@ -210,7 +210,7 @@
                         <div class="relative">
                             <input type="text" id="login-username" autocomplete="username" required
                                 class="w-full pl-4 pr-11 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition text-slate-900 text-sm font-medium"
-                                placeholder="Masukkan username" value="admin">
+                                placeholder="Masukkan username">
                             <i class="ri-user-3-line absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         </div>
                     </div>
@@ -220,12 +220,25 @@
                         <div class="relative">
                             <input type="password" id="login-password" autocomplete="current-password" required
                                 class="w-full pl-4 pr-11 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition text-slate-900 text-sm font-medium"
-                                placeholder="••••••••" value="admin123">
+                                placeholder="••••••••">
                             <button type="button" onclick="const i=document.getElementById('login-password'); i.type=i.type==='password'?'text':'password'; this.querySelector('i').className=i.type==='password'?'ri-eye-line':'ri-eye-off-line';"
                                 class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1" title="Tampilkan Password">
                                 <i class="ri-eye-line"></i>
                             </button>
                         </div>
+                    </div>
+
+                    <div id="login-2fa-group" class="hidden space-y-2 p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200">
+                        <div class="flex items-center justify-between">
+                            <label for="login-totp" class="text-xs font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-1.5">
+                                <i class="ri-shield-keyhole-line"></i> Kode Authenticator (2FA)
+                            </label>
+                            <button type="button" onclick="document.getElementById('login-2fa-group').classList.add('hidden');document.getElementById('login-totp').value='';" class="text-[11px] font-semibold text-slate-500 hover:text-slate-800">Ubah akun</button>
+                        </div>
+                        <input type="text" id="login-totp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+                            class="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-center font-mono text-lg font-bold tracking-[0.35em] text-slate-900"
+                            placeholder="000000">
+                        <p class="text-[11px] text-indigo-700">Buka Google Authenticator / Authy dan masukkan kode 6 digit.</p>
                     </div>
 
                     <button id="login-btn" type="submit"
@@ -239,28 +252,6 @@
                         <span></span>
                     </div>
                 </form>
-
-                <!-- Quick Demo Account Switcher -->
-                <div class="mt-7 pt-5 border-t border-slate-100">
-                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">Akses Demo Cepat</p>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button type="button" onclick="document.getElementById('login-username').value='admin';document.getElementById('login-password').value='admin123';"
-                            class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-200 text-left transition">
-                            <div class="text-[11px] font-bold text-slate-800">Admin</div>
-                            <div class="text-[10px] font-mono text-slate-400">admin</div>
-                        </button>
-                        <button type="button" onclick="document.getElementById('login-username').value='finance';document.getElementById('login-password').value='finance123';"
-                            class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-200 text-left transition">
-                            <div class="text-[11px] font-bold text-slate-800">Finance</div>
-                            <div class="text-[10px] font-mono text-slate-400">finance</div>
-                        </button>
-                        <button type="button" onclick="document.getElementById('login-username').value='pm';document.getElementById('login-password').value='pm123';"
-                            class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-200 text-left transition">
-                            <div class="text-[11px] font-bold text-slate-800">PM</div>
-                            <div class="text-[10px] font-mono text-slate-400">pm</div>
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -474,8 +465,8 @@
                             <div class="py-1">
                                 <button type="button" id="topbar-profile-btn" onclick="App.openProfileModal(); App.toggleUserMenu(false);"
                                     class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">
-                                    <i class="ri-user-settings-line text-sm text-slate-500"></i>
-                                    <span>Profil &amp; Ganti Password</span>
+                                    <i class="ri-shield-user-line text-sm text-indigo-600"></i>
+                                    <span>Profil Akun &amp; Keamanan (2FA)</span>
                                 </button>
                                 <button type="button" onclick="App.showAboutModal('info'); App.toggleUserMenu(false);"
                                     class="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition">

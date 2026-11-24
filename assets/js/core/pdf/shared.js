@@ -100,7 +100,19 @@ export function _drawDocumentWordmark(doc, margin, y, companyInfo, contentWidth)
         doc.text('CRUDWORKS', margin, y + 6);
     }
 
-    let compY = y + logoH + 3.5;
+    const tagline = String(companyInfo.tagline || window.App?.getSetting?.('company_tagline', '') || '').trim();
+    let compY = y + logoH + 3.2;
+    if (tagline) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.2);
+        doc.setTextColor(71, 85, 105);
+        const tagLines = doc.splitTextToSize(tagline, contentWidth * 0.52);
+        tagLines.forEach((tl) => {
+            doc.text(tl, margin, compY);
+            compY += 3.5;
+        });
+    }
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.3);
     doc.setTextColor(100, 116, 139);
@@ -108,7 +120,7 @@ export function _drawDocumentWordmark(doc, margin, y, companyInfo, contentWidth)
 
     compY += 3.8;
     doc.setFontSize(7.0);
-    doc.text(`Email: ${companyInfo.email} · Telp: ${companyInfo.phone}${companyInfo.npwp ? ' · NPWP: ' + companyInfo.npwp : ''}`, margin, compY);
+    doc.text(`Email: ${companyInfo.email} · Telp: ${companyInfo.phone}`, margin, compY);
 
     return compY + 2.5;
 }

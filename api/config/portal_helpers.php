@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/project_helpers.php';
+
 // portal_helpers.php - Logika bersama Portal Klien (akses via token tautan & login mandiri PWA)
 
 /**
@@ -134,6 +136,65 @@ function portalBuildData(Database $db, array $client): array
             $msByProject[$pid][] = $m;
         }
 
+        $bastsAllForProjects = $db->fetchAll(
+            "SELECT id, project_id, nomor_bast, judul_pekerjaan, status, tanggal_bast, signed_at
+             FROM project_basts
+             WHERE project_id IN ($inSql) AND status != 'dibatalkan'
+             ORDER BY id DESC",
+            $projIds
+        );
+        $contractsAllForProjects = $db->fetchAll(
+            "SELECT id, project_id, nomor_kontrak, judul_kontrak, status, garansi_hari
+             FROM contracts
+             WHERE project_id IN ($inSql) AND status != 'dibatalkan'
+             ORDER BY id DESC",
+            $projIds
+        );
+        $quotationsAllForProjects = $db->fetchAll(
+            "SELECT id, project_id, nomor_penawaran, public_token, status, total_penawaran
+             FROM quotations
+             WHERE project_id IN ($inSql) AND status != 'dibatalkan'
+             ORDER BY id DESC",
+            $projIds
+        );
+        $changeRequestsAll = $db->fetchAll(
+            "SELECT cr.id, cr.project_id, cr.nomor_adendum, cr.judul, cr.biaya, cr.estimasi_hari, cr.status, cr.invoice_id, i.nomor_invoice
+             FROM project_change_requests cr
+             LEFT JOIN invoices i ON cr.invoice_id = i.id
+             WHERE cr.project_id IN ($inSql) AND cr.status != 'ditolak'
+             ORDER BY cr.id DESC",
+            $projIds
+        );
+
+        $bastsByProj = [];
+        $warrantyStartByProj = [];
+        foreach ($bastsAllForProjects as $bp) {
+            $pid = (int)$bp['project_id'];
+            $bastsByProj[$pid][] = $bp;
+            if ($bp['status'] === 'ditandatangani') {
+                $dt = !empty($bp['signed_at']) ? substr((string)$bp['signed_at'], 0, 10) : ($bp['tanggal_bast'] ?? null);
+                if ($dt && (!isset($warrantyStartByProj[$pid]) || $dt > $warrantyStartByProj[$pid])) {
+                    $warrantyStartByProj[$pid] = $dt;
+                }
+            }
+        }
+        $contractsByProj = [];
+        $warrantyDaysByProj = [];
+        foreach ($contractsAllForProjects as $cp) {
+            $pid = (int)$cp['project_id'];
+            $contractsByProj[$pid][] = $cp;
+            $gd = (int)($cp['garansi_hari'] ?? 0);
+            if ($gd > ($warrantyDaysByProj[$pid] ?? 0)) $warrantyDaysByProj[$pid] = $gd;
+        }
+        $quosByProj = [];
+        foreach ($quotationsAllForProjects as $qp) {
+            $quosByProj[(int)$qp['project_id']][] = $qp;
+        }
+        $crByProj = [];
+        foreach ($changeRequestsAll as $crp) {
+            $crByProj[(int)$crp['project_id']][] = $crp;
+        }
+
         foreach ($projects as &$proj) {
             $pid = (int)$proj['id'];
             $st = $projStats[$pid] ?? ['total' => 0, 'done' => 0, 'review' => 0, 'in_progress' => 0, 'todo' => 0];
@@ -143,6 +204,13 @@ function portalBuildData(Database $db, array $client): array
                 : ($proj['status'] === 'selesai' ? 100 : 0);
             $proj['milestones'] = $msByProject[$pid] ?? [];
             $proj['releases'] = portalGetGitReleases($proj['deploy_path'] ?? null, 5);
+            $proj['warranty'] = computeProjectWarranty($warrantyDaysByProj[$pid] ?? 0, $warrantyStartByProj[$pid] ?? null);
+            $proj['documents'] = [
+                'quotations' => $quosByProj[$pid] ?? [],
+                'contracts' => $contractsByProj[$pid] ?? [],
+                'basts' => $bastsByProj[$pid] ?? []
+            ];
+            $proj['change_requests'] = $crByProj[$pid] ?? [];
             unset($proj['deploy_path']);
         }
         unset($proj);

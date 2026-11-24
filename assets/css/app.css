@@ -1196,6 +1196,22 @@ body.dt-is-resizing * {
 .data-table tfoot td:last-child {
     padding-right: 1.75rem !important;
 }
+
+/* Balanced table density when Sidebar (220px) is open */
+body.layout-sidebar .data-table thead th {
+    padding: 0.85rem 0.9rem;
+}
+body.layout-sidebar .data-table tbody td {
+    padding: 0.85rem 0.9rem;
+}
+body.layout-sidebar .data-table thead th:first-child,
+body.layout-sidebar .data-table tbody td:first-child {
+    padding-left: 1.5rem !important;
+}
+body.layout-sidebar .data-table thead th:last-child,
+body.layout-sidebar .data-table tbody td:last-child {
+    padding-right: 1.5rem !important;
+}
 .inventory-transactions .data-table thead th {
     padding: 0.875rem 1rem;
 }

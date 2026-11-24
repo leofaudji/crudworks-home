@@ -95,7 +95,7 @@ if ($id && is_numeric($id)) {
         }
 
         $settingsRows = $db->fetchAll(
-            "SELECT kunci, nilai FROM app_settings WHERE kunci IN ('company_name', 'company_address', 'company_phone', 'company_email', 'company_npwp')"
+            "SELECT kunci, nilai FROM app_settings WHERE kunci IN ('company_name', 'company_tagline', 'company_address', 'company_phone', 'company_email')"
         );
         $company = [];
         foreach ($settingsRows as $sr) {

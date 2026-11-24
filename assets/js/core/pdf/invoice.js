@@ -19,7 +19,7 @@ export async function generateInvoicePdf(inv, output = 'bloburl') {
         address: c.company_address || window.App?.getSetting?.('company_address', 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920') || 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920',
         phone: c.company_phone || window.App?.getSetting?.('company_phone', '(021) 555-0199') || '(021) 555-0199',
         email: c.company_email || window.App?.getSetting?.('company_email', 'billing@crudworks.com') || 'billing@crudworks.com',
-        npwp: c.company_npwp || window.App?.getSetting?.('company_npwp', '01.234.567.8-012.000') || '01.234.567.8-012.000'
+        tagline: c.company_tagline || window.App?.getSetting?.('company_tagline', '') || ''
     };
 
     // Single crisp dark top rule (Minimalist Executive)
@@ -46,25 +46,25 @@ export async function generateInvoicePdf(inv, output = 'bloburl') {
     doc.setTextColor(statusVal === 'lunas' ? 15 : 71, statusVal === 'lunas' ? 23 : 85, statusVal === 'lunas' ? 42 : 105);
     doc.text(statusText, badgeX + 3.5, rY + 3.1);
 
-    rY += badgeH + 3.8;
+    rY += badgeH + 4.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
     doc.text('FAKTUR TAGIHAN', pageWidth - margin, rY, { align: 'right' });
 
-    rY += 4.0;
+    rY += 4.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.8);
     doc.setTextColor(30, 41, 59);
     doc.text(String(inv.nomor_invoice || ''), pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.4;
+    rY += 3.8;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
+    doc.setFontSize(7.0);
     doc.setTextColor(100, 116, 139);
     doc.text(`Tanggal Terbit: ${_safeFormatDate(inv.tanggal_invoice)}`, pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.0;
+    rY += 3.4;
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(190, 18, 60);
     doc.text(`Jatuh Tempo: ${_safeFormatDate(inv.tanggal_jatuh_tempo)}`, pageWidth - margin, rY, { align: 'right' });
@@ -495,7 +495,7 @@ export async function generatePaymentReceiptPdf(p, output = 'bloburl') {
         address: window.App?.getSetting?.('company_address', 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920') || 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920',
         phone: window.App?.getSetting?.('company_phone', '(021) 555-0199') || '(021) 555-0199',
         email: window.App?.getSetting?.('company_email', 'billing@crudworks.com') || 'billing@crudworks.com',
-        npwp: window.App?.getSetting?.('company_npwp', '01.234.567.8-012.000') || ''
+        tagline: (p.company?.company_tagline) || window.App?.getSetting?.('company_tagline', '') || ''
     };
 
     // Single crisp dark top rule (Minimalist Executive)
@@ -519,25 +519,25 @@ export async function generatePaymentReceiptPdf(p, output = 'bloburl') {
     doc.setTextColor(15, 23, 42);
     doc.text(receiptBadgeText, badgeX + 3.5, rY + 3.1);
 
-    rY += badgeH + 3.8;
+    rY += badgeH + 4.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
     doc.text('KUITANSI PEMBAYARAN', pageWidth - margin, rY, { align: 'right' });
 
-    rY += 4.0;
+    rY += 4.4;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.8);
     doc.setTextColor(30, 41, 59);
     doc.text(String(p.nomor_pembayaran || 'KWT-DRAFT'), pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.4;
+    rY += 3.8;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
+    doc.setFontSize(7.0);
     doc.setTextColor(100, 116, 139);
     doc.text(`Tanggal Terbit: ${_safeFormatDate(p.tanggal_bayar)}`, pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.0;
+    rY += 3.4;
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(4, 120, 87);
     doc.text('Status: Terverifikasi Sah & Lunas', pageWidth - margin, rY, { align: 'right' });
@@ -909,7 +909,7 @@ export async function generateClientStatementPdf(data, output = 'bloburl') {
         address: c.company_address || window.App?.getSetting?.('company_address', 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920') || 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920',
         phone: c.company_phone || window.App?.getSetting?.('company_phone', '(021) 555-0199') || '(021) 555-0199',
         email: c.company_email || window.App?.getSetting?.('company_email', 'billing@crudworks.com') || 'billing@crudworks.com',
-        npwp: c.company_npwp || window.App?.getSetting?.('company_npwp', '') || ''
+        tagline: c.company_tagline || window.App?.getSetting?.('company_tagline', '') || ''
     };
 
     // Dark top rule
@@ -934,21 +934,21 @@ export async function generateClientStatementPdf(data, output = 'bloburl') {
     doc.setTextColor(15, 23, 42);
     doc.text(badgeTxt, badgeX + 3.5, rY + 3.1);
 
-    rY += badgeH + 3.8;
+    rY += badgeH + 4.8;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
     doc.text('LAPORAN AKUN KLIEN', pageWidth - margin, rY, { align: 'right' });
 
-    rY += 4.2;
+    rY += 4.6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.8);
     doc.setTextColor(51, 65, 85);
     doc.text(String(cl.kode_klien || 'KLIEN'), pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.6;
+    rY += 4.2;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
+    doc.setFontSize(7.2);
     doc.setTextColor(100, 116, 139);
     doc.text(`Dicetak: ${_safeFormatDate(new Date().toISOString().slice(0, 10))}`, pageWidth - margin, rY, { align: 'right' });
 

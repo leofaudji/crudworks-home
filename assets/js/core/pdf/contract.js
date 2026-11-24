@@ -19,7 +19,7 @@ export async function generateContractPdf(k, output = 'bloburl') {
         address: c.company_address || window.App?.getSetting?.('company_address', 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920') || 'Jl. Rasuna Said Kav. B4, Jakarta Selatan, 12920',
         phone: c.company_phone || window.App?.getSetting?.('company_phone', '(021) 555-0199') || '(021) 555-0199',
         email: c.company_email || window.App?.getSetting?.('company_email', 'billing@crudworks.com') || 'billing@crudworks.com',
-        npwp: c.company_npwp || window.App?.getSetting?.('company_npwp', '') || ''
+        tagline: c.company_tagline || window.App?.getSetting?.('company_tagline', '') || ''
     };
 
     // Single crisp dark top rule (minimalist legal style)
@@ -48,19 +48,19 @@ export async function generateContractPdf(k, output = 'bloburl') {
     doc.setTextColor(statusVal === 'ditandatangani' ? 15 : 71, statusVal === 'ditandatangani' ? 23 : 85, statusVal === 'ditandatangani' ? 42 : 105);
     doc.text(badgeTxt, badgeX + 3.5, rY + 3.1);
 
-    rY += badgeH + 3.8;
+    rY += badgeH + 4.8;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
     doc.text('SURAT PERJANJIAN KERJA', pageWidth - margin, rY, { align: 'right' });
 
-    rY += 4.4;
+    rY += 4.6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.8);
     doc.setTextColor(51, 65, 85);
     doc.text(String(k.nomor_kontrak || 'SPK-DRAFT'), pageWidth - margin, rY, { align: 'right' });
 
-    rY += 3.8;
+    rY += 4.2;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.2);
     doc.setTextColor(100, 116, 139);

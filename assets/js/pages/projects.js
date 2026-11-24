@@ -64,18 +64,18 @@ export async function init(container) {
                     <table class="data-table w-full text-left text-sm border-collapse">
                         <thead>
                             <tr class="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                <th class="py-3.5 px-6">Kode & Proyek</th>
-                                <th class="py-3.5 px-6">Pelanggan</th>
-                                <th class="py-3.5 px-6">Git Repository & Branch</th>
-                                <th class="py-3.5 px-6">Status Deploy</th>
-                                <th class="py-3.5 px-6">Kesehatan Uptime & SSL</th>
-                                <th class="py-3.5 px-6">Fase Siklus & Status</th>
-                                <th class="py-3.5 px-6 text-right">Aksi</th>
+                                <th class="py-3.5 px-4">Kode & Proyek</th>
+                                <th class="py-3.5 px-4">Pelanggan</th>
+                                <th class="py-3.5 px-4">Git Repository & Branch</th>
+                                <th class="py-3.5 px-4">Status Deploy</th>
+                                <th class="py-3.5 px-4">Kesehatan Uptime & SSL</th>
+                                <th class="py-3.5 px-4">Fase Siklus & Status</th>
+                                <th class="py-3.5 px-4 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="projects-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
                             <tr>
-                                <td colspan="6" class="py-12 text-center text-slate-400">
+                                <td colspan="7" class="py-12 text-center text-slate-400">
                                     <i class="ri-loader-4-line text-2xl animate-spin mb-2 inline-block"></i>
                                     <div>Memuat data proyek...</div>
                                 </td>
@@ -224,6 +224,7 @@ export async function init(container) {
             { label: 'Papan Kanban Tugas', icon: 'ri-kanban-view', iconColor: 'text-primary-600', fn: () => window.openProjectKanban(p.id) },
             { label: 'Termin & Milestone', icon: 'ri-calendar-todo-line', iconColor: 'text-amber-500', fn: () => window.manageProjectMilestones(p.id) },
             { label: 'Berita Acara (BAST)', icon: 'ri-file-shield-2-line', iconColor: 'text-emerald-600', fn: () => window.openProjectBasts(p.id) },
+            { label: 'Garansi & Adendum', icon: 'ri-shield-star-line', iconColor: 'text-teal-600', fn: () => window.openProjectChangeRequests(p.id) },
             {
                 label: 'Teknis & Analisis',
                 icon: 'ri-settings-4-line',
@@ -267,7 +268,7 @@ async function loadProjects() {
 
     const res = await App.api(ep);
     if (!res || !res.success) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-500">Gagal memuat daftar proyek</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500">Gagal memuat daftar proyek</td></tr>`;
         return;
     }
 
@@ -276,34 +277,35 @@ async function loadProjects() {
     projects.forEach((p) => projectsById.set(Number(p.id), p));
 
     if (projects.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400">Tidak ada proyek yang terdaftar</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400">Tidak ada proyek yang terdaftar</td></tr>`;
         paginationEl.innerHTML = '';
         return;
     }
 
     tbody.innerHTML = projects.map(p => {
+        const shortGit = p.git_repo_url ? String(p.git_repo_url).replace(/^https?:\/\/(github\.com|gitlab\.com|bitbucket\.org)\//i, '').replace(/\.git$/i, '') : '-';
         return `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                <td class="py-4 px-6">
-                    <div class="font-bold text-slate-900 dark:text-white">${p.nama_project}</div>
+                <td class="py-3.5 px-4">
+                    <div class="font-bold text-slate-900 dark:text-white leading-snug">${p.nama_project}</div>
                     <div class="text-xs font-mono text-primary-600 dark:text-primary-400">${p.kode_project}</div>
                 </td>
-                <td class="py-4 px-6">
-                    <div class="font-medium text-slate-800 dark:text-slate-200">${p.client_nama}</div>
-                    ${p.app_url ? `<a href="${p.app_url}" target="_blank" class="text-xs text-primary-600 hover:underline inline-flex items-center gap-1 max-w-[230px]"><span class="truncate">${p.app_url}</span><i class="ri-external-link-line text-[10px] shrink-0"></i></a>` : ''}
+                <td class="py-3.5 px-4">
+                    <div class="font-medium text-slate-800 dark:text-slate-200 leading-snug">${p.client_nama}</div>
+                    ${p.app_url ? `<a href="${p.app_url}" target="_blank" class="text-xs text-primary-600 hover:underline inline-flex items-center gap-1 max-w-[190px]"><span class="truncate">${p.app_url}</span><i class="ri-external-link-line text-[10px] shrink-0"></i></a>` : ''}
                 </td>
-                <td class="py-4 px-6">
-                    <div class="text-xs font-mono text-slate-600 dark:text-slate-300 truncate max-w-[200px]" title="${p.git_repo_url || '-'}">
-                        ${p.git_repo_url || '-'}
+                <td class="py-3.5 px-4">
+                    <div class="text-xs font-mono text-slate-600 dark:text-slate-300 truncate max-w-[155px]" title="${p.git_repo_url || '-'}">
+                        ${App.escapeHtml(shortGit)}
                     </div>
                     <div class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 font-mono">
                         <i class="ri-git-branch-line"></i> ${p.git_branch || 'main'}
                     </div>
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-4 whitespace-nowrap">
                     ${App.renderStatusBadge(p.last_deploy_status, 'deploy')}
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-4 whitespace-nowrap">
                     ${p.last_health_status === 'online' ? `
                         <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-bold border border-emerald-200 dark:border-emerald-800">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -324,7 +326,7 @@ async function loadProjects() {
                         </button>
                     `}
                 </td>
-                <td class="py-4 px-6 whitespace-nowrap">
+                <td class="py-3.5 px-4 whitespace-nowrap">
                     <div class="space-y-1.5">
                         ${renderProjectLifecycleBadge(p)}
                         <div class="flex items-center gap-1.5">
@@ -333,7 +335,7 @@ async function loadProjects() {
                         </div>
                     </div>
                 </td>
-                <td class="py-4 px-6 text-right">
+                <td class="py-3.5 px-4 text-right whitespace-nowrap">
                     <button type="button" data-table-action-trigger data-project-menu="${p.id}" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
                         <span>Aksi</span>
                         <i class="ri-more-2-fill text-slate-400"></i>
@@ -405,11 +407,25 @@ function renderProjectLifecycleBadge(p) {
         detail = 'Belum ada tugas / SPH';
     }
 
+    let warrantyHtml = '';
+    const wDays = Number(p.warranty_days || 0);
+    if (wDays > 0 && p.warranty_start) {
+        const startMs = new Date(p.warranty_start).getTime();
+        if (!Number.isNaN(startMs)) {
+            const endMs = startMs + wDays * 86400000;
+            const left = Math.floor((endMs - Date.now()) / 86400000);
+            warrantyHtml = left >= 0
+                ? `<div class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">Garansi aktif: ${left} hr lagi</div>`
+                : `<div class="text-[10px] font-mono text-slate-400">Garansi berakhir</div>`;
+        }
+    }
+
     return `
         <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-bold ${cls}">
             <span>${label}</span>
         </div>
         ${detail ? `<div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">${App.escapeHtml(detail)}</div>` : ''}
+        ${warrantyHtml}
     `;
 }
 
@@ -1527,6 +1543,136 @@ window.downloadBastPdf = async (bastId, output = 'bloburl') => {
         }
     } catch (err) {
         App.toast(err?.message || 'Gagal membuat dokumen PDF BAST', 'error');
+    }
+};
+
+window.openProjectChangeRequests = async (projectId) => {
+    const res = await App.api(`projects/${projectId}/change-requests`);
+    if (!res?.success || !res.data) {
+        App.toast(res?.message || 'Gagal memuat data garansi & adendum', 'error');
+        return;
+    }
+
+    const { project: p, warranty: w, items } = res.data;
+    let modal = document.getElementById('project-cr-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'project-cr-modal';
+        modal.className = 'fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4';
+        document.body.appendChild(modal);
+    }
+
+    const wSummary = w?.status === 'active'
+        ? `<span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">Garansi Aktif · ${w.days_left} hari tersisa (s/d ${App.formatDate(w.end)})</span>`
+        : w?.status === 'expired'
+            ? `<span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold">Masa Garansi Berakhir (${App.formatDate(w.end)})</span>`
+            : w?.days > 0
+                ? `<span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">Garansi ${w.days} Hari (Menunggu BAST Sah)</span>`
+                : `<span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold">Belum ada masa garansi di kontrak</span>`;
+
+    modal.innerHTML = `
+        <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 animate-fadeIn max-h-[92vh] overflow-y-auto space-y-5">
+            <div class="flex items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div class="space-y-1 min-w-0 flex-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-teal-600">Tracker Garansi &amp; Adendum SPK</span>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white">${App.escapeHtml(p.nama_project)}</h2>
+                    <div class="pt-1">${wSummary}</div>
+                </div>
+                <button type="button" onclick="document.getElementById('project-cr-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
+                    <i class="ri-close-line text-2xl"></i>
+                </button>
+            </div>
+
+            <form id="cr-add-form" class="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Tambah Adendum / Change Request Baru</div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <input id="cr-judul" type="text" required placeholder="Judul fitur / perubahan tambahan..." class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input id="cr-biaya" type="number" min="0" step="1000" placeholder="Biaya (Rp)" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
+                        <input id="cr-hari" type="number" min="0" placeholder="+ Hari" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="cr-deskripsi" type="text" placeholder="Catatan ruang lingkup adendum (opsional)" class="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+                    <button type="submit" class="whitespace-nowrap px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold">Tambah Adendum</button>
+                </div>
+            </form>
+
+            <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                ${items.length === 0 ? `
+                    <div class="p-8 text-center text-slate-400">Belum ada adendum / change request untuk proyek ini.</div>
+                ` : items.map((cr) => `
+                    <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="min-w-0 flex-1 space-y-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-mono font-bold text-slate-900 dark:text-white">${App.escapeHtml(cr.nomor_adendum)}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">${App.escapeHtml(cr.status)}</span>
+                                ${cr.nomor_invoice ? `<span class="text-[11px] font-mono text-emerald-600 font-bold">Faktur: ${App.escapeHtml(cr.nomor_invoice)}</span>` : ''}
+                            </div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200">${App.escapeHtml(cr.judul)}</div>
+                            <div class="text-[11px] text-slate-500 font-mono">Biaya: <b>${App.formatIDR(cr.biaya)}</b> · Estimasi: +${cr.estimasi_hari || 0} hari</div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            ${cr.status === 'draft' ? `<button type="button" onclick="window.updateCrStatus(${projectId}, ${cr.id}, 'disetujui')" class="whitespace-nowrap px-2.5 py-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 font-semibold">Setujui</button>` : ''}
+                            ${!cr.invoice_id && Number(cr.biaya) > 0 ? `<button type="button" onclick="window.createCrInvoice(${projectId}, ${cr.id})" class="whitespace-nowrap px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold">Terbitkan Faktur</button>` : ''}
+                            ${!cr.invoice_id ? `<button type="button" onclick="window.deleteCr(${projectId}, ${cr.id})" class="p-1.5 text-slate-400 hover:text-rose-600"><i class="ri-delete-bin-line text-base"></i></button>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    document.getElementById('cr-add-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const r = await App.api(`projects/${projectId}/change-requests`, {
+            method: 'POST',
+            body: {
+                judul: document.getElementById('cr-judul').value.trim(),
+                biaya: Number(document.getElementById('cr-biaya').value || 0),
+                estimasi_hari: Number(document.getElementById('cr-hari').value || 0),
+                deskripsi: document.getElementById('cr-deskripsi').value.trim()
+            }
+        });
+        if (r?.success) {
+            App.toast(r.message || 'Adendum ditambahkan', 'success');
+            window.openProjectChangeRequests(projectId);
+            loadProjects();
+        }
+    });
+
+    modal.classList.remove('hidden');
+};
+
+window.updateCrStatus = async (projectId, crId, status) => {
+    const r = await App.api(`projects/${projectId}/change-requests/${crId}`, { method: 'PUT', body: { status } });
+    if (r?.success) {
+        App.toast('Status adendum diperbarui', 'success');
+        window.openProjectChangeRequests(projectId);
+    }
+};
+
+window.createCrInvoice = async (projectId, crId) => {
+    const ok = await App.confirm('Terbitkan Faktur Adendum', 'Terbitkan faktur tagihan resmi untuk adendum ini?');
+    if (!ok) return;
+    const r = await App.api(`projects/${projectId}/change-requests/${crId}/invoice`, { method: 'POST' });
+    if (r?.success) {
+        App.toast(r.message || 'Faktur adendum diterbitkan', 'success');
+        window.openProjectChangeRequests(projectId);
+        loadProjects();
+    }
+};
+
+window.deleteCr = async (projectId, crId) => {
+    const ok = await App.confirm('Hapus Adendum', 'Hapus adendum ini?', 'warning');
+    if (!ok) return;
+    const r = await App.api(`projects/${projectId}/change-requests/${crId}`, { method: 'DELETE' });
+    if (r?.success) {
+        App.toast('Adendum dihapus', 'success');
+        window.openProjectChangeRequests(projectId);
+        loadProjects();
     }
 };
 

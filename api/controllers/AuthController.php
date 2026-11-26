@@ -96,7 +96,8 @@ switch ($method) {
                     'role_id' => (int)$user['role_id'],
                     'role_name' => $user['role_name'],
                     'role_label' => $user['role_label'],
-                    'totp_enabled' => (int)($user['totp_enabled'] ?? 0)
+                    'totp_enabled' => (int)($user['totp_enabled'] ?? 0),
+                    'preferences' => json_decode((string)($user['preferences_json'] ?? ''), true) ?: null
                 ],
                 'menus' => $menus,
                 'permissions' => $permCodes,
@@ -225,6 +226,31 @@ switch ($method) {
             logActivity('change_password', 'users', $userId);
 
             successResponse(null, 'Password berhasil diperbarui');
+        } elseif ($id === 'preferences') {
+            authCheck();
+            $userId = (int)$_SESSION['user_id'];
+            $hasCol = $db->fetch("SHOW COLUMNS FROM users LIKE 'preferences_json'");
+            if (!$hasCol) {
+                $db->execute("ALTER TABLE users ADD COLUMN preferences_json TEXT NULL AFTER totp_enabled");
+            }
+            $rawPrefs = is_array($params['preferences'] ?? null) ? $params['preferences'] : $params;
+            $allowedKeys = [
+                'app_nav_layout', 'app_windows_submenu_style', 'app_theme', 'app_dark_mode',
+                'pref_font_size', 'keuangan_table_density', 'pref_table_grid_style',
+                'pref_date_format', 'pref_num_separator', 'pref_num_decimals',
+                'pref_num_currency_symbol', 'pref_start_page', 'pref_per_page', 'pref_reduced_motion'
+            ];
+            $clean = [];
+            foreach ($allowedKeys as $k) {
+                if (array_key_exists($k, $rawPrefs) && is_scalar($rawPrefs[$k])) {
+                    $clean[$k] = mb_substr((string)$rawPrefs[$k], 0, 64);
+                }
+            }
+            $db->execute(
+                "UPDATE users SET preferences_json = ? WHERE id = ?",
+                [json_encode($clean, JSON_UNESCAPED_UNICODE), $userId]
+            );
+            successResponse(['preferences' => $clean], 'Preferensi akun disinkronkan');
         } else {
             errorResponse('Endpoint auth tidak ditemukan', 404);
         }
@@ -240,8 +266,13 @@ switch ($method) {
                 ], 200);
             }
 
+            $hasPrefCol = $db->fetch("SHOW COLUMNS FROM users LIKE 'preferences_json'");
+            if (!$hasPrefCol) {
+                $db->execute("ALTER TABLE users ADD COLUMN preferences_json TEXT NULL AFTER totp_enabled");
+            }
+
             $user = $db->fetch(
-                "SELECT u.id, u.username, u.nama_lengkap, u.email, u.role_id, u.totp_enabled,
+                "SELECT u.id, u.username, u.nama_lengkap, u.email, u.role_id, u.totp_enabled, u.preferences_json,
                         r.name as role_name, r.label as role_label 
                  FROM users u 
                  JOIN roles r ON u.role_id = r.id 
@@ -272,7 +303,8 @@ switch ($method) {
                     'role_id' => (int)$user['role_id'],
                     'role_name' => $user['role_name'],
                     'role_label' => $user['role_label'],
-                    'totp_enabled' => (int)($user['totp_enabled'] ?? 0)
+                    'totp_enabled' => (int)($user['totp_enabled'] ?? 0),
+                    'preferences' => json_decode((string)($user['preferences_json'] ?? ''), true) ?: null
                 ],
                 'menus' => $menus,
                 'permissions' => $permCodes,

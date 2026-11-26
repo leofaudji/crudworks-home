@@ -38,100 +38,114 @@ export async function init(container) {
                 </div>
             </div>
 
-            <!-- Stats Overview Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="backup-stats-container">
-                <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs animate-pulse">
-                    <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-3"></div>
-                    <div class="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
-                </div>
-                <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs animate-pulse">
-                    <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-3"></div>
-                    <div class="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
-                </div>
-                <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs animate-pulse">
-                    <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-3"></div>
-                    <div class="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
-                </div>
-                <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs animate-pulse">
-                    <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-3"></div>
-                    <div class="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
-                </div>
-            </div>
-
-            <!-- Main Tabs Container -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
-                <!-- Tab Navigation Header -->
-                <div class="px-6 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div class="flex items-center gap-2">
-                        <button class="backup-tab px-4 py-2 rounded-xl text-xs font-bold transition ${state.activeTab === 'backups' ? 'bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800/60' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}" data-tab="backups">
-                            <i class="ri-folder-zip-line mr-1.5"></i>
-                            Berkas Cadangan Tersimpan (<span id="count-badge-backups">0</span>)
-                        </button>
-                        <button class="backup-tab px-4 py-2 rounded-xl text-xs font-bold transition ${state.activeTab === 'tables' ? 'bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800/60' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}" data-tab="tables">
-                            <i class="ri-table-line mr-1.5"></i>
-                            Struktur Tabel Database (<span id="count-badge-tables">0</span>)
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="relative w-full sm:w-64">
-                            <input type="text" id="backup-search" placeholder="Cari berkas / tabel..."
-                                   class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            <i class="ri-search-line absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <!-- 2-Column Enterprise Layout (ala Pengaturan Sistem) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Left Navigation -->
+                <aside class="lg:col-span-4 xl:col-span-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-2.5 shadow-2xs space-y-1">
+                    <button type="button" class="backup-tab w-full text-left px-3.5 py-3 rounded-2xl transition flex items-center gap-3 ${state.activeTab === 'backups' ? 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/70 dark:ring-primary-800/60' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'}" data-tab="backups">
+                        <div class="w-9 h-9 rounded-xl ${state.activeTab === 'backups' ? 'bg-white dark:bg-slate-900 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center shrink-0">
+                            <i class="ri-folder-zip-line text-base text-primary-600"></i>
                         </div>
-                        <button id="btn-refresh-backup" class="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl text-xs transition" title="Muat Ulang Data">
-                            <i class="ri-refresh-line"></i>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold truncate">Berkas Cadangan (<span id="count-badge-backups">0</span>)</div>
+                            <div class="text-[11px] opacity-75 truncate">Arsip .sql &amp; .sql.gz</div>
+                        </div>
+                    </button>
+                    <button type="button" class="backup-tab w-full text-left px-3.5 py-3 rounded-2xl transition flex items-center gap-3 ${state.activeTab === 'tables' ? 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/70 dark:ring-primary-800/60' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'}" data-tab="tables">
+                        <div class="w-9 h-9 rounded-xl ${state.activeTab === 'tables' ? 'bg-white dark:bg-slate-900 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center shrink-0">
+                            <i class="ri-table-line text-base text-emerald-600"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold truncate">Struktur Tabel (<span id="count-badge-tables">0</span>)</div>
+                            <div class="text-[11px] opacity-75 truncate">Engine, baris &amp; ukuran</div>
+                        </div>
+                    </button>
+                    <button type="button" class="backup-tab w-full text-left px-3.5 py-3 rounded-2xl transition flex items-center gap-3 ${state.activeTab === 'overview' ? 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/70 dark:ring-primary-800/60' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'}" data-tab="overview">
+                        <div class="w-9 h-9 rounded-xl ${state.activeTab === 'overview' ? 'bg-white dark:bg-slate-900 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center shrink-0">
+                            <i class="ri-hard-drive-2-line text-base text-indigo-600"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold truncate">Ringkasan Server DB</div>
+                            <div class="text-[11px] opacity-75 truncate">Kapasitas &amp; cadangan akhir</div>
+                        </div>
+                    </button>
+                </aside>
+
+                <!-- Right Content Panel -->
+                <div class="lg:col-span-8 xl:col-span-9 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xs overflow-hidden min-w-0">
+                    <div id="backup-toolbar" class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 ${state.activeTab === 'overview' ? 'hidden' : ''}">
+                        <div class="min-w-0">
+                            <h2 id="backup-panel-title" class="text-sm font-bold text-slate-900 dark:text-white truncate">${state.activeTab === 'tables' ? 'Struktur Tabel Database' : 'Berkas Cadangan Tersimpan'}</h2>
+                            <p id="backup-panel-sub" class="text-[11px] text-slate-400 truncate">${state.activeTab === 'tables' ? 'Daftar tabel, engine, jumlah baris & ukuran penyimpanan' : 'Unduh, pulihkan, atau hapus arsip SQL dari server'}</p>
+                        </div>
+                        <button id="btn-refresh-backup" class="px-3.5 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition shrink-0" title="Muat Ulang Data">
+                            <i class="ri-refresh-line"></i><span>Segarkan</span>
                         </button>
                     </div>
-                </div>
 
-                <!-- Tab 1: Backups List Content -->
-                <div id="tab-content-backups" class="${state.activeTab === 'backups' ? '' : 'hidden'}">
-                    <div class="overflow-x-auto">
-                        <table class="data-table w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    <th class="py-3.5 px-6">Nama Berkas Cadangan</th>
-                                    <th class="py-3.5 px-6">Tipe Cadangan</th>
-                                    <th class="py-3.5 px-6">Ukuran</th>
-                                    <th class="py-3.5 px-6">Waktu Pembuatan</th>
-                                    <th class="py-3.5 px-6 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="backups-tbody" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                                <tr>
-                                    <td colspan="5" class="py-12 text-center text-slate-400">
-                                        <i class="ri-loader-4-line text-2xl animate-spin mb-2 inline-block"></i>
-                                        <p>Memuat daftar berkas cadangan...</p>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- Tab 1: Backups List Content -->
+                    <div id="tab-content-backups" class="${state.activeTab === 'backups' ? '' : 'hidden'}">
+                        <div class="overflow-x-auto">
+                            <table class="data-table w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        <th class="py-3 pl-5 pr-3 whitespace-nowrap">Nama Berkas</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">Tipe</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">Ukuran</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">Dibuat</th>
+                                        <th class="py-3 pl-3 pr-5 text-right whitespace-nowrap">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="backups-tbody" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                                    <tr>
+                                        <td colspan="5" class="py-12 text-center text-slate-400">
+                                            <i class="ri-loader-4-line text-2xl animate-spin mb-2 inline-block"></i>
+                                            <p>Memuat daftar berkas cadangan...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Tab 2: Tables List Content -->
-                <div id="tab-content-tables" class="${state.activeTab === 'tables' ? '' : 'hidden'}">
-                    <div class="overflow-x-auto">
-                        <table class="data-table w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    <th class="py-3.5 px-6">Nama Tabel</th>
-                                    <th class="py-3.5 px-6">Engine</th>
-                                    <th class="py-3.5 px-6 font-mono">Jumlah Baris</th>
-                                    <th class="py-3.5 px-6 font-mono">Ukuran Data</th>
-                                    <th class="py-3.5 px-6 font-mono">Ukuran Indeks</th>
-                                    <th class="py-3.5 px-6 font-mono">Total Ukuran</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tables-tbody" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                                <tr>
-                                    <td colspan="6" class="py-12 text-center text-slate-400">
-                                        <i class="ri-loader-4-line text-2xl animate-spin mb-2 inline-block"></i>
-                                        <p>Memuat struktur tabel...</p>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- Tab 2: Tables List Content -->
+                    <div id="tab-content-tables" class="${state.activeTab === 'tables' ? '' : 'hidden'}">
+                        <div class="overflow-x-auto">
+                            <table class="data-table w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        <th class="py-3 pl-5 pr-3 whitespace-nowrap">Nama Tabel</th>
+                                        <th class="py-3 px-3 whitespace-nowrap">Engine</th>
+                                        <th class="py-3 px-3 font-mono whitespace-nowrap">Baris</th>
+                                        <th class="py-3 px-3 font-mono whitespace-nowrap">Data</th>
+                                        <th class="py-3 px-3 font-mono whitespace-nowrap">Indeks</th>
+                                        <th class="py-3 pl-3 pr-5 font-mono whitespace-nowrap">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tables-tbody" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                                    <tr>
+                                        <td colspan="6" class="py-12 text-center text-slate-400">
+                                            <i class="ri-loader-4-line text-2xl animate-spin mb-2 inline-block"></i>
+                                            <p>Memuat struktur tabel...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Server Overview Stats -->
+                    <div id="tab-content-overview" class="p-6 ${state.activeTab === 'overview' ? '' : 'hidden'}">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="backup-stats-container">
+                            <div class="p-5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl animate-pulse">
+                                <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-3"></div>
+                                <div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+                            </div>
+                            <div class="p-5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl animate-pulse">
+                                <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-3"></div>
+                                <div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -398,41 +412,41 @@ function renderBackupsTable() {
 
         return `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                <td class="py-4 px-6 font-mono font-medium text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
-                    <i class="${fileIcon} ${iconColor} text-lg"></i>
-                    <div>
-                        <span class="block">${App.escapeHtml(b.filename)}</span>
-                        ${isGz ? '<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-bold">Terkompresi Gzip</span>' : ''}
+                <td class="py-3.5 pl-5 pr-3 align-middle max-w-[230px]">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <i class="${fileIcon} ${iconColor} text-base shrink-0"></i>
+                        <div class="min-w-0">
+                            <span class="block font-mono font-medium text-slate-800 dark:text-slate-100 truncate" title="${App.escapeHtml(b.filename)}">${App.escapeHtml(b.filename)}</span>
+                            ${isGz ? '<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-semibold">Terkompresi Gzip</span>' : ''}
+                        </div>
                     </div>
                 </td>
-                <td class="py-4 px-6">
-                    <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold ${b.type === 'full' ? 'bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800/60' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-                        ${b.type_label}
+                <td class="py-3.5 px-3 align-middle whitespace-nowrap">
+                    <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${b.type === 'full' ? 'bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800/60' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
+                        ${App.escapeHtml(b.type_label)}
                     </span>
                 </td>
-                <td class="py-4 px-6 font-mono font-semibold text-slate-700 dark:text-slate-200">
+                <td class="py-3.5 px-3 align-middle font-mono font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
                     ${App.escapeHtml(b.size)}
                 </td>
-                <td class="py-4 px-6 font-mono text-slate-500 dark:text-slate-400">
+                <td class="py-3.5 px-3 align-middle font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                     ${App.formatDateTime(b.created_at)}
                 </td>
-                <td class="py-4 px-6 text-right">
-                    <div class="inline-flex items-center gap-1.5">
+                <td class="py-3.5 pl-3 pr-5 align-middle text-right whitespace-nowrap">
+                    <div class="inline-flex items-center gap-1">
                         <a href="api/backup?action=download&file=${encodeURIComponent(b.filename)}" 
-                           class="p-2 text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 bg-slate-100 dark:bg-slate-800 hover:bg-primary-50 dark:hover:bg-primary-950/50 rounded-xl transition inline-flex items-center gap-1 text-xs font-semibold" 
-                           title="Unduh Berkas SQL">
+                           class="w-8 h-8 text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400 bg-slate-100 dark:bg-slate-800 hover:bg-primary-50 dark:hover:bg-primary-950/50 rounded-xl transition inline-flex items-center justify-center" 
+                           title="Unduh Berkas SQL" aria-label="Unduh Berkas SQL">
                             <i class="ri-download-2-line text-sm"></i>
-                            <span class="hidden sm:inline">Unduh</span>
                         </a>
-                        <button onclick="window.restoreFromServer('${App.escapeHtml(b.filename)}')" 
-                                class="p-2 text-amber-600 hover:text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 rounded-xl transition inline-flex items-center gap-1 text-xs font-semibold" 
-                                title="Pulihkan Database dari Berkas Ini">
+                        <button type="button" onclick="window.restoreFromServer('${App.escapeHtml(b.filename)}')" 
+                                class="w-8 h-8 text-amber-600 hover:text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 rounded-xl transition inline-flex items-center justify-center" 
+                                title="Pulihkan Database dari Berkas Ini" aria-label="Pulihkan Database">
                             <i class="ri-restart-line text-sm"></i>
-                            <span class="hidden sm:inline">Pulihkan</span>
                         </button>
-                        <button onclick="window.deleteBackup('${App.escapeHtml(b.filename)}')" 
-                                class="p-2 text-red-600 hover:text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 rounded-xl transition" 
-                                title="Hapus Berkas Cadangan">
+                        <button type="button" onclick="window.deleteBackup('${App.escapeHtml(b.filename)}')" 
+                                class="w-8 h-8 text-red-600 hover:text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 rounded-xl transition inline-flex items-center justify-center" 
+                                title="Hapus Berkas Cadangan" aria-label="Hapus Berkas Cadangan">
                             <i class="ri-delete-bin-line text-sm"></i>
                         </button>
                     </div>
@@ -467,23 +481,22 @@ function renderTablesTable() {
 
     tbody.innerHTML = list.map(t => `
         <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-            <td class="py-3.5 px-6 font-mono font-bold text-slate-800 dark:text-slate-100">
-                <i class="ri-table-line text-slate-400 mr-1.5"></i>
-                ${App.escapeHtml(t.name)}
+            <td class="py-3.5 pl-5 pr-3 align-middle font-mono font-bold text-slate-800 dark:text-slate-100 max-w-[220px] truncate" title="${App.escapeHtml(t.name)}">
+                <i class="ri-table-line text-slate-400 mr-1.5"></i>${App.escapeHtml(t.name)}
             </td>
-            <td class="py-3.5 px-6 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+            <td class="py-3.5 px-3 align-middle font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 ${App.escapeHtml(t.engine)}
             </td>
-            <td class="py-3.5 px-6 font-mono font-semibold text-slate-700 dark:text-slate-200">
+            <td class="py-3.5 px-3 align-middle font-mono font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
                 ${App.formatNumber(t.records)}
             </td>
-            <td class="py-3.5 px-6 font-mono text-slate-500 dark:text-slate-400">
+            <td class="py-3.5 px-3 align-middle font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 ${App.escapeHtml(t.data_size)}
             </td>
-            <td class="py-3.5 px-6 font-mono text-slate-500 dark:text-slate-400">
+            <td class="py-3.5 px-3 align-middle font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 ${App.escapeHtml(t.index_size)}
             </td>
-            <td class="py-3.5 px-6 font-mono font-bold text-slate-800 dark:text-slate-200">
+            <td class="py-3.5 pl-3 pr-5 align-middle font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                 ${App.escapeHtml(t.total_size)}
             </td>
         </tr>
@@ -501,11 +514,24 @@ function bindEvents() {
             state.activeTab = tab;
 
             document.querySelectorAll('.backup-tab').forEach(b => {
-                b.className = `backup-tab px-4 py-2 rounded-xl text-xs font-bold transition ${b.dataset.tab === tab ? 'bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800/60' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`;
+                const isAct = b.dataset.tab === tab;
+                b.className = `backup-tab w-full text-left px-3.5 py-3 rounded-2xl transition flex items-center gap-3 ${isAct ? 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 ring-1 ring-primary-200/70 dark:ring-primary-800/60' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`;
+                const iconBox = b.querySelector('div:first-child');
+                if (iconBox) {
+                    iconBox.className = `w-9 h-9 rounded-xl ${isAct ? 'bg-white dark:bg-slate-900 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center shrink-0`;
+                }
             });
 
-            document.getElementById('tab-content-backups').classList.toggle('hidden', tab !== 'backups');
-            document.getElementById('tab-content-tables').classList.toggle('hidden', tab !== 'tables');
+            document.getElementById('backup-toolbar')?.classList.toggle('hidden', tab === 'overview');
+            const titleEl = document.getElementById('backup-panel-title');
+            const subEl = document.getElementById('backup-panel-sub');
+            if (titleEl && subEl) {
+                titleEl.textContent = tab === 'tables' ? 'Struktur Tabel Database' : 'Berkas Cadangan Tersimpan';
+                subEl.textContent = tab === 'tables' ? 'Daftar tabel, engine, jumlah baris & ukuran penyimpanan' : 'Unduh, pulihkan, atau hapus arsip SQL dari server';
+            }
+            document.getElementById('tab-content-backups')?.classList.toggle('hidden', tab !== 'backups');
+            document.getElementById('tab-content-tables')?.classList.toggle('hidden', tab !== 'tables');
+            document.getElementById('tab-content-overview')?.classList.toggle('hidden', tab !== 'overview');
         });
     });
 

@@ -30,28 +30,28 @@ export async function init(container) {
                 </div>
             </div>
 
-            <!-- Action Board Pagi Hari (Executive Daily Brief Banner) -->
-            <div id="dashboard-daily-brief-banner" class="bg-gradient-to-r from-amber-500/10 via-primary-500/10 to-indigo-500/10 dark:from-amber-950/30 dark:via-primary-950/30 dark:to-indigo-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-3xl p-5 sm:p-6 transition shadow-xs">
+            <!-- Action Board Pagi Hari (Minimalist Executive Daily Brief Banner) -->
+            <div id="dashboard-daily-brief-banner" class="bg-white dark:bg-slate-900 bg-gradient-to-r from-amber-500/[0.05] via-primary-500/[0.03] to-indigo-500/[0.05] dark:from-amber-500/[0.08] dark:via-primary-500/[0.04] dark:to-indigo-500/[0.08] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 transition shadow-2xs">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-amber-500/15 dark:bg-amber-400/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl shrink-0 shadow-xs">
+                        <div class="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
                             <i class="ri-sun-cloudy-line"></i>
                         </div>
                         <div>
                             <div class="flex items-center gap-2 mb-1">
-                                <span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider">Executive Daily Brief</span>
+                                <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider">Executive Brief</span>
                                 <span id="dash-brief-date" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Memuat agenda hari ini...</span>
                             </div>
-                            <h3 id="dash-brief-title" class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Memeriksa prioritas operasional & penagihan...</h3>
+                            <h3 id="dash-brief-title" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Memeriksa prioritas operasional &amp; penagihan...</h3>
                             <p id="dash-brief-desc" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sistem sedang merangkum piutang jatuh tempo, milestone termin, dan SLA server untuk hari ini.</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 self-start lg:self-center shrink-0">
-                        <button type="button" onclick="App.copyDailyBriefWhatsApp()" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs" title="Salin Ringkasan untuk WhatsApp">
-                            <i class="ri-file-copy-line text-emerald-600"></i>
+                        <button type="button" onclick="App.copyDailyBriefWhatsApp()" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition" title="Salin Ringkasan untuk WhatsApp">
+                            <i class="ri-file-copy-line text-emerald-600 dark:text-emerald-400"></i>
                             <span>Salin WA</span>
                         </button>
-                        <button type="button" onclick="App.openDailyBriefModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-primary-500/20 transition">
+                        <button type="button" onclick="App.openDailyBriefModal()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
                             <i class="ri-layout-masonry-line"></i>
                             <span>Buka Action Board</span>
                         </button>

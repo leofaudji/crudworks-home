@@ -948,11 +948,24 @@ export class NavigationManager {
         this.initFontSize();
         this.initTableDensity();
         this.initTableGridStyle();
+        this.initReducedMotion();
 
         const savedTheme = localStorage.getItem('app_theme') || 'orange';
         if (window.THEMES && window.THEMES[savedTheme] && typeof window.applyTheme === 'function') {
             window.applyTheme(savedTheme);
         }
+    }
+
+    initReducedMotion() {
+        const enabled = localStorage.getItem('pref_reduced_motion') === '1';
+        this.applyReducedMotion(enabled, false);
+    }
+
+    applyReducedMotion(enabled, notify = true) {
+        const isOn = enabled === true || enabled === '1';
+        document.documentElement.classList.toggle('reduce-motion', isOn);
+        try { localStorage.setItem('pref_reduced_motion', isOn ? '1' : '0'); } catch (_) {}
+        if (notify) toast(isOn ? 'Mode instan (animasi diminimalkan) aktif' : 'Animasi standar diaktifkan', 'success', 1500);
     }
 
     initDarkMode() {
@@ -1109,434 +1122,28 @@ export class NavigationManager {
         setTimeout(() => modal.classList.add('hidden'), 200);
     }
 
-    renderPreferencesModalContent() {
-        const body = document.getElementById('pref-modal-body');
-        if (!body) return;
-
-        const curLayout = this.navLayout;
-        const curWinSub = this.windowsSubmenuStyle;
-        const curTheme = localStorage.getItem('app_theme') || 'orange';
-        const curDarkMode = localStorage.getItem('app_dark_mode') || 'light';
-        const curFontSize = localStorage.getItem('pref_font_size') || 'normal';
-        const curDensity = localStorage.getItem('keuangan_table_density') || 'comfortable';
-        const curGridStyle = localStorage.getItem('pref_table_grid_style') || 'zebra';
-        const curDateFormat = localStorage.getItem('pref_date_format') || 'dmy';
-        const curSeparator = localStorage.getItem('pref_num_separator') || 'id';
-        const curDecimals = localStorage.getItem('pref_num_decimals') || '0';
-        const curSymbol = localStorage.getItem('pref_num_currency_symbol') !== null
-            ? localStorage.getItem('pref_num_currency_symbol')
-            : 'Rp ';
-
-        const themes = window.THEMES || {};
-        const sampleAmount = formatRupiah(15750000);
-        const sampleDate = formatDate('2026-11-11');
-
-        body.innerHTML = `
-            <div class="space-y-6">
-                <!-- Live Preview Strip -->
-                <div class="p-4 rounded-2xl bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border border-slate-800">
-                    <div>
-                        <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Pratinjau Format Aktif</p>
-                        <p class="text-sm font-bold mt-0.5 font-mono text-emerald-400">${escapeHtml(sampleAmount)}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Tanggal</p>
-                        <p class="text-xs font-semibold mt-0.5 text-slate-200">${escapeHtml(sampleDate)}</p>
-                    </div>
-                </div>
-
-                <!-- 1. Mode Tampilan (Light / Dark Mode) -->
-                <div>
-                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                        <i class="ri-contrast-2-line text-primary-600"></i> Mode Tampilan (Light / Dark Mode)
-                    </h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        ${[
-                            { id: 'light', name: 'Mode Terang (Light)', desc: 'Latar belakang putih cerah & bersih', icon: 'ri-sun-line', iconColor: 'text-amber-500' },
-                            { id: 'dark', name: 'Mode Gelap (Dark)', desc: 'Latar gelap, nyaman untuk mata', icon: 'ri-moon-line', iconColor: 'text-indigo-400' },
-                            { id: 'system', name: 'Otomatis (Sistem)', desc: 'Menyesuaikan tema perangkat OS', icon: 'ri-computer-line', iconColor: 'text-slate-400' }
-                        ].map((m) => `
-                            <button type="button" onclick="App.applyDarkMode('${m.id}', true); App.renderPreferencesModalContent();"
-                                class="p-3 rounded-xl border text-left transition flex items-start gap-2.5 ${curDarkMode === m.id ? 'border-primary-500 bg-primary-50/70 dark:bg-primary-950/40 ring-2 ring-primary-500/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-800'}">
-                                <i class="${m.icon} ${m.iconColor} text-lg mt-0.5"></i>
-                                <div class="min-w-0 flex-1">
-                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-100">${m.name}</div>
-                                    <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">${m.desc}</div>
-                                </div>
-                                ${curDarkMode === m.id ? '<i class="ri-check-line text-primary-600 font-bold shrink-0"></i>' : ''}
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- 2. Tata Letak Navigasi -->
-                <div>
-                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5">Tata Letak Menu</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                        ${[
-                            { id: 'sidebar', name: 'Sidebar Kiri', desc: 'Navigasi klasik Cloudflare', icon: 'ri-layout-left-line' },
-                            { id: 'bottom', name: 'Taskbar Bawah', desc: 'Windows bar & Start Menu', icon: 'ri-layout-bottom-line' },
-                            { id: 'top', name: 'Bilah Atas', desc: 'Taskbar bar di bagian atas', icon: 'ri-layout-top-line' }
-                        ].map((l) => `
-                            <button type="button" onclick="App.setNavLayout('${l.id}'); App.renderPreferencesModalContent();"
-                                class="p-3 rounded-xl border text-left transition flex items-start gap-2.5 ${curLayout === l.id ? 'border-primary-500 bg-primary-50/70 dark:bg-primary-950/40 ring-2 ring-primary-500/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-800'}">
-                                <i class="${l.icon} text-lg ${curLayout === l.id ? 'text-primary-600' : 'text-slate-500'}"></i>
-                                <div>
-                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-100">${l.name}</div>
-                                    <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">${l.desc}</div>
-                                </div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- 3. Gaya Start Menu Windows -->
-                <div>
-                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5">Gaya Submenu Start Menu (Mode Taskbar)</h4>
-                    <div class="grid grid-cols-2 gap-2.5">
-                        ${[
-                            { id: 'panel', name: 'Gaya Panel (2 Kolom)', desc: 'Kategori di kiri, detail di kanan', icon: 'ri-layout-column-line' },
-                            { id: 'cascading', name: 'Gaya Akordeon', desc: 'Daftar bertingkat vertikal', icon: 'ri-node-tree' }
-                        ].map((s) => `
-                            <button type="button" onclick="App.setWindowsSubmenuStyle('${s.id}'); App.renderPreferencesModalContent();"
-                                class="p-3 rounded-xl border text-left transition flex items-center gap-2.5 ${curWinSub === s.id ? 'border-primary-500 bg-primary-50/70 dark:bg-primary-950/40 ring-2 ring-primary-500/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-800'}">
-                                <i class="${s.icon} text-lg ${curWinSub === s.id ? 'text-primary-600' : 'text-slate-500'}"></i>
-                                <div>
-                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-100">${s.name}</div>
-                                    <div class="text-[10px] text-slate-500 dark:text-slate-400">${s.desc}</div>
-                                </div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- 4. Tema Warna -->
-                <div>
-                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5">Tema Warna Aplikasi</h4>
-                    <div class="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                        ${Object.entries(themes).map(([key, th]) => `
-                            <button type="button" onclick="window.applyTheme('${key}'); App.renderPreferencesModalContent();"
-                                class="p-2 rounded-xl border flex flex-col items-center gap-1.5 transition ${curTheme === key ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-slate-800 ring-2 ring-slate-900/15 dark:ring-white/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-800'}">
-                                <span class="w-6 h-6 rounded-full shadow-xs border border-white dark:border-slate-900" style="background:${th.shade}"></span>
-                                <span class="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate w-full text-center">${th.name}</span>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- 5. Tabel: Kerapatan & Garis Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Kerapatan Baris Tabel</h4>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button type="button" onclick="App.applyTableDensity('comfortable', true); App.renderPreferencesModalContent();"
-                                class="px-3 py-2.5 rounded-xl border text-xs font-semibold transition ${curDensity === 'comfortable' ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-                                Nyaman (Standard)
-                            </button>
-                            <button type="button" onclick="App.applyTableDensity('compact', true); App.renderPreferencesModalContent();"
-                                class="px-3 py-2.5 rounded-xl border text-xs font-semibold transition ${curDensity === 'compact' ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-                                Padat (Compact)
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Gaya Garis Tabel</h4>
-                        <div class="grid grid-cols-3 gap-2">
-                            ${[
-                                { id: 'zebra', label: 'Zebra' },
-                                { id: 'bordered', label: 'Grid Penuh' },
-                                { id: 'minimal', label: 'Minimalis' }
-                            ].map((g) => `
-                                <button type="button" onclick="App.applyTableGridStyle('${g.id}'); App.renderPreferencesModalContent();"
-                                    class="px-2.5 py-2.5 rounded-xl border text-xs font-semibold transition ${curGridStyle === g.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-                                    ${g.label}
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 6. Format Tanggal, Angka & Ukuran Huruf -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Format Tanggal</h4>
-                        <select onchange="App.setFormatPref('pref_date_format', this.value)"
-                            class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl font-medium focus:outline-none focus:border-primary-500">
-                            <option value="dmy" ${curDateFormat === 'dmy' ? 'selected' : ''}>DD/MM/YYYY (11/11/2026)</option>
-                            <option value="ymd" ${curDateFormat === 'ymd' ? 'selected' : ''}>YYYY-MM-DD (2026-11-11)</option>
-                            <option value="long" ${curDateFormat === 'long' ? 'selected' : ''}>11 Nov 2026</option>
-                            <option value="full" ${curDateFormat === 'full' ? 'selected' : ''}>11 November 2026</option>
-                        </select>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Ukuran Huruf</h4>
-                        <div class="grid grid-cols-4 gap-1.5">
-                            ${[
-                                { id: 'small', label: 'Kecil' },
-                                { id: 'normal', label: 'Normal' },
-                                { id: 'large', label: 'Besar' },
-                                { id: 'xl', label: 'XL' }
-                            ].map((f) => `
-                                <button type="button" onclick="App.applyFontSize('${f.id}'); App.renderPreferencesModalContent();"
-                                    class="py-2 rounded-xl border text-xs font-semibold transition ${curFontSize === f.id ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600'}">
-                                    ${f.label}
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Pemisah Ribuan</h4>
-                        <select onchange="App.setFormatPref('pref_num_separator', this.value)"
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                            <option value="id" ${curSeparator === 'id' ? 'selected' : ''}>Titik (1.000.000,00)</option>
-                            <option value="en" ${curSeparator === 'en' ? 'selected' : ''}>Koma (1,000,000.00)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Desimal</h4>
-                        <select onchange="App.setFormatPref('pref_num_decimals', this.value)"
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                            <option value="0" ${curDecimals === '0' ? 'selected' : ''}>0 Desimal (Bulat)</option>
-                            <option value="2" ${curDecimals === '2' ? 'selected' : ''}>2 Desimal (,00)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Simbol Mata Uang</h4>
-                        <select onchange="App.setFormatPref('pref_num_currency_symbol', this.value)"
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                            <option value="Rp " ${curSymbol === 'Rp ' ? 'selected' : ''}>Rp (Dengan Spasi)</option>
-                            <option value="IDR " ${curSymbol === 'IDR ' ? 'selected' : ''}>IDR</option>
-                            <option value="" ${curSymbol === '' ? 'selected' : ''}>Tanpa Simbol</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        `;
+    async renderPreferencesModalContent() {
+        const mod = await import('./preferences-modal.js');
+        mod.renderPreferencesModalContent(this);
     }
 
-    resetPreferences() {
-        try {
-            [
-                'app_nav_layout',
-                'app_windows_submenu_style',
-                'app_theme',
-                'app_dark_mode',
-                'pref_font_size',
-                'keuangan_table_density',
-                'pref_table_grid_style',
-                'pref_date_format',
-                'pref_num_separator',
-                'pref_num_decimals',
-                'pref_num_currency_symbol'
-            ].forEach((k) => localStorage.removeItem(k));
-        } catch (_) {}
-
-        this.applyDarkMode('light', false);
-        this.setNavLayout('sidebar');
-        this.setWindowsSubmenuStyle('panel', false);
-        if (typeof window.applyTheme === 'function') window.applyTheme('orange');
-        this.applyFontSize('normal', false);
-        this.applyTableDensity('comfortable', false);
-        this.applyTableGridStyle('zebra', false);
-        this.renderPreferencesModalContent();
-        if (typeof this.onRouteRefresh === 'function') this.onRouteRefresh();
-        toast('Preferensi dikembalikan ke setelan awal', 'success', 2000);
+    async resetPreferences() {
+        const mod = await import('./preferences-modal.js');
+        mod.resetPreferences(this);
     }
 
-    // ===== OmniSearch (Ctrl+K) =====
+    // ===== OmniSearch (Ctrl+K, Lazy-loaded) =====
     initOmniSearch() {
-        const input = document.getElementById('omni-search-input');
-        if (!input) return;
-
-        input.addEventListener('input', () => {
-            this.renderOmniSearchResults(input.value);
-        });
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (this._omniResults.length > 0) {
-                    this._omniActiveIdx = (this._omniActiveIdx + 1) % this._omniResults.length;
-                    this._highlightOmniItem();
-                }
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (this._omniResults.length > 0) {
-                    this._omniActiveIdx = (this._omniActiveIdx - 1 + this._omniResults.length) % this._omniResults.length;
-                    this._highlightOmniItem();
-                }
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                const picked = this._omniResults[this._omniActiveIdx];
-                if (picked) this._executeOmniItem(picked);
-            }
-        });
+        // Bound lazily on first toggleSearch
     }
 
-    toggleSearch(forceOpen = null) {
-        const modal = document.getElementById('omni-search-modal');
-        const content = document.getElementById('omni-search-content');
-        const input = document.getElementById('omni-search-input');
-        if (!modal) return;
-
-        const isHidden = modal.classList.contains('hidden');
-        const open = forceOpen !== null ? forceOpen : isHidden;
-
-        if (open) {
-            modal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                modal.classList.remove('opacity-0');
-                content?.classList.remove('scale-95');
-            });
-            if (input) {
-                input.value = '';
-                setTimeout(() => input.focus(), 50);
-            }
-            this.renderOmniSearchResults('');
-            // Prefetch clients list softly for quick search
-            if (!this._cachedClientSearch) {
-                api('clients?limit=50', { silent: true }).then((res) => {
-                    if (res && res.success && Array.isArray(res.data)) {
-                        this._cachedClientSearch = res.data;
-                        if (!modal.classList.contains('hidden') && input && input.value) {
-                            this.renderOmniSearchResults(input.value);
-                        }
-                    }
-                });
-            }
-        } else {
-            modal.classList.add('opacity-0');
-            content?.classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 200);
-        }
+    async toggleSearch(forceOpen = null) {
+        const mod = await import('./omnisearch.js');
+        mod.toggleSearch(this, forceOpen);
     }
 
-    renderOmniSearchResults(query = '') {
-        const container = document.getElementById('omni-search-results');
-        if (!container) return;
-
-        const q = (query || '').trim().toLowerCase();
-        const items = [];
-
-        // Menus
-        this._flatMenuItems.forEach((m) => {
-            if (!q || m.nama.toLowerCase().includes(q) || m.section.toLowerCase().includes(q)) {
-                items.push({
-                    type: 'menu',
-                    title: m.nama,
-                    subtitle: m.section || 'Navigasi Halaman',
-                    icon: m.icon,
-                    url: m.url
-                });
-            }
-        });
-
-        // Quick Actions
-        const quickActions = [
-            { title: '+ Buat Tagihan / Faktur Baru', subtitle: 'Penerbitan invoice tagihan pelanggan', icon: 'ri-file-add-line', action: 'new_inv' },
-            { title: '+ Catat Pembayaran Tagihan', subtitle: 'Pencatatan pembayaran & bukti transfer', icon: 'ri-money-dollar-circle-line', action: 'new_pay' },
-            { title: '+ Tambah Pelanggan Baru', subtitle: 'Pendaftaran klien & PIC kontak', icon: 'ri-user-add-line', action: 'new_client' },
-            { title: '+ Tambah Proyek Baru', subtitle: 'Hubungkan aplikasi app-git ke pelanggan', icon: 'ri-git-branch-line', action: 'new_project' },
-            { title: 'Preferensi Tampilan', subtitle: 'Atur tata letak, tema, format tanggal & angka', icon: 'ri-equalizer-line', action: 'pref' },
-            { title: 'Tentang Sistem & Catatan Rilis', subtitle: 'Lihat versi aplikasi dan changelog', icon: 'ri-information-line', action: 'about' }
-        ];
-        quickActions.forEach((act) => {
-            if (!q || act.title.toLowerCase().includes(q) || act.subtitle.toLowerCase().includes(q)) {
-                items.push({ type: 'action', ...act });
-            }
-        });
-
-        // Client matches
-        if (q && Array.isArray(this._cachedClientSearch)) {
-            this._cachedClientSearch.forEach((cl) => {
-                const label = `${cl.kode || ''} ${cl.nama || ''} ${cl.perusahaan || ''}`.toLowerCase();
-                if (label.includes(q)) {
-                    items.push({
-                        type: 'menu',
-                        title: `Pelanggan: ${cl.nama}`,
-                        subtitle: `${cl.kode || ''} • ${cl.perusahaan || 'Individu'} • ${cl.telepon || ''}`,
-                        icon: 'ri-building-line',
-                        url: '#/clients'
-                    });
-                }
-            });
-        }
-
-        this._omniResults = items.slice(0, 12);
-        this._omniActiveIdx = 0;
-
-        if (this._omniResults.length === 0) {
-            container.innerHTML = `
-                <div class="p-8 text-center text-slate-400">
-                    <i class="ri-search-eye-line text-3xl mb-2 block opacity-40"></i>
-                    <p class="text-xs font-medium">Tidak ada hasil untuk "<strong>${escapeHtml(query)}</strong>"</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = `
-            <div class="space-y-1">
-                ${this._omniResults.map((item, i) => `
-                    <button type="button" data-omni-idx="${i}"
-                        class="omni-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition ${i === 0 ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'}">
-                        <div class="w-8 h-8 rounded-lg ${i === 0 ? 'bg-primary-100 text-primary-600' : 'bg-slate-100 text-slate-500'} flex items-center justify-center flex-shrink-0">
-                            <i class="${escapeHtml(item.icon)} text-base"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-xs font-bold truncate">${escapeHtml(item.title)}</div>
-                            <div class="text-[11px] text-slate-400 truncate">${escapeHtml(item.subtitle)}</div>
-                        </div>
-                        <span class="text-[10px] font-bold uppercase text-slate-400 px-2 py-0.5 rounded bg-white border border-slate-200/70">
-                            ${item.type === 'action' ? 'Aksi' : 'Buka'}
-                        </span>
-                    </button>
-                `).join('')}
-            </div>
-        `;
-
-        container.querySelectorAll('[data-omni-idx]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const idx = parseInt(btn.getAttribute('data-omni-idx'), 10);
-                const picked = this._omniResults[idx];
-                if (picked) this._executeOmniItem(picked);
-            });
-        });
-    }
-
-    _highlightOmniItem() {
-        document.querySelectorAll('#omni-search-results [data-omni-idx]').forEach((btn, idx) => {
-            const active = idx === this._omniActiveIdx;
-            btn.className = `omni-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition ${active ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'}`;
-            if (active) btn.scrollIntoView({ block: 'nearest' });
-        });
-    }
-
-    _executeOmniItem(item) {
-        this.toggleSearch(false);
-        if (item.type === 'menu' && item.url) {
-            window.location.hash = item.url;
-        } else if (item.action === 'new_inv') {
-            window.location.hash = '#/invoices';
-            setTimeout(() => window.InvoicesPage?.openForm?.(), 220);
-        } else if (item.action === 'new_pay') {
-            window.location.hash = '#/payments';
-            setTimeout(() => window.PaymentsPage?.openForm?.(), 220);
-        } else if (item.action === 'new_client') {
-            window.location.hash = '#/clients';
-            setTimeout(() => window.ClientsPage?.openForm?.(), 220);
-        } else if (item.action === 'new_project') {
-            window.location.hash = '#/projects';
-            setTimeout(() => window.ProjectsPage?.openForm?.(), 220);
-        } else if (item.action === 'calc' && typeof this.onOpenCalculator === 'function') {
-            this.onOpenCalculator(true);
-        } else if (item.action === 'pref') {
-            this.openPreferencesModal();
-        } else if (item.action === 'about' && typeof this.onOpenAbout === 'function') {
-            this.onOpenAbout();
-        }
+    async renderOmniSearchResults(query = '') {
+        const mod = await import('./omnisearch.js');
+        mod.renderOmniSearchResults(this, query);
     }
 }

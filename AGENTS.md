@@ -122,7 +122,7 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
 2. **Wajib `paginatedResponse()`**: Jangan menulis ulang `LIMIT`/`OFFSET` dan struktur JSON `pagination` secara manual.
 3. **Validasi Terpadu**: Gunakan `requireParams()` dan `validateEnum()` untuk field wajib dan pengecekan `ENUM`.
 4. **Event Binding & Debounce**: Pasang event listener di `container` (bukan menumpuk di `document` pada setiap `init()`), dan gunakan `App.debounce()` untuk input pencarian.
-5. **Batas Ukuran File**: Jika controller atau page JS >500 baris atau punya logika kompleks, ekstrak ke `api/config/*_helpers.php` atau `assets/js/core/*.js`.
+5. **Batas Ukuran File & Modularisasi Bertahap**: Modul/controller baru wajib dijaga di bawah `450` baris. Untuk berkas lama yang sudah melampaui `800` baris (seperti `app.js`, `utils.js`, `projects.js`), setiap penambahan fitur baru `> 100` baris wajib diekstrak ke sub-modul di `api/config/*_helpers.php` atau `assets/js/core/*.js` (dan di-lazy-load bila tidak dibutuhkan saat initial load).
 6. **Sinkronisasi DB & PWA**: Setiap perubahan SQL wajib diperbarui di `database.sql` & `docs/prd/03-desain-database.md`; setiap perubahan JS/CSS wajib menaikkan `CACHE_NAME` di `sw.js` (atau `portal/sw.js`).
 7. **Satu Pintu Dialog**: Dilarang memakai `alert()`, `confirm()`, `prompt()` bawaan browser; gunakan `SweetAlert2`, `App.confirm()`, atau `App.modal()`.
 
@@ -140,7 +140,7 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
 3. **Transaksi & Urutan Cache**: Panggil `clearCache()` dan `logActivity()` **hanya setelah `$pdo->commit()` berhasil**, jangan di dalam transaksi sebelum commit.
 4. **UI Responsif, Dark Mode & Aksesibel**: Komponen baru wajib mendukung `dark:*`, rapi di mobile-desktop, dan tombol ikon wajib punya `title`/`aria-label`.
 5. **Proporsi Tabel, Taskbar Safe-Area & Modal**: Kontainer `#app-content` wajib menjaga `pb-24` (aman dari taskbar bawah), dropdown/popover mengambang wajib menghormati `safeBottom`, sel tabel status/angka/aksi wajib `whitespace-nowrap` (teks panjang pakai `truncate` + `title`), dan modal panjang wajib memakai header/footer *sticky* (`flex flex-col` + `overflow-y-auto` di body).
-6. **Gerbang Verifikasi (DoD)**: Wajib lulus `php -l` (PHP), `node -c` (JS), validasi JSON (`menus.json`), serta cek endpoint/halaman live.
+6. **Gerbang Verifikasi (DoD)**: Wajib lulus `php -l` (PHP), `node -c` (JS), validasi JSON (`menus.json`), serta cek endpoint/halaman live (dapat dijalankan terpadu melalui `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`).
 7. **Changelog Bahasa Pelanggan**: Catat rilis fitur baru di `CHANGELOG.md` dengan bahasa bisnis untuk pelanggan, bukan jargon teknis internal.
 
 ### PHP Backend

@@ -646,13 +646,22 @@ if ($id === 'cash-flow' && $method === 'GET') {
     );
 
     $operating = []; $investing = []; $financing = [];
+    $opSum = []; $invSum = []; $finSum = [];
     $totOp = 0.0; $totInv = 0.0; $totFin = 0.0;
+
+    $addSummary = static function (array &$bucket, string $key, string $kode, string $nama, float $amount): void {
+        if (!isset($bucket[$key])) {
+            $bucket[$key] = ['kode_akun' => $kode, 'nama_akun' => $nama, 'count' => 0, 'nominal' => 0.0];
+        }
+        $bucket[$key]['count']++;
+        $bucket[$key]['nominal'] = round($bucket[$key]['nominal'] + $amount, 2);
+    };
 
     foreach ($cashJrnRows as $jr) {
         $net = round((float)$jr['net_cash'], 2);
         // Cek akun lawan (counterpart) untuk menentukan kategori PSAK 2
         $counter = $db->fetch(
-            "SELECT coa.kode_akun, coa.tipe_akun
+            "SELECT coa.kode_akun, coa.nama_akun, coa.tipe_akun
              FROM journal_items ji
              JOIN chart_of_accounts coa ON ji.coa_id = coa.id
              WHERE ji.journal_id = ? AND ji.coa_id NOT IN ({$ph})
@@ -661,6 +670,8 @@ if ($id === 'cash-flow' && $method === 'GET') {
         );
         $cType = $counter['tipe_akun'] ?? '';
         $cCode = (string)($counter['kode_akun'] ?? '');
+        $cName = (string)($counter['nama_akun'] ?? 'Transaksi Kas Lainnya');
+        $sumKey = ($cCode !== '' ? $cCode : ($cType ?: 'lainnya'));
 
         $item = [
             'tanggal' => $jr['tanggal'],
@@ -671,12 +682,18 @@ if ($id === 'cash-flow' && $method === 'GET') {
 
         if ($cType === 'ekuitas' || str_starts_with($cCode, '22')) {
             $financing[] = $item;
+            $addSummary($finSum, $sumKey, $cCode, $cName, $net);
             $totFin += $net;
         } elseif ($cType === 'aset' && !in_array($cCode, ['1102', '1103'], true) && !str_starts_with($cCode, '11')) {
             $investing[] = $item;
+            $addSummary($invSum, $sumKey, $cCode, $cName, $net);
             $totInv += $net;
         } else {
             $operating[] = $item;
+            $opLabel = in_array($cCode, ['1102', '1103'], true)
+                ? ($net >= 0 ? 'Penerimaan dari Pelanggan (' . $cName . ')' : 'Pengembalian / Koreksi (' . $cName . ')')
+                : $cName;
+            $addSummary($opSum, $sumKey . ($net >= 0 ? '_in' : '_out'), $cCode, $opLabel, $net);
             $totOp += $net;
         }
     }
@@ -688,9 +705,9 @@ if ($id === 'cash-flow' && $method === 'GET') {
         'start_date' => $startDate,
         'end_date' => $endDate,
         'opening_cash' => $openingCash,
-        'operating' => ['items' => $operating, 'total' => round($totOp, 2)],
-        'investing' => ['items' => $investing, 'total' => round($totInv, 2)],
-        'financing' => ['items' => $financing, 'total' => round($totFin, 2)],
+        'operating' => ['items' => $operating, 'summary' => array_values($opSum), 'total' => round($totOp, 2)],
+        'investing' => ['items' => $investing, 'summary' => array_values($invSum), 'total' => round($totInv, 2)],
+        'financing' => ['items' => $financing, 'summary' => array_values($finSum), 'total' => round($totFin, 2)],
         'net_cash_flow' => $netFlow,
         'closing_cash' => $closingCash,
     ]);

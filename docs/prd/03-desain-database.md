@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `telepon` VARCHAR(30) NULL,
     `avatar` VARCHAR(255) NULL,
     `status` ENUM('aktif', 'nonaktif') DEFAULT 'aktif',
+    `preferences_json` TEXT NULL,
     `last_login` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

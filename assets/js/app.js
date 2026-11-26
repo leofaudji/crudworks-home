@@ -49,6 +49,7 @@ import {
     openWhatsAppQuotation,
     openReportCsvPreview,
     openReportPdfPreview,
+    getDefaultPerPage,
     quickDateChipsHtml,
     refreshAutocomplete,
     reportExportDropdownHtml,
@@ -145,6 +146,7 @@ const App = {
     openReportPdfPreview,
     openReportCsvPreview,
     closeReportPreview,
+    getDefaultPerPage,
     setRefreshing,
     swapSmooth,
     resolveDatePreset,
@@ -180,6 +182,7 @@ const App = {
     applyTableDensity: (m, n) => nav.applyTableDensity(m, n),
     applyTableGridStyle: (s, n) => nav.applyTableGridStyle(s, n),
     applyFontSize: (s, n) => nav.applyFontSize(s, n),
+    applyReducedMotion: (e, n) => nav.applyReducedMotion(e, n),
     applyDarkMode: (m, n) => nav.applyDarkMode(m, n),
     toggleDarkMode: () => nav.toggleDarkMode(),
     setFormatPref: (k, v) => nav.setFormatPref(k, v),
@@ -418,7 +421,8 @@ const App = {
         }
 
         if (!window.location.hash || !window.location.hash.startsWith('#/')) {
-            window.location.hash = '#/dashboard';
+            const startPage = localStorage.getItem('pref_start_page') || '#/dashboard';
+            window.location.hash = startPage.startsWith('#/') ? startPage : '#/dashboard';
         } else {
             router.handleRoute();
         }
@@ -427,6 +431,16 @@ const App = {
     _syncUserUI() {
         const u = AuthState.user;
         if (!u) return;
+        if (u.preferences && typeof u.preferences === 'object') {
+            const syncKey = `pref_hydrated_u_${u.id}`;
+            if (!sessionStorage.getItem(syncKey)) {
+                Object.entries(u.preferences).forEach(([k, v]) => {
+                    try { localStorage.setItem(k, String(v)); } catch (_) {}
+                });
+                try { sessionStorage.setItem(syncKey, '1'); } catch (_) {}
+                nav.initPreferences();
+            }
+        }
         const name = u.nama_lengkap || u.username || 'User';
         const role = u.role || '-';
         const initial = name.charAt(0).toUpperCase();
@@ -989,636 +1003,67 @@ const App = {
         });
     },
 
-    // ===== Quick Billing / Invoice Calculator Modal =====
+    // ===== Quick Billing / Invoice Calculator Modal (Lazy-loaded) =====
     async toggleCalculator(forceOpen = null) {
-        const modal = document.getElementById('calculator-modal');
-        const content = document.getElementById('calculator-content');
-        if (!modal) return;
-
-        const isHidden = modal.classList.contains('hidden');
-        const open = forceOpen !== null ? forceOpen : isHidden;
-
-        if (open) {
-            modal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                modal.classList.remove('opacity-0');
-                content?.classList.remove('scale-95');
-            });
-            this.computeQuickInvoiceCalc();
-        } else {
-            modal.classList.add('opacity-0');
-            content?.classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 200);
-        }
+        return (await import('./core/calculator-modal.js')).toggleCalculator(forceOpen);
     },
 
-    computeQuickInvoiceCalc() {
-        const subtotalInput = document.getElementById('qcalc-subtotal');
-        const diskonInput = document.getElementById('qcalc-diskon');
-        const ppnInput = document.getElementById('qcalc-ppn');
-        const ppnAmountEl = document.getElementById('qcalc-ppn-amount');
-        const grandTotalEl = document.getElementById('qcalc-grand-total');
-
-        if (!subtotalInput) return;
-
-        const subtotal = Math.max(0, parseFloat(subtotalInput.value) || 0);
-        const diskon = Math.max(0, parseFloat(diskonInput?.value) || 0);
-        const ppnPct = Math.max(0, parseFloat(ppnInput?.value) || 0);
-
-        const dpp = Math.max(0, subtotal - diskon);
-        const ppnAmount = Math.round(dpp * (ppnPct / 100));
-        const grandTotal = dpp + ppnAmount;
-
-        if (ppnAmountEl) ppnAmountEl.textContent = formatRupiah(ppnAmount);
-        if (grandTotalEl) grandTotalEl.textContent = formatRupiah(grandTotal);
+    async computeQuickInvoiceCalc() {
+        return (await import('./core/calculator-modal.js')).computeQuickInvoiceCalc();
     },
 
-    // ===== About & Changelog Modal =====
-    showAboutModal(tab = 'info') {
-        const modal = document.getElementById('about-modal');
-        if (!modal) return;
-        this.switchAboutTab(tab);
-        modal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('.about-dialog-card')?.classList.remove('scale-95');
-        });
+    // ===== About & Changelog Modal (Lazy-loaded) =====
+    async showAboutModal(tab = 'info') {
+        return (await import('./core/about-modal.js')).showAboutModal(tab, { version: this.version, navLayout: nav.navLayout });
     },
 
-    closeAboutModal() {
-        const modal = document.getElementById('about-modal');
-        if (!modal) return;
-        modal.classList.add('opacity-0');
-        modal.querySelector('.about-dialog-card')?.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 200);
+    async closeAboutModal() {
+        return (await import('./core/about-modal.js')).closeAboutModal();
     },
 
-    switchAboutTab(tab = 'info') {
-        this._aboutActiveTab = tab;
-        const btnInfo = document.getElementById('btn-about-tab-info');
-        const btnChangelog = document.getElementById('btn-about-tab-changelog');
-        if (btnInfo && btnChangelog) {
-            const activeCls = 'px-4 py-2 border-b-2 font-bold text-xs transition-all border-primary-600 text-primary-600 dark:text-primary-400';
-            const idleCls = 'px-4 py-2 border-b-2 font-medium text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border-transparent transition-all';
-            btnInfo.className = tab === 'info' ? activeCls : idleCls;
-            btnChangelog.className = tab === 'changelog' ? activeCls : idleCls;
-        }
-        this.renderAboutModalContent();
+    async switchAboutTab(tab = 'info') {
+        return (await import('./core/about-modal.js')).switchAboutTab(tab, { version: this.version, navLayout: nav.navLayout });
     },
 
     async renderAboutModalContent() {
-        const body = document.getElementById('about-modal-body');
-        if (!body) return;
-
-        if (this._aboutActiveTab === 'info') {
-            const userName = AuthState.user?.nama_lengkap || AuthState.user?.username || 'Guest';
-            const userRole = AuthState.user?.role || '-';
-
-            body.innerHTML = `
-                <div class="space-y-4 text-xs">
-                    <div class="flex items-center gap-3.5 p-4 bg-gradient-to-r from-primary-50 to-indigo-50/60 dark:from-primary-950/40 dark:to-indigo-950/20 rounded-2xl border border-primary-100 dark:border-primary-900/40">
-                        <img src="assets/icons/icon.svg" class="w-12 h-12 rounded-xl app-brand-logo shrink-0" alt="Logo">
-                        <div>
-                            <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">CRUDWorks ERP</h4>
-                            <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Sistem manajemen proyek, penagihan, akuntansi &amp; layanan klien terpadu.</p>
-                            <span class="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/60 font-mono text-[10px] font-bold text-primary-700 dark:text-primary-300 border border-primary-200/60 dark:border-primary-800/50">Versi Aktif: v${this.version}</span>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-600 flex items-center justify-center shrink-0"><i class="ri-file-list-3-line text-base"></i></div>
-                            <div>
-                                <div class="font-bold text-slate-800 dark:text-slate-100">Penagihan &amp; Pembayaran</div>
-                                <div class="text-slate-400 text-[11px]">Faktur PDF, QRIS/VA &amp; Email</div>
-                            </div>
-                        </div>
-                        <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center shrink-0"><i class="ri-scales-line text-base"></i></div>
-                            <div>
-                                <div class="font-bold text-slate-800 dark:text-slate-100">Akuntansi &amp; Pajak</div>
-                                <div class="text-slate-400 text-[11px]">COA, Jurnal, Neraca &amp; Laba Rugi</div>
-                            </div>
-                        </div>
-                        <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center shrink-0"><i class="ri-git-branch-line text-base"></i></div>
-                            <div>
-                                <div class="font-bold text-slate-800 dark:text-slate-100">Proyek &amp; Portal Klien</div>
-                                <div class="text-slate-400 text-[11px]">Progres tugas, BAST &amp; Tiket SLA</div>
-                            </div>
-                        </div>
-                        <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center shrink-0"><i class="ri-shield-keyhole-line text-base"></i></div>
-                            <div>
-                                <div class="font-bold text-slate-800 dark:text-slate-100">Keamanan Enterprise</div>
-                                <div class="text-slate-400 text-[11px]">2FA Authenticator &amp; Kontrol Sesi</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap justify-between gap-2">
-                        <span>Pengguna: <strong class="text-slate-700 dark:text-slate-200">${escapeHtml(userName)} (${escapeHtml(userRole)})</strong></span>
-                        <span>Tata Letak: <strong class="text-slate-700 dark:text-slate-200 uppercase">${escapeHtml(nav.navLayout)}</strong></span>
-                    </div>
-                </div>
-            `;
-        } else {
-            body.innerHTML = `
-                <div class="py-12 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                    <i class="ri-loader-4-line text-2xl animate-spin text-primary-600"></i>
-                    <span>Memuat catatan rilis...</span>
-                </div>
-            `;
-            try {
-                if (!this._cachedChangelog) {
-                    const res = await fetch(`${apiClient.ROOT_BASE}CHANGELOG.md?_t=${Date.now()}`, { cache: 'no-cache' });
-                    if (res.ok) this._cachedChangelog = await res.text();
-                }
-                if (!this._cachedChangelog) {
-                    body.innerHTML = `
-                        <div class="text-center py-8 space-y-2">
-                            <i class="ri-file-warning-line text-3xl text-amber-500"></i>
-                            <p class="text-xs text-slate-500">Catatan rilis belum dapat dimuat.</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Format Markdown menjadi kartu rilis yang rapi & ramah pembaca
-                const lines = this._cachedChangelog.split(/\r?\n/);
-                const cards = [];
-                let cur = null;
-                let curGroup = null;
-                const fmtInline = (t) => escapeHtml(t)
-                    .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-slate-800 dark:text-slate-100">$1</strong>')
-                    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-                for (const raw of lines) {
-                    const ln = raw.trim();
-                    const verM = ln.match(/^##\s+\[?([^\]\s]+)\]?\s*(?:-\s*(.+))?$/);
-                    if (verM) {
-                        cur = { ver: verM[1], date: verM[2] || '', groups: [] };
-                        curGroup = null;
-                        cards.push(cur);
-                        continue;
-                    }
-                    const grpM = ln.match(/^###\s+(.+)$/);
-                    if (grpM && cur) {
-                        const rawG = grpM[1].toLowerCase();
-                        const label = rawG.includes('ditambahkan') || rawG.includes('added') ? 'Fitur Baru'
-                            : (rawG.includes('keamanan') || rawG.includes('security') ? 'Keamanan'
-                            : (rawG.includes('diperbaiki') || rawG.includes('fixed') ? 'Perbaikan' : 'Peningkatan'));
-                        const badgeCls = label === 'Fitur Baru' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : (label === 'Keamanan' ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : (label === 'Perbaikan' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-sky-50 text-sky-700 border-sky-200'));
-                        curGroup = { label, badgeCls, items: [] };
-                        cur.groups.push(curGroup);
-                        continue;
-                    }
-                    if (/^[-*]\s+/.test(ln) && curGroup) {
-                        curGroup.items.push(fmtInline(ln.replace(/^[-*]\s+/, '')));
-                    }
-                }
-
-                body.innerHTML = `
-                    <div class="space-y-4">
-                        ${cards.slice(0, 6).map((c, idx) => `
-                            <div class="p-4 rounded-2xl border ${idx === 0 ? 'border-primary-200 bg-primary-50/20 dark:border-primary-800/50 dark:bg-primary-950/10' : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900'} space-y-3">
-                                <div class="flex items-center justify-between gap-2 flex-wrap">
-                                    <div class="flex items-center gap-2">
-                                        <span class="px-2.5 py-0.5 rounded-lg ${idx === 0 ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'} font-mono text-xs font-bold">v${escapeHtml(c.ver)}</span>
-                                        ${idx === 0 ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">Terbaru</span>' : ''}
-                                    </div>
-                                    <span class="text-[11px] text-slate-400">${escapeHtml(c.date)}</span>
-                                </div>
-                                ${c.groups.map(g => `
-                                    <div class="space-y-1.5">
-                                        <span class="inline-block px-2 py-0.5 rounded-full border text-[10px] font-bold ${g.badgeCls}">${g.label}</span>
-                                        <ul class="space-y-1 text-xs text-slate-600 dark:text-slate-300 pl-1">
-                                            ${g.items.map(it => `<li class="flex items-start gap-2"><span class="text-slate-400">•</span><span>${it}</span></li>`).join('')}
-                                        </ul>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } catch (err) {
-                body.innerHTML = `<p class="text-center text-xs text-rose-500 py-6">Gagal memuat: ${escapeHtml(err.message)}</p>`;
-            }
-        }
+        return (await import('./core/about-modal.js')).renderAboutModalContent({ version: this.version, navLayout: nav.navLayout });
     },
 
-    // ===== Action Board Pagi Hari & Rekap Penagihan Otomatis (Executive Daily Brief) =====
-    _dailyBriefData: null,
-    _dailyBriefTab: null,
+    // ===== Action Board Pagi Hari & Rekap Penagihan Otomatis (Lazy-loaded via core/daily-brief.js) =====
+    async _dailyBriefMod() {
+        return import('./core/daily-brief.js');
+    },
 
     async loadDailyBriefBadge() {
-        const badge = document.getElementById('topbar-daily-brief-badge');
-        if (!badge || !AuthState.user) return;
-        try {
-            const res = await api('dashboard/daily_brief', { silent: true });
-            if (res && res.success && res.data) {
-                this._dailyBriefData = res.data;
-                const total = res.data.total_critical_items || 0;
-                if (total > 0) {
-                    badge.textContent = total > 99 ? '99+' : total;
-                    badge.classList.remove('hidden');
-                    badge.style.display = 'inline-flex';
-                } else {
-                    badge.classList.add('hidden');
-                    badge.style.display = 'none';
-                }
-            }
-        } catch (_) {}
+        return (await this._dailyBriefMod()).loadDailyBriefBadge();
     },
 
     async openDailyBriefModal() {
-        const modal = document.getElementById('daily-brief-modal');
-        const content = document.getElementById('daily-brief-content');
-        if (!modal) return;
-
-        this._dailyBriefTab = null;
-        modal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            modal.classList.remove('opacity-0');
-            content?.classList.remove('scale-95');
-        });
-
-        await this.refreshDailyBriefData();
+        return (await this._dailyBriefMod()).openDailyBriefModal();
     },
 
-    closeDailyBriefModal() {
-        const modal = document.getElementById('daily-brief-modal');
-        const content = document.getElementById('daily-brief-content');
-        if (!modal) return;
+    async closeDailyBriefModal() {
+        return (await this._dailyBriefMod()).closeDailyBriefModal();
+    },
 
-        modal.classList.add('opacity-0');
-        content?.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 200);
+    async switchDailyBriefTab(tabKey) {
+        return (await this._dailyBriefMod()).switchDailyBriefTab(tabKey);
     },
 
     async refreshDailyBriefData() {
-        const bodyEl = document.getElementById('daily-brief-body');
-        const dateEl = document.getElementById('daily-brief-date');
-        const badge = document.getElementById('topbar-daily-brief-badge');
-        if (bodyEl) {
-            bodyEl.innerHTML = `
-                <div class="py-12 text-center text-slate-400">
-                    <i class="ri-loader-4-line text-2xl animate-spin inline-block mb-2 text-primary-600"></i>
-                    <div>Menghimpun agenda operasional & data tagihan hari ini...</div>
-                </div>
-            `;
-        }
-
-        const res = await api('dashboard/daily_brief');
-        if (!res || !res.success || !res.data) {
-            if (bodyEl) bodyEl.innerHTML = `<div class="p-6 text-center text-rose-500 font-medium">Gagal memuat Action Board harian.</div>`;
-            return;
-        }
-
-        const d = res.data;
-        this._dailyBriefData = d;
-
-        if (dateEl) dateEl.textContent = d.date_formatted || 'Hari ini';
-        if (badge) {
-            const total = d.total_critical_items || 0;
-            if (total > 0) {
-                badge.textContent = total > 99 ? '99+' : total;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        const kpiNom = document.getElementById('brief-kpi-nominal');
-        const kpiInv = document.getElementById('brief-kpi-inv-count');
-        const kpiMs = document.getElementById('brief-kpi-ms-count');
-        const kpiSla = document.getElementById('brief-kpi-sla-count');
-
-        const invCount = (d.invoices || []).length;
-        const msCount = (d.milestones || []).length;
-        const slaCount = (d.maintenances || []).length;
-        const incCount = (d.incidents || []).length;
-
-        if (kpiNom) {
-            kpiNom.textContent = formatRupiah(d.total_nominal_mendesak);
-            kpiNom.className = `text-base font-bold font-mono ${(Number(d.total_nominal_mendesak) || 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'}`;
-        }
-        if (kpiInv) {
-            kpiInv.textContent = `${invCount} Faktur`;
-            kpiInv.className = `text-base font-bold font-mono ${invCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'}`;
-        }
-        if (kpiMs) {
-            kpiMs.textContent = `${msCount} Termin`;
-            kpiMs.className = `text-base font-bold font-mono ${msCount > 0 ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400 dark:text-slate-500'}`;
-        }
-        if (kpiSla) {
-            kpiSla.textContent = `${slaCount + incCount} Item`;
-            kpiSla.className = `text-base font-bold font-mono ${incCount > 0 ? 'text-rose-600 dark:text-rose-400' : (slaCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')}`;
-        }
-
-        this.renderDailyBriefBody(d);
+        return (await this._dailyBriefMod()).refreshDailyBriefData();
     },
 
-    switchDailyBriefTab(tabKey) {
-        this._dailyBriefTab = tabKey;
-        if (this._dailyBriefData) {
-            this.renderDailyBriefBody(this._dailyBriefData);
-        }
+    async copyDailyBriefWhatsApp() {
+        return (await this._dailyBriefMod()).copyDailyBriefWhatsApp();
     },
 
-    renderDailyBriefBody(d) {
-        const bodyEl = document.getElementById('daily-brief-body');
-        const tabsEl = document.getElementById('daily-brief-tabs');
-        if (!bodyEl) return;
-
-        const invs = d.invoices || [];
-        const mss = d.milestones || [];
-        const slas = d.maintenances || [];
-        const incs = d.incidents || [];
-
-        const tabs = [
-            { key: 'invoices', label: 'Tagihan', count: invs.length, icon: 'ri-hand-coin-line', dotColor: invs.length > 0 ? 'bg-rose-500' : '' },
-            { key: 'milestones', label: 'Termin Proyek', count: mss.length, icon: 'ri-flag-2-line', dotColor: mss.length > 0 ? 'bg-primary-500' : '' },
-            { key: 'sla', label: 'SLA & Lisensi', count: slas.length, icon: 'ri-global-line', dotColor: slas.length > 0 ? 'bg-amber-500' : '' },
-            { key: 'incidents', label: 'Server & Uptime', count: incs.length, icon: 'ri-server-line', dotColor: incs.length > 0 ? 'bg-rose-500' : '' }
-        ];
-
-        if (!this._dailyBriefTab || !tabs.some(t => t.key === this._dailyBriefTab)) {
-            const firstWithItems = tabs.find(t => t.count > 0);
-            this._dailyBriefTab = firstWithItems ? firstWithItems.key : 'invoices';
-        }
-        const activeTab = this._dailyBriefTab;
-
-        document.querySelectorAll('[data-brief-kpi]').forEach((el) => {
-            const isKpiActive = el.dataset.briefKpi === activeTab || (activeTab === 'incidents' && el.dataset.briefKpi === 'sla');
-            el.classList.toggle('bg-white', isKpiActive);
-            el.classList.toggle('dark:bg-slate-900', isKpiActive);
-        });
-
-        if (tabsEl) {
-            tabsEl.innerHTML = tabs.map(t => {
-                const isActive = t.key === activeTab;
-                const btnCls = isActive
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800';
-                const badgeCls = isActive
-                    ? 'bg-white/20 text-white dark:bg-slate-900/15 dark:text-slate-900'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-                const alertDot = t.dotColor
-                    ? `<span class="w-1.5 h-1.5 rounded-full ${t.dotColor} shrink-0"></span>`
-                    : '';
-                return `
-                    <button type="button" role="tab" aria-selected="${isActive ? 'true' : 'false'}"
-                            onclick="App.switchDailyBriefTab('${t.key}')"
-                            class="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 whitespace-nowrap transition shrink-0 ${btnCls}">
-                        <i class="${t.icon} text-sm opacity-80"></i>
-                        <span>${t.label}</span>
-                        ${alertDot}
-                        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${badgeCls}">${t.count}</span>
-                    </button>
-                `;
-            }).join('');
-        }
-
-        let html = '';
-
-        // 1. Invoices Overdue & Due Today
-        if (activeTab === 'invoices') {
-            html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
-                            <i class="ri-hand-coin-line text-base"></i>
-                        </span>
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">Tagihan Jatuh Tempo & Overdue (${invs.length})</h4>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Prioritas penagihan hari ini untuk mengamankan arus kas</p>
-                        </div>
-                    </div>
-                    <span class="font-mono text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">${formatRupiah(d.total_nominal_mendesak)}</span>
-                </div>
-                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-        `;
-
-            if (invs.length === 0) {
-                html += `<div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-slate-500 text-sm"></i> Tidak ada tagihan menunggak atau jatuh tempo hari ini.</div>`;
-            } else {
-                html += invs.map(inv => {
-                    const hari = Number(inv.hari_lewat) || 0;
-                    const rowAccent = hari > 0 ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-400';
-                    const statusBadge = hari > 0 
-                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50">Overdue ${hari} hari</span>`
-                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50">Jatuh Tempo Hari Ini</span>`;
-
-                    return `
-                        <div class="p-4 ${rowAccent} flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(inv.nomor_invoice)}</span>
-                                    ${statusBadge}
-                                </div>
-                                <div class="text-xs text-slate-600 dark:text-slate-300 font-medium">${escapeHtml(inv.nama_perusahaan)}</div>
-                                <div class="text-[11px] text-slate-500 font-mono mt-0.5">Sisa Tagihan: <b class="text-rose-600 dark:text-rose-400 font-semibold">${formatRupiah(inv.sisa_tagihan)}</b> dari ${formatRupiah(inv.total_tagihan)}</div>
-                            </div>
-                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                <button type="button" onclick="App.openWhatsAppInvoiceReminder(${inv.id})" class="px-3 py-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition whitespace-nowrap">
-                                    <i class="ri-whatsapp-line text-emerald-600 dark:text-emerald-400"></i> Kirim WA
-                                </button>
-                                <a href="#/invoices" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap">
-                                    <i class="ri-eye-line"></i> Rincian
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            html += `</div></div>`;
-        }
-
-        // 2. Milestones Ready to Bill
-        if (activeTab === 'milestones') {
-            html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
-                            <i class="ri-flag-2-line text-base"></i>
-                        </span>
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">Termin Proyek Siap Ditagihkan (${mss.length})</h4>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Milestone berstatus rencana yang siap diterbitkan faktur</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-        `;
-
-            if (mss.length === 0) {
-                html += `<div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-slate-500 text-sm"></i> Belum ada termin baru yang siap ditagihkan hari ini.</div>`;
-            } else {
-                html += mss.map(ms => {
-                    return `
-                        <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
-                            <div>
-                                <div class="font-bold text-sm text-slate-900 dark:text-white mb-0.5">${escapeHtml(ms.nama_milestone)}</div>
-                                <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(ms.nama_project)} • <span class="font-medium text-slate-700 dark:text-slate-300">${escapeHtml(ms.nama_perusahaan)}</span></div>
-                                <div class="text-[11px] font-mono text-primary-600 dark:text-primary-400 font-semibold mt-1">Termin ${ms.persentase}%: ${formatRupiah(ms.nominal)}</div>
-                            </div>
-                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                <button type="button" onclick="App.createMilestoneInvoiceFromBrief(${ms.id}, ${ms.project_id})" class="px-3.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition whitespace-nowrap">
-                                    <i class="ri-file-add-line"></i> Terbitkan Faktur
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            html += `</div></div>`;
-        }
-
-        // 3. SLA Domain & Hosting Expiring
-        if (activeTab === 'sla') {
-            html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
-                            <i class="ri-global-line text-base"></i>
-                        </span>
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">SLA Domain, Hosting & SSL (< 14 Hari) (${slas.length})</h4>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Peringatan perpanjangan lisensi agar tidak suspend</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-        `;
-
-            if (slas.length === 0) {
-                html += `<div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-slate-500 text-sm"></i> Seluruh masa aktif domain, hosting, dan SSL klien dalam kondisi aman.</div>`;
-            } else {
-                html += slas.map(s => {
-                    const sisa = Number(s.sisa_hari) || 0;
-                    const rowAccent = sisa <= 3 ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-400';
-                    const badge = sisa <= 3 
-                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300">Sisa ${sisa} hari</span>`
-                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300">Sisa ${sisa} hari</span>`;
-
-                    return `
-                        <div class="p-4 ${rowAccent} flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
-                            <div>
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(s.nama_aset)}</span>
-                                    ${badge}
-                                </div>
-                                <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(s.nama_perusahaan)} • Jatuh Tempo: ${formatDate(s.tanggal_berakhir)}</div>
-                                <div class="text-[11px] font-mono text-slate-600 dark:text-slate-300 mt-1">Biaya: <b>${formatRupiah(s.biaya_perpanjangan)}</b></div>
-                            </div>
-                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                <a href="#/maintenance" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition whitespace-nowrap">
-                                    Kelola SLA
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            html += `</div></div>`;
-        }
-
-        // 4. Server & Uptime Incidents
-        if (activeTab === 'incidents') {
-            html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
-                            <i class="ri-server-line text-base"></i>
-                        </span>
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">Status Kesehatan Server & Uptime (${incs.length})</h4>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Pemantau insiden live HTTP status dan sertifikat SSL</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-        `;
-
-            if (incs.length === 0) {
-                html += `<div class="p-6 text-center text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-center gap-2"><i class="ri-checkbox-circle-line text-emerald-600 dark:text-emerald-400 text-base"></i> Seluruh sistem proyek klien terpantau 100% online & SSL aman.</div>`;
-            } else {
-                html += incs.map(inc => {
-                    const isDown = inc.last_health_status === 'down';
-                    const rowAccent = isDown ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-400';
-                    const badge = isDown
-                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300">DOWN</span>`
-                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300">SSL Segera Habis</span>`;
-
-                    return `
-                        <div class="p-4 ${rowAccent} flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
-                            <div>
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(inc.nama_project)}</span>
-                                    ${badge}
-                                </div>
-                                <div class="text-xs text-slate-400 font-mono">${escapeHtml(inc.app_url || '-')}</div>
-                                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">Status: ${isDown ? 'Server tidak merespons HTTP' : `SSL tersisa ${inc.last_ssl_days} hari`}</div>
-                            </div>
-                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                <a href="#/projects" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition whitespace-nowrap">
-                                    Cek Proyek
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            html += `</div></div>`;
-        }
-
-        bodyEl.innerHTML = html;
-    },
-
-    copyDailyBriefWhatsApp() {
-        if (!this._dailyBriefData || !this._dailyBriefData.whatsapp_text) {
-            toast('Data brief belum siap disalin', 'warning');
-            return;
-        }
-        const text = this._dailyBriefData.whatsapp_text;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(() => {
-                toast('Ringkasan Executive Brief berhasil disalin ke clipboard!', 'success');
-            }).catch(() => {
-                window.prompt('Salin teks brief berikut:', text);
-            });
-        } else {
-            window.prompt('Salin teks brief berikut:', text);
-        }
-    },
-
-    sendDailyBriefWhatsApp() {
-        if (!this._dailyBriefData || !this._dailyBriefData.whatsapp_text) {
-            toast('Data brief belum siap dikirim', 'warning');
-            return;
-        }
-        const text = encodeURIComponent(this._dailyBriefData.whatsapp_text);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
+    async sendDailyBriefWhatsApp() {
+        return (await this._dailyBriefMod()).sendDailyBriefWhatsApp();
     },
 
     async createMilestoneInvoiceFromBrief(milestoneId, projectId) {
-        const conf = await confirmAction('Terbitkan Faktur Termin', 'Apakah Anda yakin ingin langsung menerbitkan faktur resmi dari termin ini?');
-        if (!conf) return;
-
-        const res = await api(`projects/${projectId}?action=create-milestone-invoice`, {
-            method: 'POST',
-            body: { milestone_id: milestoneId }
-        });
-
-        if (res && res.success) {
-            toast(res.message, 'success');
-            await this.refreshDailyBriefData();
-        }
+        return (await this._dailyBriefMod()).createMilestoneInvoiceFromBrief(milestoneId, projectId);
     },
 
     // ===== PWA Service Worker & Install Prompt =====
@@ -1821,117 +1266,21 @@ const App = {
         document.getElementById('pwa-install-banner')?.classList.add('hidden');
     },
 
-    // ===== Notification Bell Popover =====
-    async loadNotifications(silentRefresh = false) {
-        if (!hasPerm('dashboard.view')) return;
-        const badge = document.getElementById('topbar-notif-badge');
-        const list = document.getElementById('topbar-notif-list');
-        if (!badge || !list) return;
-
-        const [dashRes, inAppRes] = await Promise.all([
-            api('dashboard/notifications', { cache: false, silent: true }),
-            api('notifications?limit=15', { cache: false, silent: true })
-        ]);
-        const dashData = dashRes?.success && dashRes.data ? dashRes.data : { total_badge: 0, alerts: [] };
-        const inAppData = inAppRes?.success && inAppRes.data ? inAppRes.data : { unread_count: 0, items: [] };
-
-        const alerts = dashData.alerts || [];
-        const inAppItems = inAppData.items || [];
-        const totalBadge = (Number(dashData.total_badge) || 0) + (Number(inAppData.unread_count) || 0);
-
-        if (totalBadge > 0) {
-            badge.textContent = totalBadge > 99 ? '99+' : String(totalBadge);
-            badge.classList.remove('hidden');
-            badge.style.display = 'inline-flex';
-        } else {
-            badge.classList.add('hidden');
-            badge.style.display = 'none';
-        }
-
-        if (alerts.length === 0 && inAppItems.length === 0) {
-            list.innerHTML = `<div class="p-6 text-center text-xs text-slate-400"><i class="ri-checkbox-circle-line text-2xl text-emerald-400 block mb-1"></i>Semua terkendali, tidak ada notifikasi baru.</div>`;
-            return;
-        }
-
-        const inAppHtml = inAppItems.length ? `
-            <div class="px-3.5 py-2 bg-slate-50/80 dark:bg-slate-800/60 flex items-center justify-between text-[11px] font-bold text-slate-500">
-                <span>Aktivitas Real-Time</span>
-                ${Number(inAppData.unread_count) > 0 ? `<button type="button" onclick="App.markAllNotifRead()" class="text-primary-600 hover:underline font-semibold">Tandai dibaca</button>` : ''}
-            </div>
-            ${inAppItems.map((n) => {
-                const unread = Number(n.is_read) === 0;
-                const badgeCls = n.tipe === 'bahaya' ? 'bg-rose-50 text-rose-600 border-rose-100'
-                    : (n.tipe === 'peringatan' ? 'bg-amber-50 text-amber-600 border-amber-100'
-                    : (n.tipe === 'sukses' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'));
-                return `
-                    <a href="${escapeHtml(n.tautan || '#/dashboard')}" onclick="App.markNotifRead(${n.id}); App.closeNotifications();"
-                       class="flex items-start gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition ${unread ? 'bg-primary-50/30 dark:bg-primary-950/15' : 'opacity-75'}">
-                        <div class="w-8 h-8 rounded-xl border ${badgeCls} flex items-center justify-center shrink-0 mt-0.5">
-                            <i class="ri-notification-3-line"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-slate-800 dark:text-white leading-snug truncate">${escapeHtml(n.judul)}</span>
-                                ${unread ? '<span class="w-1.5 h-1.5 rounded-full bg-primary-600 shrink-0"></span>' : ''}
-                            </div>
-                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">${escapeHtml(n.pesan)}</div>
-                        </div>
-                    </a>
-                `;
-            }).join('')}
-        ` : '';
-
-        const alertsHtml = alerts.map((a) => {
-            const badgeCls = a.type === 'danger' ? 'bg-rose-50 text-rose-600 border-rose-100'
-                : (a.type === 'warning' ? 'bg-amber-50 text-amber-600 border-amber-100'
-                : (a.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-sky-50 text-sky-600 border-sky-100'));
-            return `
-                <a href="${escapeHtml(a.url || '#/invoices')}" onclick="App.closeNotifications()" class="flex items-start gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                    <div class="w-8 h-8 rounded-xl border ${badgeCls} flex items-center justify-center shrink-0 mt-0.5">
-                        <i class="${escapeHtml(a.icon || 'ri-file-warning-line')}"></i>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="text-xs font-bold text-slate-800 dark:text-white leading-snug">${escapeHtml(a.title)}</div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">${escapeHtml(a.detail)}</div>
-                    </div>
-                    <i class="ri-arrow-right-s-line text-slate-300 mt-1"></i>
-                </a>
-            `;
-        }).join('');
-
-        list.innerHTML = inAppHtml + alertsHtml;
+    // ===== Notification Bell Popover (Lazy-loaded) =====
+    async loadNotifications() {
+        return (await import('./core/notifications.js')).loadNotifications();
     },
 
     async markNotifRead(id) {
-        if (!id) return;
-        await api('notifications/read', { method: 'POST', body: { id }, silent: true });
-        this.loadNotifications(true);
+        return (await import('./core/notifications.js')).markNotifRead(id);
     },
 
     async markAllNotifRead() {
-        await api('notifications/read', { method: 'POST', body: { all: true }, silent: true });
-        this.loadNotifications(true);
+        return (await import('./core/notifications.js')).markAllNotifRead();
     },
 
-    toggleNotifications(e) {
-        if (e) e.stopPropagation();
-        const pop = document.getElementById('topbar-notif-popover');
-        if (!pop) return;
-        const willOpen = pop.classList.contains('hidden');
-        pop.classList.toggle('hidden');
-        if (willOpen) {
-            this.loadNotifications();
-            if (!this._notifOutsideBound) {
-                this._notifOutsideBound = true;
-                document.addEventListener('click', (evt) => {
-                    const wrapper = document.getElementById('topbar-notif-wrapper');
-                    const p = document.getElementById('topbar-notif-popover');
-                    if (wrapper && p && !p.classList.contains('hidden') && !wrapper.contains(evt.target)) {
-                        p.classList.add('hidden');
-                    }
-                });
-            }
-        }
+    async toggleNotifications(e) {
+        return (await import('./core/notifications.js')).toggleNotifications(e);
     },
 
     toggleUserMenu(e) {

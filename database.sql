@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `status` ENUM('aktif', 'nonaktif') DEFAULT 'aktif',
     `totp_secret` VARCHAR(64) NULL,
     `totp_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+    `preferences_json` TEXT NULL,
     `last_login` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

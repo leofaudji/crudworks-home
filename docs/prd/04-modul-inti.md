@@ -198,3 +198,20 @@ stateDiagram-v2
 - **Portal Klien (PWA)**: Ringkasan Proyek & BAST (dengan label termin ringkas dan pintasan unduh SPK/BAST), daftar Layanan & Status Uptime/SSL terintegrasi, pencarian Tiket Gangguan beserta badge cakupan biaya, daftar Faktur & status verifikasi pembayaran, serta Penawaran (SPH) digital.
 - **Status Page Layanan Publik (`#/status`)**: Halaman status uptime & respons server real-time yang dapat diakses publik maupun dari tautan Portal Klien tanpa perlu login admin.
 - **Ekspor CSV Seragam & Audit Komunikasi**: Halaman utama (`Faktur`, `Pembayaran`, `Pengeluaran`, `Tiket`) dilengkapi ekspor CSV kompatibel Excel (`App.exportCsv`) serta pencatatan waktu & kanal pengiriman terakhir (`last_sent_at`, `last_sent_via`) pada Faktur dan Penawaran.
+
+---
+
+## 13. Action Board Pagi Hari & Kesiapan Serah Terima Proyek
+
+### Action Board Pagi Hari (Executive Daily Brief)
+- **Akses Cepat**: Dapat dibuka dari banner Dashboard maupun ikon lonceng/agenda di topbar (`#daily-brief-modal`, di-lazy-load via `assets/js/core/daily-brief.js`).
+- **Navigasi Tab Interaktif & KPI Quick Bar**: 4 kartu KPI di bagian atas dapat diklik untuk langsung berpindah ke 4 tab kategori:
+  1. **Tagihan** (`invoices`): Faktur overdue dan jatuh tempo hari ini, dilengkapi tombol 1-klik **Kirim WA**.
+  2. **Termin Proyek** (`milestones`): Termin proyek berstatus rencana yang siap diterbitkan faktur 1-klik.
+  3. **SLA & Lisensi** (`sla`): Domain, hosting, dan SSL yang akan kedaluwarsa dalam 14 hari.
+  4. **Server & Uptime** (`incidents`): Insiden server DOWN atau sertifikat SSL mendekati kedaluwarsa.
+- **Ringkasan Eksekutif WhatsApp**: Mendukung salin ringkasan agenda ke clipboard dan kirim langsung via WhatsApp (`wa.me`).
+
+### Checklist Kesiapan Serah Terima Proyek (Go-Live Checklist) & Garansi/Adendum
+- Tersedia di menu aksi proyek (`Dokumen & Serah Terima`) untuk memastikan seluruh prasyarat teknis, keamanan, backup, dan BAST terverifikasi sebelum serah terima ke klien.
+- Pengelolaan garansi purnajual dan adendum perubahan ruang lingkup (*Change Request*) terhubung langsung ke profil proyek.

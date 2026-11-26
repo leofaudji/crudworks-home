@@ -537,17 +537,22 @@
             <div id="taskbar-pinned-apps" class="flex-1 flex items-center gap-1 overflow-x-auto max-w-4xl mx-2 py-0.5 scrollbar-none"></div>
 
             <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-                <button type="button" onclick="App.toggleCalculator()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition" title="Kalkulator Cepat">
-                    <i class="ri-calculator-line text-base"></i>
-                </button>
-                <button type="button" onclick="App.toggleNavLayoutPicker(event)" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition" title="Ubah Tata Letak Menu">
-                    <i class="ri-layout-masonry-line text-base"></i>
-                </button>
-                <button type="button" onclick="App.toggleTableDensity()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition hidden sm:flex" title="Kerapatan Tabel">
-                    <i class="ri-table-line text-base"></i>
-                </button>
-                <button type="button" onclick="App.openPreferencesModal()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition" title="Preferensi Tampilan">
-                    <i class="ri-equalizer-line text-base"></i>
+                <button type="button" data-table-action-trigger
+                    onclick="App.toggleTableActionMenu(this, event, [
+                        { label: 'Kalkulator Cepat', icon: 'ri-calculator-line', fn: () => App.toggleCalculator() },
+                        { label: 'Tata Letak Menu', icon: 'ri-layout-masonry-line', children: [
+                            { label: 'Sidebar Kiri', icon: 'ri-layout-left-line', fn: () => App.setNavLayout('sidebar') },
+                            { label: 'Taskbar Bawah', icon: 'ri-layout-bottom-line', fn: () => App.setNavLayout('bottom') },
+                            { label: 'Bilah Atas', icon: 'ri-layout-top-line', fn: () => App.setNavLayout('top') }
+                        ]},
+                        { label: 'Kerapatan Tabel', icon: 'ri-table-line', fn: () => App.toggleTableDensity() },
+                        { divider: true },
+                        { label: 'Preferensi Tampilan', icon: 'ri-equalizer-line', fn: () => App.openPreferencesModal() }
+                    ])"
+                    class="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition inline-flex items-center gap-1"
+                    title="Utilitas &amp; Preferensi" aria-label="Utilitas dan Preferensi">
+                    <i class="ri-apps-2-line text-base"></i>
+                    <i class="ri-arrow-up-s-line text-xs opacity-60"></i>
                 </button>
                 <div id="taskbar-clock" class="text-right px-2 py-0.5 hover:bg-slate-100 rounded-lg hidden sm:flex flex-col justify-center leading-tight">
                     <span id="taskbar-clock-time" class="text-xs font-bold font-mono text-slate-800">12:00</span>
@@ -736,7 +741,7 @@
     <div id="preferences-modal" class="fixed inset-0 z-[130] hidden opacity-0 transition-opacity duration-200">
         <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="App.closePreferencesModal()"></div>
         <div class="relative min-h-screen flex items-center justify-center p-4 pointer-events-none">
-            <div class="pref-dialog-card relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transform transition-transform duration-200 scale-95 flex flex-col max-h-[90vh] pointer-events-auto">
+            <div class="pref-dialog-card relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transform transition-transform duration-200 scale-95 flex flex-col max-h-[90vh] pointer-events-auto">
                 <div class="px-6 py-4 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-2xl bg-primary-50 dark:bg-primary-950/40 text-primary-600 flex items-center justify-center font-bold text-lg border border-primary-200/60 dark:border-primary-800/60">
@@ -877,8 +882,8 @@
         <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" onclick="App.closeDailyBriefModal()"></div>
         <div class="relative min-h-screen flex items-center justify-center p-3 sm:p-6 pointer-events-none">
             <div id="daily-brief-content" class="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all scale-95 pointer-events-auto flex flex-col max-h-[92vh]">
-                <!-- Header Minimalis -->
-                <div class="bg-white dark:bg-slate-900 px-6 py-4 text-slate-900 dark:text-white border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0">
+                <!-- Header Minimalis dengan Gradien 3 Warna Lembut -->
+                <div class="bg-white dark:bg-slate-900 bg-gradient-to-r from-amber-500/[0.06] via-primary-500/[0.03] to-indigo-500/[0.06] dark:from-amber-500/[0.09] dark:via-primary-500/[0.04] dark:to-indigo-500/[0.09] px-6 py-4 text-slate-900 dark:text-white border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0">
                     <div class="flex items-center gap-3.5">
                         <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/50 flex items-center justify-center text-amber-600 dark:text-amber-400 text-xl shrink-0">
                             <i class="ri-sun-cloudy-line"></i>

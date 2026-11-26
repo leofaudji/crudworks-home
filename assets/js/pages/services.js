@@ -206,23 +206,23 @@ async function loadServices() {
 
         return `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                <td class="py-4 px-6">
-                    <div class="font-bold text-slate-900 dark:text-white">${s.nama_layanan}</div>
-                    <div class="text-xs font-mono text-primary-600 dark:text-primary-400">${s.kode_layanan}</div>
+                <td class="py-3.5 px-6 align-middle max-w-[240px]">
+                    <div class="font-bold text-slate-900 dark:text-white truncate" title="${App.escapeHtml(s.nama_layanan)}">${App.escapeHtml(s.nama_layanan)}</div>
+                    <div class="text-xs font-mono text-primary-600 dark:text-primary-400 whitespace-nowrap">${App.escapeHtml(s.kode_layanan)}</div>
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap">
                     ${catBadges[s.kategori] || s.kategori}
                 </td>
-                <td class="py-4 px-6 font-mono font-bold text-slate-900 dark:text-white">
+                <td class="py-3.5 px-6 align-middle font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                     ${App.formatIDR(s.harga_standar)}
                 </td>
-                <td class="py-4 px-6 text-xs text-slate-600 dark:text-slate-300 capitalize">
+                <td class="py-3.5 px-6 align-middle text-xs text-slate-600 dark:text-slate-300 capitalize whitespace-nowrap">
                     ${s.siklus_tagihan.replace('_', ' ')}
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap">
                     ${App.renderStatusBadge(s.status, 'service')}
                 </td>
-                <td class="py-4 px-6 text-right">
+                <td class="py-3.5 px-6 align-middle text-right whitespace-nowrap">
                     <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                         { label: 'Edit Layanan', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editService(${s.id})' },
                         { divider: true },

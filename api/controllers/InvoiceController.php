@@ -85,8 +85,7 @@ if ($id && is_numeric($id)) {
     if ($action === 'log-send') {
         if ($method !== 'POST') errorResponse('Method not allowed', 405);
         checkPermission('invoice.view');
-        $via = trim((string)($params['via'] ?? 'whatsapp'));
-        if (!in_array($via, ['whatsapp', 'email', 'portal'], true)) $via = 'whatsapp';
+        $via = validateEnum((string)($params['via'] ?? ''), ['whatsapp', 'email', 'portal'], 'whatsapp');
 
         $inv = $db->fetch("SELECT id, nomor_invoice, status FROM invoices WHERE id = ?", [$invoiceId]);
         if (!$inv) errorResponse('Invoice tidak ditemukan', 404);
@@ -245,8 +244,8 @@ if ($id && is_numeric($id)) {
         $inv = $db->fetch("SELECT * FROM invoices WHERE id = ?", [$invoiceId]);
         if (!$inv) errorResponse('Invoice tidak ditemukan', 404);
 
-        if ((float)$inv['total_dibayar'] > 0) {
-            errorResponse('Invoice yang telah memiliki riwayat pembayaran tidak dapat dihapus. Silakan batalkan transaksi pembayaran terlebih dahulu.');
+        if ($inv['status'] === 'lunas' || (float)$inv['total_dibayar'] > 0) {
+            errorResponse('Invoice yang telah lunas atau memiliki riwayat pembayaran tidak dapat dihapus. Silakan batalkan transaksi pembayaran terlebih dahulu.', 422);
         }
 
         $db->execute("DELETE FROM invoices WHERE id = ?", [$invoiceId]);

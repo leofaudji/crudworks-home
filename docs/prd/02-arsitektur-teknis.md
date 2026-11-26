@@ -147,9 +147,51 @@ d:/laragon/www/crudworks-home/
 
 Untuk mencegah overhead disk I/O dan menangani proses berulang:
 - **Redis Session Handler**: Sesi PHP disimpan langsung ke Redis (`tcp://127.0.0.1:6379`) dengan prefix key `crudworks_sess:`.
-- **Cache-Aside Data Master**: Master data (katalog layanan, daftar role, struktur menu RBAC, konfigurasi instansi) di-cache di Redis dengan TTL 1 jam.
-- **Invalidasi Cache Bertarget**: Setiap kali terjadi operasi CUD (Create/Update/Delete) pada modul terkait, fungsi `clearCache(['services', 'rbac', 'settings'])` membersihkan key terkait secara terarah.
+- **Cache-Aside Data Master & Laporan Berat**:
+  - Master data (katalog layanan, daftar role, struktur menu RBAC, konfigurasi instansi) dan statistik dashboard di-cache di Redis.
+  - Seluruh laporan agregasi berat di `ReportController.php` (`aging`, `revenue`, `statement`, `profit-loss`, `cashflow-tax`) dan laporan akuntansi di `AccountingController.php` (`coa`, `ledger`, `balance-sheet`, `trial-balance`, `income-statement`, `cash-flow`, `equity-statement`) terintegrasi dengan helper terpadu `initReportCache()` (TTL default 300 detik, mendukung bypass `?fresh=1`).
+- **Invalidasi Cache Bertarget**: Setiap kali terjadi operasi CUD (Create/Update/Delete) pada faktur, pembayaran, pengeluaran, jurnal, COA, atau pengaturan, fungsi `clearCache()` membersihkan key terkait (`cache_report_*`, `cache_accounting_*`, `dashboard_stats`, dll.) secara otomatis, serta tersedia tombol pembersihan manual di **Pengaturan Sistem → Kesehatan Sistem & Cache**.
+- **Fallback Aman**: Apabila server/ekstensi Redis tidak aktif, `RedisManager` otomatis melakukan fallback ke query MySQL tanpa mengganggu operasional.
 - **Badge Notifikasi Otomatis**: Jumlah tagihan jatuh tempo dan pembayaran tertunda dihitung dan di-cache selama 30 detik untuk menghemat beban query database saat navigasi berpindah-pindah.
+
+---
+
+## 7. Standar Fungsi Terpadu & Aturan Kebersihan Kode
+
+Untuk mencegah duplikasi kode lintas modul, pengembangan wajib mematuhi 7 aturan rekayasa berikut:
+1. **Satu Sumber Kebenaran Status & Badge**: Warna, label, dan ikon status wajib mengacu pada pemetaan terpusat (`App.renderStatusBadge()`), bukan mendefinisikan ulang objek badge di setiap halaman JS.
+2. **Wajib `paginatedResponse()` di Endpoint Daftar**: Seluruh endpoint `GET` berpaginasi wajib memakai `paginatedResponse()` di `api/index.php`—dilarang menghitung `LIMIT`/`OFFSET` dan menyusun JSON `pagination` secara manual.
+3. **Helper Validasi Input & Enum Terpadu**: Pengecekan field wajib dan validasi `ENUM` di backend wajib memakai `requireParams()` dan `validateEnum()` di `api/index.php`.
+4. **Binding Event di `container` & Debounce Standar**: Event listener SPA dipasang di dalam `container` (atau sekali di level modul) agar tidak menumpuk ganda saat berpindah rute, dan pencarian teks wajib memakai `App.debounce()`.
+5. **Batas Ukuran Modul & Pemisahan Helper**: Controller atau halaman JS yang melebihi ~500 baris atau memuat logika kompleks (PDF, akuntansi, integrasi) wajib dipecah ke `api/config/*_helpers.php` atau `assets/js/core/*.js`.
+6. **Sinkronisasi Wajib Skema DB & Cache PWA**: Setiap perubahan skema SQL wajib langsung dicatat di `database.sql` dan `docs/prd/03-desain-database.md`; setiap perubahan JS/CSS wajib menaikkan `CACHE_NAME` di `sw.js` (atau `portal/sw.js`).
+7. **Satu Pintu Modal & Konfirmasi**: Seluruh dialog konfirmasi dan modal ringkas wajib memakai `App.confirm()` / `App.modal()` atau komponen modal standar—dilarang memakai `alert()`, `confirm()`, `prompt()` bawaan browser.
+
+Ringkasan helper terpadu yang tersedia:
+- **Backend (`api/index.php` & `api/config/invoice_helpers.php`)**: `generateDocNumber()`, `initReportCache()`, `cacheGet()`, `cacheSet()`, `clearCache()`, `requireParams()`, `validateEnum()`, `saveUploadedFile()`.
+- **Frontend (`assets/js/core/utils.js` & `assets/js/app.js`)**: `App.renderPagination()`, `App.openWhatsApp()`, `App.formatWhatsAppPhone()`, `App.exportCsv()`, `App.renderStatusBadge()`, `App.debounce()`, `App.btnLoading()`, `App.formatIDR()`, `App.formatDate()`.
+
+---
+
+## 8. Standar Keamanan, Integritas Keuangan & Isolasi Data
+
+1. **Upload File & Lampiran Terpusat**: Seluruh unggahan file wajib melewati helper terpadu `saveUploadedFile()` yang memvalidasi MIME type asli (`finfo`), batas ukuran file, dan menghasilkan nama file acak (`random_bytes`).
+2. **Anti Double-Submit & Idempotency Transaksi**: Tombol aksi mutasi di frontend wajib memakai `App.btnLoading()`, dan backend wajib menolak konversi ganda (misal tiket yang sudah memiliki `invoice_id` atau `quotation_id`).
+3. **Presisi Desimal Keuangan**: Kolom uang memakai `DECIMAL(15,2)` dan pembulatan `round($val, 2)` di PHP dengan toleransi pelunasan `<= 0.01`.
+4. **Isolasi Ketat Data Publik**: Endpoint publik (`public-invoice`, `public-quotation`, `public-status`, `portal-auth`) wajib memakai *explicit `SELECT`* dan dilarang membocorkan `catatan_internal`, kredensial, atau data klien lain.
+5. **Proteksi Penghapusan Data Transaksi**: Faktur `lunas` atau yang sudah memiliki pembayaran, pembayaran terverifikasi, kontrak ditandatangani, dan jurnal tutup buku dilarang dihapus permanen (`DELETE`); arahkan ke pembatalan (`batal`) atau nonaktif.
+6. **Pesan Error Ramah Pengguna**: Respons `errorResponse()` untuk pengguna harus berbahasa Indonesia yang jelas dan tidak membocorkan detail SQL atau path internal server pada mode produksi.
+
+---
+
+## 9. Tata Kelola Migrasi, Rilis & Definisi Selesai (DoD)
+
+1. **Migrasi Skema Database Aman**: Penambahan kolom atau tabel baru pada database aktif wajib bersifat *backward-compatible* (`NULL` atau `DEFAULT` aman) dan memeriksa keberadaan kolom sebelum `ALTER TABLE`.
+2. **Standar Penamaan Permission RBAC**: Setiap modul/endpoint baru wajib memakai konvensi `<domain>.view|create|edit|delete|manage` dan didaftarkan serentak di `api/config/menus.json`, tabel `permissions`, serta `role_permissions`.
+3. **Transaksi Multi-Tabel & Urutan Cache**: Mutasi lebih dari satu tabel wajib memakai transaksi PDO (`beginTransaction` / `commit` / `rollBack`), dan `clearCache()` serta `logActivity()` wajib dipanggil **setelah `$pdo->commit()` berhasil**.
+4. **Standar Responsivitas, Dark Mode & Aksesibilitas**: Seluruh UI baru wajib mendukung `dark:*`, tata letak mobile hingga desktop (`overflow-x-auto` pada tabel), serta `title` atau `aria-label` pada tombol ikon.
+5. **Definition of Done (Gerbang Verifikasi)**: Perubahan dinyatakan selesai hanya setelah lulus `php -l` (seluruh file PHP diubah), `node -c` (seluruh file JS diubah), validasi JSON konfigurasi, dan uji muat live tanpa PHP Warning atau Console Error.
+6. **Kebijakan Catatan Rilis Pelanggan**: Fitur yang berdampak ke pengguna akhir wajib dicatat di `CHANGELOG.md` dengan bahasa pelanggan yang menjelaskan manfaat operasionalnya.
 
 ---
 

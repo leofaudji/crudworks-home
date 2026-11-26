@@ -566,38 +566,38 @@ function renderTable() {
         return `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
                 <!-- Aset & Provider -->
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-6 align-middle max-w-[240px]">
                     <div class="flex items-start gap-3">
                         <div class="w-9 h-9 rounded-xl border flex items-center justify-center text-base flex-shrink-0 ${catCfg.color}">
                             <i class="${catCfg.icon}"></i>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <div class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                <span>${App.escapeHtml(a.nama_aset)}</span>
-                                ${a.url_portal ? `<a href="${App.escapeHtml(a.url_portal)}" target="_blank" rel="noopener" class="text-slate-400 hover:text-primary-600 text-xs" title="Buka Portal Provider"><i class="ri-external-link-line"></i></a>` : ''}
+                                <span class="truncate" title="${App.escapeHtml(a.nama_aset)}">${App.escapeHtml(a.nama_aset)}</span>
+                                ${a.url_portal ? `<a href="${App.escapeHtml(a.url_portal)}" target="_blank" rel="noopener" class="text-slate-400 hover:text-primary-600 text-xs shrink-0" title="Buka Portal Provider"><i class="ri-external-link-line"></i></a>` : ''}
                             </div>
                             <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                                <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300">
+                                <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                     ${App.escapeHtml(a.provider)}
                                 </span>
-                                <span class="text-[10px] text-slate-400">${catCfg.label}</span>
+                                <span class="text-[10px] text-slate-400 whitespace-nowrap">${catCfg.label}</span>
                             </div>
                         </div>
                     </div>
                 </td>
 
                 <!-- Identifikasi & Lokasi -->
-                <td class="py-4 px-6 text-xs font-mono">
-                    <div class="font-bold text-slate-800 dark:text-slate-200">
+                <td class="py-3.5 px-6 align-middle text-xs font-mono max-w-[180px]">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 truncate" title="${App.escapeHtml(a.identifier || '')}">
                         ${a.identifier ? App.escapeHtml(a.identifier) : '<span class="text-slate-400 font-sans">-</span>'}
                     </div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">
+                    <div class="text-[11px] text-slate-400 mt-0.5 truncate">
                         ${a.region ? `<i class="ri-map-pin-line text-[10px] mr-0.5"></i> ${App.escapeHtml(a.region)}` : ''}
                     </div>
                 </td>
 
                 <!-- Biaya & Siklus -->
-                <td class="py-4 px-6 font-mono">
+                <td class="py-3.5 px-6 align-middle font-mono whitespace-nowrap">
                     <div class="font-bold text-slate-900 dark:text-white">
                         ${App.formatRupiah(a.biaya_idr)}
                     </div>
@@ -608,7 +608,7 @@ function renderTable() {
                 </td>
 
                 <!-- Tanggal Berakhir & Countdown -->
-                <td class="py-4 px-6 font-mono text-xs">
+                <td class="py-3.5 px-6 align-middle font-mono text-xs whitespace-nowrap">
                     <div class="font-bold text-slate-800 dark:text-slate-200">
                         ${App.formatDate(a.tanggal_berakhir)}
                     </div>
@@ -618,7 +618,7 @@ function renderTable() {
                 </td>
 
                 <!-- Status -->
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap">
                     ${statusBadge}
                 </td>
 

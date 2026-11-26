@@ -4,6 +4,14 @@ Daftar pembaruan fitur, peningkatan kenyamanan, dan perbaikan sistem **CRUDWorks
 
 ---
 
+## [1.8.14] - 2026-11-26
+
+### Ditambahkan (Added)
+
+- **Checklist Kesiapan Serah Terima Proyek (Go-Live Checklist)**: Pemeriksaan otomatis dan manual pada modul Proyek untuk memastikan URL produksi online, sertifikat SSL aktif, kredensial tersimpan di Brankas, tugas selesai, serta SPK dan BAST sudah ditandatangani sebelum serah terima ke klien.
+
+---
+
 ## [1.8.13] - 2026-11-25
 
 ### Ditambahkan (Added)

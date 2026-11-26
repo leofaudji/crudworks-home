@@ -101,6 +101,48 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
 
 ## 4. Panduan Penulisan Kode (Conventions)
 
+### Wajib Fungsi Terpadu (*Unified Helpers First*)
+- **Setiap kali membuat fungsi baru yang berpotensi dipakai di lebih dari satu tempat, wajib buat dalam bentuk fungsi terpadu (reusable helper)** — jangan menyalin-tempel blok logika yang sama di banyak controller atau halaman.
+- Sebelum menulis fungsi utilitas baru, periksa dan gunakan helper terpadu yang sudah tersedia:
+  - **PHP Backend**:
+    - Penomoran dokumen otomatis: `generateDocNumber($table, $column, $prefix, $pad, $withYearMonth, $separator)` di `api/config/invoice_helpers.php` (serta `generateInvoiceNo()` & `generatePaymentNo()`).
+    - Cache Redis laporan & invalidasi: `initReportCache()`, `cacheGet()`, `cacheSet()`, dan `clearCache()` di `api/index.php`.
+    - Validasi input & enum: `requireParams()` dan `validateEnum()` di `api/index.php`.
+    - Unggahan file aman terpusat: `saveUploadedFile()` di `api/index.php`.
+    - Paginasi API standar: `paginatedResponse()` di `api/index.php`.
+  - **JavaScript Frontend**:
+    - Pagination tabel seragam: `App.renderPagination(containerEl, pagination, onPageChange, itemLabel)`.
+    - Pengiriman & normalisasi WhatsApp: `App.openWhatsApp(phone, message)` dan `App.formatWhatsAppPhone(phone)`.
+    - Ekspor CSV kompatibel Excel: `App.exportCsv(filename, headers, rows)`.
+    - Status badge terpusat & pencarian: `App.renderStatusBadge(status, domain)` dan `App.debounce(fn, 300)`.
+    - Format mata uang & tanggal: `App.formatIDR(value)` dan `App.formatDate(dateString)`.
+
+### Aturan Kebersihan Kode & Anti-Duplikasi (Wajib 7 Poin)
+1. **Satu Sumber Kebenaran Status**: Gunakan `App.renderStatusBadge()`, jangan mendefinisikan ulang objek warna/ikon badge di tiap halaman.
+2. **Wajib `paginatedResponse()`**: Jangan menulis ulang `LIMIT`/`OFFSET` dan struktur JSON `pagination` secara manual.
+3. **Validasi Terpadu**: Gunakan `requireParams()` dan `validateEnum()` untuk field wajib dan pengecekan `ENUM`.
+4. **Event Binding & Debounce**: Pasang event listener di `container` (bukan menumpuk di `document` pada setiap `init()`), dan gunakan `App.debounce()` untuk input pencarian.
+5. **Batas Ukuran File**: Jika controller atau page JS >500 baris atau punya logika kompleks, ekstrak ke `api/config/*_helpers.php` atau `assets/js/core/*.js`.
+6. **Sinkronisasi DB & PWA**: Setiap perubahan SQL wajib diperbarui di `database.sql` & `docs/prd/03-desain-database.md`; setiap perubahan JS/CSS wajib menaikkan `CACHE_NAME` di `sw.js` (atau `portal/sw.js`).
+7. **Satu Pintu Dialog**: Dilarang memakai `alert()`, `confirm()`, `prompt()` bawaan browser; gunakan `SweetAlert2`, `App.confirm()`, atau `App.modal()`.
+
+### Aturan Keamanan & Integritas Keuangan (Wajib 6 Poin)
+1. **Upload Terpusat**: Gunakan `saveUploadedFile()` untuk unggahan file (validasi MIME `finfo`, batas ukuran, nama acak).
+2. **Anti Double-Submit**: Gunakan `App.btnLoading()` di tombol mutasi frontend dan cek idempotency di backend agar konversi/transaksi tidak dobel.
+3. **Presisi Keuangan**: Gunakan `DECIMAL(15,2)` dan `round($val, 2)` dengan toleransi lunas `<= 0.01`.
+4. **Isolasi Data Publik**: Endpoint publik & Portal Klien wajib *explicit `SELECT`* tanpa `catatan_internal` atau data klien lain.
+5. **Proteksi Hapus Transaksi**: Tolak `DELETE` permanen pada faktur `lunas`/berbayar, kontrak sah, atau jurnal tutup buku; gunakan status `batal`/`nonaktif`.
+6. **Error Ramah Pengguna**: Kembalikan pesan bahasa Indonesia yang aman via `errorResponse()` tanpa membocorkan detail SQL/stack trace.
+
+### Aturan Tata Kelola, Rilis & Definition of Done (Wajib 6 Poin)
+1. **Migrasi Database Aman**: Kolom/tabel baru wajib *backward-compatible* (`NULL` atau `DEFAULT` aman) dan dicek sebelum `ALTER TABLE`.
+2. **Standar Permission RBAC**: Gunakan pola `<domain>.view|create|edit|delete|manage` di `api/config/menus.json`, `permissions`, dan `role_permissions`.
+3. **Transaksi & Urutan Cache**: Panggil `clearCache()` dan `logActivity()` **hanya setelah `$pdo->commit()` berhasil**, jangan di dalam transaksi sebelum commit.
+4. **UI Responsif, Dark Mode & Aksesibel**: Komponen baru wajib mendukung `dark:*`, rapi di mobile-desktop, dan tombol ikon wajib punya `title`/`aria-label`.
+5. **Proporsi Tabel, Taskbar Safe-Area & Modal**: Kontainer `#app-content` wajib menjaga `pb-24` (aman dari taskbar bawah), dropdown/popover mengambang wajib menghormati `safeBottom`, sel tabel status/angka/aksi wajib `whitespace-nowrap` (teks panjang pakai `truncate` + `title`), dan modal panjang wajib memakai header/footer *sticky* (`flex flex-col` + `overflow-y-auto` di body).
+6. **Gerbang Verifikasi (DoD)**: Wajib lulus `php -l` (PHP), `node -c` (JS), validasi JSON (`menus.json`), serta cek endpoint/halaman live.
+7. **Changelog Bahasa Pelanggan**: Catat rilis fitur baru di `CHANGELOG.md` dengan bahasa bisnis untuk pelanggan, bukan jargon teknis internal.
+
 ### PHP Backend
 - Selalu gunakan strict typing bila memungkinkan (`declare(strict_types=1);`).
 - Hindari `die()` atau `echo` mentah di dalam controller; gunakan `jsonResponse()`, `successResponse()`, atau `errorResponse()`.

@@ -404,27 +404,27 @@ async function loadTimesheets() {
                 <td class="py-4 px-4">
                     <div class="font-semibold text-xs text-slate-900 dark:text-white">${t.user_nama}</div>
                 </td>
-                <td class="py-4 px-6">
-                    <div class="font-bold text-xs text-slate-900 dark:text-white">${t.nama_project}</div>
-                    <div class="text-[11px] text-slate-400">${t.client_nama}</div>
+                <td class="py-3.5 px-6 align-middle max-w-[200px]">
+                    <div class="font-bold text-xs text-slate-900 dark:text-white truncate" title="${App.escapeHtml(t.nama_project)}">${App.escapeHtml(t.nama_project)}</div>
+                    <div class="text-[11px] text-slate-400 truncate" title="${App.escapeHtml(t.client_nama)}">${App.escapeHtml(t.client_nama)}</div>
                 </td>
-                <td class="py-4 px-6 max-w-xs">
-                    <div class="text-xs text-slate-700 dark:text-slate-300 font-medium line-clamp-2">${t.deskripsi_tugas}</div>
-                    ${Number(t.is_billable) ? '<span class="inline-block mt-1 text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800">BILLABLE</span>' : '<span class="inline-block mt-1 text-[10px] bg-slate-100 text-slate-500 dark:bg-slate-800 font-semibold px-1.5 py-0.2 rounded">NON-BILLABLE</span>'}
+                <td class="py-3.5 px-6 align-middle max-w-xs">
+                    <div class="text-xs text-slate-700 dark:text-slate-300 font-medium line-clamp-2" title="${App.escapeHtml(t.deskripsi_tugas)}">${App.escapeHtml(t.deskripsi_tugas)}</div>
+                    ${Number(t.is_billable) ? '<span class="inline-block mt-1 text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-bold px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">BILLABLE</span>' : '<span class="inline-block mt-1 text-[10px] bg-slate-100 text-slate-500 dark:bg-slate-800 font-semibold px-1.5 py-0.2 rounded whitespace-nowrap">NON-BILLABLE</span>'}
                 </td>
-                <td class="py-4 px-4 text-center">
+                <td class="py-3.5 px-4 align-middle text-center whitespace-nowrap">
                     <div class="font-mono font-bold text-xs text-slate-800 dark:text-slate-200">${durasiStr}</div>
                     <div class="text-[10px] text-slate-400 font-mono">(${t.durasi_jam} jam)</div>
                 </td>
-                <td class="py-4 px-6 text-right font-mono">
+                <td class="py-3.5 px-6 align-middle text-right font-mono whitespace-nowrap">
                     <div class="font-bold text-xs text-slate-900 dark:text-white">${App.formatIDR(t.nilai_billing)}</div>
                     <div class="text-[10px] text-slate-400">${App.formatIDR(t.billing_rate_per_jam)} / jam</div>
                 </td>
-                <td class="py-4 px-4 text-center">
+                <td class="py-3.5 px-4 align-middle text-center whitespace-nowrap">
                     ${App.renderStatusBadge(t.status, 'timesheet')}
                     ${t.nomor_invoice ? `<div class="mt-1"><a href="#/invoices" class="font-mono text-[10px] font-bold text-primary-600 hover:underline">${t.nomor_invoice}</a></div>` : ''}
                 </td>
-                <td class="py-4 px-6 text-right">
+                <td class="py-3.5 px-6 align-middle text-right whitespace-nowrap">
                     ${!isBilled ? `
                         <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                             { label: 'Edit Log Kerja', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editTimesheet(${t.id})' },

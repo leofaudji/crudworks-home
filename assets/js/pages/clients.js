@@ -116,18 +116,19 @@ export async function init(container) {
 
         <!-- Client Form Modal -->
         <div id="client-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 animate-fadeIn max-h-[90vh] overflow-y-auto">
-                <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+            <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl animate-fadeIn max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
                     <h3 id="client-modal-title" class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <i class="ri-building-line text-primary-600"></i>
                         <span>Tambah Pelanggan Baru</span>
                     </h3>
-                    <button id="btn-close-client-modal" class="text-slate-400 hover:text-slate-600">
+                    <button type="button" id="btn-close-client-modal" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Tutup">
                         <i class="ri-close-line text-2xl"></i>
                     </button>
                 </div>
 
-                <form id="client-form" class="space-y-4">
+                <form id="client-form" class="flex flex-col flex-1 min-h-0">
+                    <div class="p-6 sm:px-8 space-y-4 overflow-y-auto flex-1">
                     <input type="hidden" id="form-client-id" value="">
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -209,7 +210,9 @@ export async function init(container) {
                         </div>
                     </div>
 
-                    <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                    </div>
+
+                    <div class="px-6 sm:px-8 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end gap-3 shrink-0">
                         <button type="button" id="btn-cancel-client" class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-semibold">Batal</button>
                         <button type="submit" id="btn-save-client" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-primary-500/20">Simpan Data</button>
                     </div>
@@ -430,30 +433,30 @@ async function loadClients() {
 
         return `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                <td class="py-4 px-6">
-                    <div class="font-bold text-slate-900 dark:text-white">${c.nama_perusahaan}</div>
-                    <div class="text-xs font-mono text-primary-600 dark:text-primary-400">${c.kode_klien}</div>
+                <td class="py-3.5 px-6 align-middle max-w-[240px]">
+                    <div class="font-bold text-slate-900 dark:text-white truncate" title="${App.escapeHtml(c.nama_perusahaan)}">${App.escapeHtml(c.nama_perusahaan)}</div>
+                    <div class="text-xs font-mono text-primary-600 dark:text-primary-400 whitespace-nowrap">${App.escapeHtml(c.kode_klien)}</div>
                 </td>
-                <td class="py-4 px-6">
-                    <div class="font-medium text-slate-800 dark:text-slate-200">${c.penanggung_jawab}</div>
-                    <div class="text-xs text-slate-400">${c.kota || '-'}</div>
+                <td class="py-3.5 px-6 align-middle max-w-[180px]">
+                    <div class="font-medium text-slate-800 dark:text-slate-200 truncate" title="${App.escapeHtml(c.penanggung_jawab)}">${App.escapeHtml(c.penanggung_jawab)}</div>
+                    <div class="text-xs text-slate-400 truncate">${App.escapeHtml(c.kota || '-')}</div>
                 </td>
-                <td class="py-4 px-6">
-                    <div class="text-xs text-slate-600 dark:text-slate-300">${c.email}</div>
-                    <div class="text-xs text-slate-400 font-mono">${c.telepon || '-'}</div>
+                <td class="py-3.5 px-6 align-middle max-w-[200px]">
+                    <div class="text-xs text-slate-600 dark:text-slate-300 truncate" title="${App.escapeHtml(c.email)}">${App.escapeHtml(c.email)}</div>
+                    <div class="text-xs text-slate-400 font-mono whitespace-nowrap">${App.escapeHtml(c.telepon || '-')}</div>
                 </td>
-                <td class="py-4 px-6">
-                    <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-bold font-mono text-slate-700 dark:text-slate-300">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap">
+                    <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-bold font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
                         ${c.total_projects} Proyek
                     </span>
                 </td>
-                <td class="py-4 px-6 ${piutangClass}">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap ${piutangClass}">
                     ${App.formatIDR(c.total_piutang)}
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap">
                     ${App.renderStatusBadge(c.status, 'client')}
                 </td>
-                <td class="py-4 px-6 text-right">
+                <td class="py-3.5 px-6 align-middle text-right whitespace-nowrap">
                     <button type="button" data-table-action-trigger data-client-menu="${c.id}" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
                         <span>Aksi</span>
                         <i class="ri-more-2-fill text-slate-400"></i>

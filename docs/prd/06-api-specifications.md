@@ -166,6 +166,9 @@ Seluruh respons API mengembalikan header `Content-Type: application/json; charse
 #### `POST /api/projects/{id}/sync-git`
 - **Tujuan**: Membaca status deployment terbaru dari instance app-git lokal.
 
+#### `GET /api/projects/{id}/golive-checklist` & `POST /api/projects/{id}/golive-checklist`
+- **Tujuan**: Memeriksa kesiapan serah terima proyek (gabungan cek otomatis URL/SSL/Brankas/Kanban/Kontrak/BAST + verifikasi manual tim).
+
 ---
 
 ### 2.6 Master Layanan (Services)
@@ -281,3 +284,32 @@ Seluruh respons API mengembalikan header `Content-Type: application/json; charse
 #### `GET /api/reports/statement`
 - **Query Params**: `client_id`, `year`.
 - **Tujuan**: Rekening koran piutang historis pelanggan.
+
+---
+
+### 2.11 Tiket & Log Aktivitas Support (`Tickets`)
+
+#### `GET /api/tickets` & `GET /api/tickets/{id}`
+- **Tujuan**: Mengambil daftar tiket (filter `status`, `kategori`, `cakupan_biaya`, `search`) atau detail tiket lengkap beserta balasan dan `client_ticket_logs`.
+
+#### `POST /api/tickets`
+- **Tujuan**: Mencatat tiket baru dari admin (sumber `whatsapp`, `telepon`, `email`, `portal`, `internal`) beserta lampiran gambar.
+
+#### `POST /api/tickets/{id}/logs` & `POST /api/tickets/{id}/scope`
+- **Tujuan**: Menambahkan log aktivitas teknis internal (durasi menit & penanda `is_billable`) serta mengubah `cakupan_biaya` (`sla_gratis`, `garansi`, `berbayar`).
+
+#### `POST /api/tickets/{id}/convert-quotation` & `POST /api/tickets/{id}/convert-invoice`
+- **Tujuan**: Mengonversi tiket menjadi Draft SPH (`quotations`) atau Faktur Tagihan Tambahan (`invoices`).
+
+---
+
+### 2.12 Audit Komunikasi & Kesehatan Sistem
+
+#### `POST /api/invoices/{id}/log-send` & `POST /api/quotations/{id}/log-send`
+- **Tujuan**: Mencatat kanal (`whatsapp`, `email`, `portal`) dan waktu pengiriman terakhir (`last_sent_at`, `last_sent_via`).
+
+#### `GET /api/settings/system-health` & `POST /api/settings/clear-cache`
+- **Tujuan**: Memeriksa status koneksi Redis, ukuran database MySQL, versi PHP, backup terakhir, serta membersihkan seluruh cache Redis laporan & sistem.
+
+#### `GET /api/public-status`
+- **Tujuan**: Menyajikan status uptime, latensi, dan masa berlaku SSL layanan aktif untuk halaman Status Page Publik (`#/status`).

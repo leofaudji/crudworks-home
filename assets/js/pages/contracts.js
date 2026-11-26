@@ -150,22 +150,22 @@ function renderContractsTable() {
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                     ${contracts.map((k) => `
                         <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition">
-                            <td class="py-3.5 px-7">
-                                <div class="font-mono font-bold text-slate-900 dark:text-white">${App.escapeHtml(k.nomor_kontrak)}</div>
-                                <div class="font-semibold text-slate-700 dark:text-slate-300 mt-0.5">${App.escapeHtml(k.judul_kontrak)}</div>
-                                <div class="text-[11px] text-slate-400 font-mono mt-0.5">Garansi ${k.garansi_hari} hari${k.tanggal_mulai ? ' · Mulai ' + App.formatDate(k.tanggal_mulai) : ''}</div>
+                            <td class="py-3.5 px-7 align-middle max-w-[260px]">
+                                <div class="font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">${App.escapeHtml(k.nomor_kontrak)}</div>
+                                <div class="font-semibold text-slate-700 dark:text-slate-300 mt-0.5 truncate" title="${App.escapeHtml(k.judul_kontrak)}">${App.escapeHtml(k.judul_kontrak)}</div>
+                                <div class="text-[11px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">Garansi ${k.garansi_hari} hari${k.tanggal_mulai ? ' · Mulai ' + App.formatDate(k.tanggal_mulai) : ''}</div>
                             </td>
-                            <td class="py-3.5 px-4">
-                                <div class="font-bold text-slate-800 dark:text-slate-200">${App.escapeHtml(k.client_nama)}</div>
-                                ${k.nama_project ? `<div class="text-[11px] text-slate-500">${App.escapeHtml(k.nama_project)}</div>` : ''}
-                                ${k.nomor_penawaran ? `<div class="text-[10px] font-mono text-indigo-600">${App.escapeHtml(k.nomor_penawaran)}</div>` : ''}
+                            <td class="py-3.5 px-4 align-middle max-w-[200px]">
+                                <div class="font-bold text-slate-800 dark:text-slate-200 truncate" title="${App.escapeHtml(k.client_nama)}">${App.escapeHtml(k.client_nama)}</div>
+                                ${k.nama_project ? `<div class="text-[11px] text-slate-500 truncate" title="${App.escapeHtml(k.nama_project)}">${App.escapeHtml(k.nama_project)}</div>` : ''}
+                                ${k.nomor_penawaran ? `<div class="text-[10px] font-mono text-indigo-600 whitespace-nowrap">${App.escapeHtml(k.nomor_penawaran)}</div>` : ''}
                             </td>
-                            <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">${App.formatIDR(k.nilai_kontrak)}</td>
-                            <td class="py-3.5 px-4">
+                            <td class="py-3.5 px-4 align-middle text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">${App.formatIDR(k.nilai_kontrak)}</td>
+                            <td class="py-3.5 px-4 align-middle whitespace-nowrap">
                                 ${STATUS_BADGES[k.status] || k.status}
-                                ${k.signed_at ? `<div class="text-[10px] text-emerald-600 mt-1">${App.escapeHtml(k.signed_by_name || '')}</div>` : ''}
+                                ${k.signed_at ? `<div class="text-[10px] text-emerald-600 mt-1 truncate max-w-[140px]">${App.escapeHtml(k.signed_by_name || '')}</div>` : ''}
                             </td>
-                            <td class="py-3.5 px-7 text-right">
+                            <td class="py-3.5 px-7 align-middle text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-1.5">
                                     <button data-pdf="${k.id}" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-rose-600" title="Pratinjau PDF SPK">
                                         <i class="ri-file-pdf-2-line"></i>

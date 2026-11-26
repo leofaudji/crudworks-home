@@ -177,4 +177,24 @@ stateDiagram-v2
 - **Profil Perusahaan**: Nama instansi, tagline, alamat, nomor telepon, logo instansi, NPWP perusahaan.
 - **Konfigurasi Tagihan**: Format nomor invoice, jatuh tempo default (misal 14 hari), persentase PPN default, catatan kaki invoice standar.
 - **Konfigurasi Email / SMTP**: Host SMTP, port, username, password, enkripsi (TLS/SSL), dan alamat pengirim notifikasi.
+- **Kesehatan Sistem & Kontrol Cache**: Panel pemantauan status koneksi Redis (*Aktif* / *Fallback MySQL*), ukuran database MySQL, versi PHP, status cadangan terakhir, serta tombol 1-klik **Bersihkan Cache Laporan & Sistem**.
 - **Jejak Audit (Audit Trail)**: Menampilkan catatan kronologis seluruh operasi CREATE, UPDATE, DELETE di sistem dengan detail user, IP address, waktu eksekusi, serta rekaman perubahan data lama vs data baru.
+
+---
+
+## 11. Modul Tiket & Log Aktivitas Support Klien (`#/tickets`)
+
+### Fitur Utama
+- **Pencatatan Multi-Sumber**: Menerima tiket langsung dari Portal Klien maupun pencatatan manual oleh Admin (WhatsApp, Telepon, Email, Internal) dengan rich-text composer & lampiran screenshot (`Ctrl+V`).
+- **Pemisahan Cakupan Biaya**: Setiap tiket memiliki label `cakupan_biaya` (`SLA Gratis`, `Garansi`, `Berbayar / Billable`).
+- **Log Aktivitas Support Internal**: Tab khusus untuk mencatat tindakan teknis (`investigasi`, `perbaikan`, `komunikasi`, `deploy`, `konversi`), durasi penanganan (menit), dan akumulasi total waktu support.
+- **Konversi 1-Klik**: Tiket berbayar atau fitur tambahan dapat langsung dikonversi menjadi tugas **Kanban Proyek**, **Draft SPH (Quotation)**, atau **Faktur Tagihan Tambahan**.
+
+---
+
+## 12. Portal Klien (`/portal/`) & Status Page Publik (`#/status`)
+
+### Fitur Utama
+- **Portal Klien (PWA)**: Ringkasan Proyek & BAST (dengan label termin ringkas dan pintasan unduh SPK/BAST), daftar Layanan & Status Uptime/SSL terintegrasi, pencarian Tiket Gangguan beserta badge cakupan biaya, daftar Faktur & status verifikasi pembayaran, serta Penawaran (SPH) digital.
+- **Status Page Layanan Publik (`#/status`)**: Halaman status uptime & respons server real-time yang dapat diakses publik maupun dari tautan Portal Klien tanpa perlu login admin.
+- **Ekspor CSV Seragam & Audit Komunikasi**: Halaman utama (`Faktur`, `Pembayaran`, `Pengeluaran`, `Tiket`) dilengkapi ekspor CSV kompatibel Excel (`App.exportCsv`) serta pencatatan waktu & kanal pengiriman terakhir (`last_sent_at`, `last_sent_via`) pada Faktur dan Penawaran.

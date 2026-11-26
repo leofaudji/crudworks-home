@@ -603,27 +603,27 @@ async function loadQuotations() {
 
     tbody.innerHTML = items.map(q => `
         <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition">
-            <td class="py-3.5 px-6 font-mono font-bold text-slate-900 dark:text-white">
-                ${q.nomor_penawaran}
-                ${q.converted_invoice_no ? `<div class="text-[10px] text-indigo-600 font-sans">Faktur: <a href="#/invoices" class="hover:underline">${q.converted_invoice_no}</a></div>` : ''}
+            <td class="py-3.5 px-6 align-middle font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                ${App.escapeHtml(q.nomor_penawaran)}
+                ${q.converted_invoice_no ? `<div class="text-[10px] text-indigo-600 font-sans">Faktur: <a href="#/invoices" class="hover:underline">${App.escapeHtml(q.converted_invoice_no)}</a></div>` : ''}
             </td>
-            <td class="py-3.5 px-4 font-mono text-slate-500">
+            <td class="py-3.5 px-4 align-middle font-mono text-slate-500 whitespace-nowrap">
                 ${App.formatDate(q.tanggal_penawaran)}
             </td>
-            <td class="py-3.5 px-4 font-mono text-rose-600">
+            <td class="py-3.5 px-4 align-middle font-mono text-rose-600 whitespace-nowrap">
                 ${App.formatDate(q.berlaku_hingga)}
             </td>
-            <td class="py-3.5 px-4 font-sans">
-                <div class="font-bold text-slate-900 dark:text-white">${q.nama_perusahaan}</div>
-                <div class="text-[11px] text-slate-400">UP: ${q.penanggung_jawab || '-'} ${q.nama_project ? `· Proyek: ${q.nama_project}` : ''}</div>
+            <td class="py-3.5 px-4 align-middle font-sans max-w-[240px]">
+                <div class="font-bold text-slate-900 dark:text-white truncate" title="${App.escapeHtml(q.nama_perusahaan)}">${App.escapeHtml(q.nama_perusahaan)}</div>
+                <div class="text-[11px] text-slate-400 truncate">UP: ${App.escapeHtml(q.penanggung_jawab || '-')} ${q.nama_project ? `· Proyek: ${App.escapeHtml(q.nama_project)}` : ''}</div>
             </td>
-            <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+            <td class="py-3.5 px-4 align-middle text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                 ${App.formatIDR(q.total_penawaran)}
             </td>
-            <td class="py-3.5 px-4 text-center">
+            <td class="py-3.5 px-4 align-middle text-center whitespace-nowrap">
                 ${App.renderStatusBadge(q.status, 'quotation')}
             </td>
-            <td class="py-3.5 px-6 text-right">
+            <td class="py-3.5 px-6 align-middle text-right whitespace-nowrap">
                 <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                     ${q.status !== 'dikonversi' ? `{ label: 'Edit Naskah & Rincian', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editQuotation(${q.id})' },` : ''}
                     {

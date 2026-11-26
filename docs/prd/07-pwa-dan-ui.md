@@ -94,3 +94,15 @@ Aplikasi dapat diinstal langsung ke homescreen ponsel Android/iOS atau desktop W
    - Menghasilkan tabel HTML otomatis lengkap dengan status skeleton loading, empty state ilustratif, header penyortiran kolom, dan navigasi paginasi.
 4. **Print Engine Modal (`App.printInvoice`)**:
    - Area render khusus berukuran kertas A4 standar yang mengisolasi elemen tagihan dari elemen navigasi sistem saat dialog cetak browser (`Ctrl+P`) dipanggil.
+
+---
+
+## 5. Standar Proporsi UI, Area Aman Taskbar & Ergonomi Modal
+
+1. **Area Aman Taskbar Bawah**: Kontainer utama `#app-content` wajib menyertakan `pb-24` agar baris terakhir tabel, pagination, atau tombol di bagian bawah tidak tertutup oleh taskbar mengambang.
+2. **Batas Viewport Popover & Dropdown**: Seluruh menu mengambang (`table-menu.js`, `.dt-col-popover`, notifikasi) wajib memperhitungkan `safeBottom` (area taskbar) dan `max-h` agar tidak terpotong di tepi layar laptop maupun ponsel.
+3. **Proporsi Tabel Padat**: Badge status, tanggal, nominal uang, dan tombol **Aksi** wajib memakai `whitespace-nowrap` + `align-middle`, sedangkan kolom teks panjang (nama proyek, email, URL) wajib memakai `max-w-[...]` dan `truncate` dengan atribut `title`.
+4. **Sticky Footer pada Modal Panjang**: Modal form yang panjang wajib memakai struktur `max-h-[90vh] flex flex-col overflow-hidden` dengan header dan footer tombol **Simpan/Batal** tetap menempel (`shrink-0`), sementara hanya area isian form di tengah yang di-scroll.
+5. **Konsistensi Toolbar Filter**: Input pencarian, dropdown filter, dan tombol ekspor wajib memakai tinggi seragam (`py-2 text-xs rounded-xl`) dengan `flex-wrap gap-2.5` agar rapi di berbagai lebar layar.
+6. **Batas Popover Topbar di Layar Mobile**: Popover lonceng notifikasi dan menu profil pengguna wajib menyertakan `max-w-[calc(100vw-24px)]` dan `max-h-[calc(100vh-110px)] overflow-y-auto` agar tidak meluber di layar ponsel.
+7. **Responsivitas Halaman Publik**: Halaman publik (`#/public-invoice`, `#/public-quotation`, `#/status`) wajib menjaga padding tepi yang lega dan tabel item dalam `overflow-x-auto`.

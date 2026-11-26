@@ -67,14 +67,10 @@ if ($method === 'POST' && !$id) {
     $client = $db->fetch("SELECT id, nama_perusahaan, nama_pic FROM clients WHERE id = ?", [$clientId]);
     if (!$client) errorResponse('Pelanggan tidak ditemukan', 404);
 
-    $validKat = ['gangguan_sistem', 'domain_ssl', 'perbaikan_bug', 'permintaan_fitur', 'billing', 'lainnya'];
-    if (!in_array($kategori, $validKat, true)) $kategori = 'gangguan_sistem';
-    $validPrio = ['rendah', 'sedang', 'tinggi', 'kritis'];
-    if (!in_array($prioritas, $validPrio, true)) $prioritas = 'sedang';
-    $validSumber = ['portal', 'whatsapp', 'telepon', 'email', 'internal'];
-    if (!in_array($sumberLaporan, $validSumber, true)) $sumberLaporan = 'whatsapp';
-    $validScope = ['sla_gratis', 'garansi', 'berbayar'];
-    if (!in_array($cakupanBiaya, $validScope, true)) $cakupanBiaya = 'sla_gratis';
+    $kategori = validateEnum((string)($params['kategori'] ?? ''), ['gangguan_sistem', 'domain_ssl', 'perbaikan_bug', 'permintaan_fitur', 'billing', 'lainnya'], 'gangguan_sistem');
+    $prioritas = validateEnum((string)($params['prioritas'] ?? ''), ['rendah', 'sedang', 'tinggi', 'kritis'], 'sedang');
+    $sumberLaporan = validateEnum((string)($params['sumber_laporan'] ?? ''), ['portal', 'whatsapp', 'telepon', 'email', 'internal'], 'whatsapp');
+    $cakupanBiaya = validateEnum((string)($params['cakupan_biaya'] ?? ''), ['sla_gratis', 'garansi', 'berbayar'], 'sla_gratis');
 
     if ($pelaporNama === '') {
         $pelaporNama = $client['nama_pic'] ?: $client['nama_perusahaan'];
@@ -254,6 +250,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'convert-invoice
     checkPermission('invoice.create');
     $ticket = $db->fetch("SELECT * FROM client_tickets WHERE id = ?", [(int)$id]);
     if (!$ticket) errorResponse('Tiket tidak ditemukan', 404);
+    if (!empty($ticket['invoice_id'])) errorResponse('Tiket ini sudah dikonversi menjadi faktur tambahan', 409);
 
     $nominal = (float)($params['nominal'] ?? 0);
     $deskripsiItem = trim((string)($params['deskripsi'] ?? "[{$ticket['nomor_tiket']}] Penanganan / Fitur Tambahan: {$ticket['judul']}"));
@@ -319,6 +316,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'convert-quotati
     checkPermission('quotation.create');
     $ticket = $db->fetch("SELECT * FROM client_tickets WHERE id = ?", [(int)$id]);
     if (!$ticket) errorResponse('Tiket tidak ditemukan', 404);
+    if (!empty($ticket['quotation_id'])) errorResponse('Tiket ini sudah dikonversi menjadi Surat Penawaran (SPH)', 409);
 
     $nominal = (float)($params['nominal'] ?? 0);
     $deskripsiItem = trim((string)($params['deskripsi'] ?? "[{$ticket['nomor_tiket']}] Pengembangan / Penyesuaian: {$ticket['judul']}"));

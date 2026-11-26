@@ -149,26 +149,26 @@ async function loadAuditLogs() {
 
         return `
             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                <td class="py-3.5 px-6 text-slate-400">
+                <td class="py-3.5 px-6 align-middle text-slate-400 whitespace-nowrap">
                     ${new Date(l.created_at).toLocaleString('id-ID')}
                 </td>
-                <td class="py-3.5 px-6 font-sans">
-                    <div class="font-bold text-slate-800 dark:text-slate-200">${l.user_nama}</div>
-                    <div class="text-[10px] text-slate-400 font-mono">@${l.user_uname}</div>
+                <td class="py-3.5 px-6 align-middle font-sans max-w-[180px]">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 truncate" title="${App.escapeHtml(l.user_nama)}">${App.escapeHtml(l.user_nama)}</div>
+                    <div class="text-[10px] text-slate-400 font-mono truncate">@${App.escapeHtml(l.user_uname)}</div>
                 </td>
-                <td class="py-3.5 px-6">
+                <td class="py-3.5 px-6 align-middle whitespace-nowrap">
                     <div class="flex items-center gap-2">
-                        ${actionBadges[l.aksi] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200">${l.aksi}</span>`}
-                        <span class="font-bold text-slate-700 dark:text-slate-300">${l.tabel}</span>
+                        ${actionBadges[l.aksi] || `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 whitespace-nowrap">${App.escapeHtml(l.aksi)}</span>`}
+                        <span class="font-bold text-slate-700 dark:text-slate-300">${App.escapeHtml(l.tabel)}</span>
                     </div>
                 </td>
-                <td class="py-3.5 px-6 font-bold text-primary-600">
+                <td class="py-3.5 px-6 align-middle font-bold text-primary-600 whitespace-nowrap">
                     #${l.record_id || '-'}
                 </td>
-                <td class="py-3.5 px-6 text-slate-400 text-[10px] truncate max-w-[150px]" title="${l.user_agent || ''}">
-                    <div>${l.ip_address || '127.0.0.1'}</div>
+                <td class="py-3.5 px-6 align-middle text-slate-400 text-[10px] truncate max-w-[150px]" title="${App.escapeHtml(l.user_agent || '')}">
+                    <div>${App.escapeHtml(l.ip_address || '127.0.0.1')}</div>
                 </td>
-                <td class="py-3.5 px-6 text-right font-sans">
+                <td class="py-3.5 px-6 align-middle text-right font-sans whitespace-nowrap">
                     ${(l.data_lama || l.data_baru) ? `
                         <button onclick="window.viewAuditPayload(${l.id})" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold">
                             Lihat JSON

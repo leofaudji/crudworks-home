@@ -186,6 +186,8 @@ CREATE TABLE IF NOT EXISTS `invoices` (
     `catatan_klien` TEXT NULL,
     `catatan_internal` TEXT NULL,
     `email_terkirim_at` DATETIME NULL,
+    `last_sent_at` DATETIME NULL,
+    `last_sent_via` VARCHAR(30) NULL,
     `created_by` INT UNSIGNED NOT NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -324,3 +326,11 @@ CREATE TABLE IF NOT EXISTS `notifications` (
     INDEX `idx_notif_unread` (`is_read`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+---
+
+### 2.6 Helpdesk & Dukungan Klien
+
+#### Tabel `client_tickets` & `client_ticket_logs`
+- `client_tickets` menyimpan tiket gangguan & permintaan klien (`nomor_tiket`, `client_id`, `project_id`, `maintenance_id`, `kategori`, `prioritas`, `sumber_laporan`, `cakupan_biaya` [`sla_gratis`, `garansi`, `berbayar`], `total_durasi_menit`, `quotation_id`, `invoice_id`, `status`).
+- `client_ticket_logs` mencatat log aktivitas support internal per tiket (`ticket_id`, `actor_name`, `tipe_aktivitas`, `durasi_menit`, `is_billable`, `ringkasan`).

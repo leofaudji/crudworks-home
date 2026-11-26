@@ -51,8 +51,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
 if ($method === 'POST' && $id && is_numeric($id) && $action === 'log-send') {
     authCheck();
     checkPermission('quotation.view');
-    $via = trim((string)($params['via'] ?? 'whatsapp'));
-    if (!in_array($via, ['whatsapp', 'email', 'portal'], true)) $via = 'whatsapp';
+    $via = validateEnum((string)($params['via'] ?? ''), ['whatsapp', 'email', 'portal'], 'whatsapp');
     $quo = $db->fetch("SELECT id, nomor_penawaran FROM quotations WHERE id = ?", [(int)$id]);
     if (!$quo) errorResponse('Surat penawaran tidak ditemukan', 404);
     $db->execute("UPDATE quotations SET last_sent_at = NOW(), last_sent_via = ? WHERE id = ?", [$via, (int)$id]);

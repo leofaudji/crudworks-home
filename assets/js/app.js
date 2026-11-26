@@ -1209,6 +1209,7 @@ const App = {
 
     // ===== Action Board Pagi Hari & Rekap Penagihan Otomatis (Executive Daily Brief) =====
     _dailyBriefData: null,
+    _dailyBriefTab: null,
 
     async loadDailyBriefBadge() {
         const badge = document.getElementById('topbar-daily-brief-badge');
@@ -1235,6 +1236,7 @@ const App = {
         const content = document.getElementById('daily-brief-content');
         if (!modal) return;
 
+        this._dailyBriefTab = null;
         modal.classList.remove('hidden');
         requestAnimationFrame(() => {
             modal.classList.remove('opacity-0');
@@ -1292,16 +1294,41 @@ const App = {
         const kpiMs = document.getElementById('brief-kpi-ms-count');
         const kpiSla = document.getElementById('brief-kpi-sla-count');
 
-        if (kpiNom) kpiNom.textContent = formatRupiah(d.total_nominal_mendesak);
-        if (kpiInv) kpiInv.textContent = `${(d.invoices || []).length} Faktur`;
-        if (kpiMs) kpiMs.textContent = `${(d.milestones || []).length} Termin`;
-        if (kpiSla) kpiSla.textContent = `${(d.maintenances || []).length + (d.incidents || []).length} Item`;
+        const invCount = (d.invoices || []).length;
+        const msCount = (d.milestones || []).length;
+        const slaCount = (d.maintenances || []).length;
+        const incCount = (d.incidents || []).length;
+
+        if (kpiNom) {
+            kpiNom.textContent = formatRupiah(d.total_nominal_mendesak);
+            kpiNom.className = `text-base font-bold font-mono ${(Number(d.total_nominal_mendesak) || 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'}`;
+        }
+        if (kpiInv) {
+            kpiInv.textContent = `${invCount} Faktur`;
+            kpiInv.className = `text-base font-bold font-mono ${invCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'}`;
+        }
+        if (kpiMs) {
+            kpiMs.textContent = `${msCount} Termin`;
+            kpiMs.className = `text-base font-bold font-mono ${msCount > 0 ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400 dark:text-slate-500'}`;
+        }
+        if (kpiSla) {
+            kpiSla.textContent = `${slaCount + incCount} Item`;
+            kpiSla.className = `text-base font-bold font-mono ${incCount > 0 ? 'text-rose-600 dark:text-rose-400' : (slaCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')}`;
+        }
 
         this.renderDailyBriefBody(d);
     },
 
+    switchDailyBriefTab(tabKey) {
+        this._dailyBriefTab = tabKey;
+        if (this._dailyBriefData) {
+            this.renderDailyBriefBody(this._dailyBriefData);
+        }
+    },
+
     renderDailyBriefBody(d) {
         const bodyEl = document.getElementById('daily-brief-body');
+        const tabsEl = document.getElementById('daily-brief-tabs');
         if (!bodyEl) return;
 
         const invs = d.invoices || [];
@@ -1309,66 +1336,114 @@ const App = {
         const slas = d.maintenances || [];
         const incs = d.incidents || [];
 
+        const tabs = [
+            { key: 'invoices', label: 'Tagihan', count: invs.length, icon: 'ri-hand-coin-line', dotColor: invs.length > 0 ? 'bg-rose-500' : '' },
+            { key: 'milestones', label: 'Termin Proyek', count: mss.length, icon: 'ri-flag-2-line', dotColor: mss.length > 0 ? 'bg-primary-500' : '' },
+            { key: 'sla', label: 'SLA & Lisensi', count: slas.length, icon: 'ri-global-line', dotColor: slas.length > 0 ? 'bg-amber-500' : '' },
+            { key: 'incidents', label: 'Server & Uptime', count: incs.length, icon: 'ri-server-line', dotColor: incs.length > 0 ? 'bg-rose-500' : '' }
+        ];
+
+        if (!this._dailyBriefTab || !tabs.some(t => t.key === this._dailyBriefTab)) {
+            const firstWithItems = tabs.find(t => t.count > 0);
+            this._dailyBriefTab = firstWithItems ? firstWithItems.key : 'invoices';
+        }
+        const activeTab = this._dailyBriefTab;
+
+        document.querySelectorAll('[data-brief-kpi]').forEach((el) => {
+            const isKpiActive = el.dataset.briefKpi === activeTab || (activeTab === 'incidents' && el.dataset.briefKpi === 'sla');
+            el.classList.toggle('bg-white', isKpiActive);
+            el.classList.toggle('dark:bg-slate-900', isKpiActive);
+        });
+
+        if (tabsEl) {
+            tabsEl.innerHTML = tabs.map(t => {
+                const isActive = t.key === activeTab;
+                const btnCls = isActive
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800';
+                const badgeCls = isActive
+                    ? 'bg-white/20 text-white dark:bg-slate-900/15 dark:text-slate-900'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+                const alertDot = t.dotColor
+                    ? `<span class="w-1.5 h-1.5 rounded-full ${t.dotColor} shrink-0"></span>`
+                    : '';
+                return `
+                    <button type="button" role="tab" aria-selected="${isActive ? 'true' : 'false'}"
+                            onclick="App.switchDailyBriefTab('${t.key}')"
+                            class="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 whitespace-nowrap transition shrink-0 ${btnCls}">
+                        <i class="${t.icon} text-sm opacity-80"></i>
+                        <span>${t.label}</span>
+                        ${alertDot}
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${badgeCls}">${t.count}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
         let html = '';
 
         // 1. Invoices Overdue & Due Today
-        html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <div class="px-5 py-3.5 bg-rose-50/50 dark:bg-rose-950/20 border-b border-rose-100 dark:border-rose-900/30 flex items-center justify-between">
+        if (activeTab === 'invoices') {
+            html += `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-bold text-sm">
-                            <i class="ri-hand-coin-line text-lg"></i>
+                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
+                            <i class="ri-hand-coin-line text-base"></i>
                         </span>
                         <div>
                             <h4 class="text-sm font-bold text-slate-900 dark:text-white">Tagihan Jatuh Tempo & Overdue (${invs.length})</h4>
                             <p class="text-[11px] text-slate-500 dark:text-slate-400">Prioritas penagihan hari ini untuk mengamankan arus kas</p>
                         </div>
                     </div>
-                    <span class="font-mono text-sm font-extrabold text-rose-600 dark:text-rose-400">${formatRupiah(d.total_nominal_mendesak)}</span>
+                    <span class="font-mono text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">${formatRupiah(d.total_nominal_mendesak)}</span>
                 </div>
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
         `;
 
-        if (invs.length === 0) {
-            html += `<div class="p-5 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-emerald-500 text-sm"></i> Tidak ada tagihan menunggak atau jatuh tempo hari ini.</div>`;
-        } else {
-            html += invs.map(inv => {
-                const hari = Number(inv.hari_lewat) || 0;
-                const statusBadge = hari > 0 
-                    ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Overdue ${hari} hari</span>`
-                    : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Jatuh Tempo Hari Ini</span>`;
+            if (invs.length === 0) {
+                html += `<div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-slate-500 text-sm"></i> Tidak ada tagihan menunggak atau jatuh tempo hari ini.</div>`;
+            } else {
+                html += invs.map(inv => {
+                    const hari = Number(inv.hari_lewat) || 0;
+                    const rowAccent = hari > 0 ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-400';
+                    const statusBadge = hari > 0 
+                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50">Overdue ${hari} hari</span>`
+                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50">Jatuh Tempo Hari Ini</span>`;
 
-                return `
-                    <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(inv.nomor_invoice)}</span>
-                                ${statusBadge}
+                    return `
+                        <div class="p-4 ${rowAccent} flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(inv.nomor_invoice)}</span>
+                                    ${statusBadge}
+                                </div>
+                                <div class="text-xs text-slate-600 dark:text-slate-300 font-medium">${escapeHtml(inv.nama_perusahaan)}</div>
+                                <div class="text-[11px] text-slate-500 font-mono mt-0.5">Sisa Tagihan: <b class="text-rose-600 dark:text-rose-400 font-semibold">${formatRupiah(inv.sisa_tagihan)}</b> dari ${formatRupiah(inv.total_tagihan)}</div>
                             </div>
-                            <div class="text-xs text-slate-600 dark:text-slate-300 font-semibold">${escapeHtml(inv.nama_perusahaan)}</div>
-                            <div class="text-[11px] text-slate-400 font-mono mt-0.5">Sisa Tagihan: <b class="text-rose-600 font-bold">${formatRupiah(inv.sisa_tagihan)}</b> dari ${formatRupiah(inv.total_tagihan)}</div>
+                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <button type="button" onclick="App.openWhatsAppInvoiceReminder(${inv.id})" class="px-3 py-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition whitespace-nowrap">
+                                    <i class="ri-whatsapp-line text-emerald-600 dark:text-emerald-400"></i> Kirim WA
+                                </button>
+                                <a href="#/invoices" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap">
+                                    <i class="ri-eye-line"></i> Rincian
+                                </a>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2 self-end sm:self-center">
-                            <button type="button" onclick="App.openWhatsAppInvoiceReminder(${inv.id})" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-xl text-xs font-semibold flex items-center gap-1 transition">
-                                <i class="ri-whatsapp-line"></i> Kirim WA
-                            </button>
-                            <a href="#/invoices" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1 transition">
-                                <i class="ri-eye-line"></i> Rincian
-                            </a>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
+            html += `</div></div>`;
         }
-        html += `</div></div>`;
 
         // 2. Milestones Ready to Bill
-        html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <div class="px-5 py-3.5 bg-indigo-50/50 dark:bg-indigo-950/20 border-b border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between">
+        if (activeTab === 'milestones') {
+            html += `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold text-sm">
-                            <i class="ri-flag-2-line text-lg"></i>
+                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
+                            <i class="ri-flag-2-line text-base"></i>
                         </span>
                         <div>
                             <h4 class="text-sm font-bold text-slate-900 dark:text-white">Termin Proyek Siap Ditagihkan (${mss.length})</h4>
@@ -1379,35 +1454,37 @@ const App = {
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
         `;
 
-        if (mss.length === 0) {
-            html += `<div class="p-5 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-emerald-500 text-sm"></i> Belum ada termin baru yang siap ditagihkan hari ini.</div>`;
-        } else {
-            html += mss.map(ms => {
-                return `
-                    <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                        <div>
-                            <div class="font-bold text-sm text-slate-900 dark:text-white mb-0.5">${escapeHtml(ms.nama_milestone)}</div>
-                            <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(ms.nama_project)} • <span class="font-medium text-slate-700 dark:text-slate-300">${escapeHtml(ms.nama_perusahaan)}</span></div>
-                            <div class="text-[11px] font-mono text-primary-600 font-bold mt-1">Termin ${ms.persentase}%: ${formatRupiah(ms.nominal)}</div>
+            if (mss.length === 0) {
+                html += `<div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-slate-500 text-sm"></i> Belum ada termin baru yang siap ditagihkan hari ini.</div>`;
+            } else {
+                html += mss.map(ms => {
+                    return `
+                        <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                            <div>
+                                <div class="font-bold text-sm text-slate-900 dark:text-white mb-0.5">${escapeHtml(ms.nama_milestone)}</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(ms.nama_project)} • <span class="font-medium text-slate-700 dark:text-slate-300">${escapeHtml(ms.nama_perusahaan)}</span></div>
+                                <div class="text-[11px] font-mono text-primary-600 dark:text-primary-400 font-semibold mt-1">Termin ${ms.persentase}%: ${formatRupiah(ms.nominal)}</div>
+                            </div>
+                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <button type="button" onclick="App.createMilestoneInvoiceFromBrief(${ms.id}, ${ms.project_id})" class="px-3.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition whitespace-nowrap">
+                                    <i class="ri-file-add-line"></i> Terbitkan Faktur
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2 self-end sm:self-center">
-                            <button type="button" onclick="App.createMilestoneInvoiceFromBrief(${ms.id}, ${ms.project_id})" class="px-3.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition">
-                                <i class="ri-file-add-line"></i> 1-Klik Terbitkan Faktur
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
+            html += `</div></div>`;
         }
-        html += `</div></div>`;
 
         // 3. SLA Domain & Hosting Expiring
-        html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <div class="px-5 py-3.5 bg-amber-50/50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900/30 flex items-center justify-between">
+        if (activeTab === 'sla') {
+            html += `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm">
-                            <i class="ri-global-line text-lg"></i>
+                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
+                            <i class="ri-global-line text-base"></i>
                         </span>
                         <div>
                             <h4 class="text-sm font-bold text-slate-900 dark:text-white">SLA Domain, Hosting & SSL (< 14 Hari) (${slas.length})</h4>
@@ -1418,43 +1495,46 @@ const App = {
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
         `;
 
-        if (slas.length === 0) {
-            html += `<div class="p-5 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-emerald-500 text-sm"></i> Seluruh masa aktif domain, hosting, dan SSL klien dalam kondisi aman.</div>`;
-        } else {
-            html += slas.map(s => {
-                const sisa = Number(s.sisa_hari) || 0;
-                const badge = sisa <= 3 
-                    ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-700">Sisa ${sisa} hari!</span>`
-                    : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700">Sisa ${sisa} hari</span>`;
+            if (slas.length === 0) {
+                html += `<div class="p-6 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5"><i class="ri-checkbox-circle-line text-slate-500 text-sm"></i> Seluruh masa aktif domain, hosting, dan SSL klien dalam kondisi aman.</div>`;
+            } else {
+                html += slas.map(s => {
+                    const sisa = Number(s.sisa_hari) || 0;
+                    const rowAccent = sisa <= 3 ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-400';
+                    const badge = sisa <= 3 
+                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300">Sisa ${sisa} hari</span>`
+                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300">Sisa ${sisa} hari</span>`;
 
-                return `
-                    <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                        <div>
-                            <div class="flex items-center gap-2 mb-0.5">
-                                <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(s.nama_aset)}</span>
-                                ${badge}
+                    return `
+                        <div class="p-4 ${rowAccent} flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                            <div>
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(s.nama_aset)}</span>
+                                    ${badge}
+                                </div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(s.nama_perusahaan)} • Jatuh Tempo: ${formatDate(s.tanggal_berakhir)}</div>
+                                <div class="text-[11px] font-mono text-slate-600 dark:text-slate-300 mt-1">Biaya: <b>${formatRupiah(s.biaya_perpanjangan)}</b></div>
                             </div>
-                            <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(s.nama_perusahaan)} • Jatuh Tempo: ${formatDate(s.tanggal_berakhir)}</div>
-                            <div class="text-[11px] font-mono text-slate-600 dark:text-slate-300 mt-1">Biaya: <b>${formatRupiah(s.biaya_perpanjangan)}</b></div>
+                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <a href="#/maintenance" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition whitespace-nowrap">
+                                    Kelola SLA
+                                </a>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2 self-end sm:self-center">
-                            <a href="#/maintenance" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition">
-                                Kelola SLA
-                            </a>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
+            html += `</div></div>`;
         }
-        html += `</div></div>`;
 
         // 4. Server & Uptime Incidents
-        html += `
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        if (activeTab === 'incidents') {
+            html += `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-sm">
-                            <i class="ri-server-line text-lg"></i>
+                        <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-sm shrink-0">
+                            <i class="ri-server-line text-base"></i>
                         </span>
                         <div>
                             <h4 class="text-sm font-bold text-slate-900 dark:text-white">Status Kesehatan Server & Uptime (${incs.length})</h4>
@@ -1465,35 +1545,37 @@ const App = {
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
         `;
 
-        if (incs.length === 0) {
-            html += `<div class="p-5 text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center justify-center gap-2"><i class="ri-checkbox-circle-fill text-base"></i> 🟢 Seluruh sistem proyek klien terpantau 100% ONLINE & SSL AMAN.</div>`;
-        } else {
-            html += incs.map(inc => {
-                const isDown = inc.last_health_status === 'down';
-                const badge = isDown
-                    ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white">DOWN</span>`
-                    : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500 text-white">SSL Expired</span>`;
+            if (incs.length === 0) {
+                html += `<div class="p-6 text-center text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center justify-center gap-2"><i class="ri-checkbox-circle-line text-emerald-600 dark:text-emerald-400 text-base"></i> Seluruh sistem proyek klien terpantau 100% online & SSL aman.</div>`;
+            } else {
+                html += incs.map(inc => {
+                    const isDown = inc.last_health_status === 'down';
+                    const rowAccent = isDown ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-400';
+                    const badge = isDown
+                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300">DOWN</span>`
+                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300">SSL Segera Habis</span>`;
 
-                return `
-                    <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                        <div>
-                            <div class="flex items-center gap-2 mb-0.5">
-                                <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(inc.nama_project)}</span>
-                                ${badge}
+                    return `
+                        <div class="p-4 ${rowAccent} flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                            <div>
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="font-bold text-sm text-slate-900 dark:text-white">${escapeHtml(inc.nama_project)}</span>
+                                    ${badge}
+                                </div>
+                                <div class="text-xs text-slate-400 font-mono">${escapeHtml(inc.app_url || '-')}</div>
+                                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">Status: ${isDown ? 'Server tidak merespons HTTP' : `SSL tersisa ${inc.last_ssl_days} hari`}</div>
                             </div>
-                            <div class="text-xs text-slate-400 font-mono">${escapeHtml(inc.app_url || '-')}</div>
-                            <div class="text-[11px] text-rose-500 font-medium mt-1">Status: ${isDown ? 'Server tidak merespons HTTP' : `SSL tersisa ${inc.last_ssl_days} hari`}</div>
+                            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <a href="#/projects" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition whitespace-nowrap">
+                                    Cek Proyek
+                                </a>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2 self-end sm:self-center">
-                            <a href="#/projects" onclick="App.closeDailyBriefModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition">
-                                Cek Proyek
-                            </a>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
+            html += `</div></div>`;
         }
-        html += `</div></div>`;
 
         bodyEl.innerHTML = html;
     },

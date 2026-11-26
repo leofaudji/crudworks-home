@@ -79,7 +79,7 @@ export function openModal(html, { sheet = true, wide = false, onClose = null } =
     const widthCls = wide ? 'sm:max-w-3xl' : 'sm:max-w-xl';
     root.innerHTML = `
         <div id="modal-overlay" class="fixed inset-0 z-[80] bg-slate-950/50 backdrop-blur-[2px] flex ${sheet ? 'items-end sm:items-center' : 'items-center'} justify-center sm:p-4" data-action="modal-backdrop">
-            <div class="${sheet ? 'sheet-in' : 'fade-in'} w-full ${widthCls} max-h-[94vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl pb-[env(safe-area-inset-bottom)]" data-modal-body>
+            <div class="${sheet ? 'sheet-in' : 'fade-in'} w-full ${widthCls} max-h-[90vh] overflow-y-auto overscroll-contain bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pb-0" data-modal-body>
                 ${html}
             </div>
         </div>`;

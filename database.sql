@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
     `app_url` VARCHAR(255) NULL,
     `last_deploy_status` ENUM('idle', 'success', 'failed', 'running') DEFAULT 'idle',
     `last_deploy_at` DATETIME NULL,
+    `golive_checklist_json` TEXT NULL,
     `tanggal_mulai` DATE NULL,
     `tanggal_selesai` DATE NULL,
     `nilai_project` DECIMAL(15,2) DEFAULT 0.00,

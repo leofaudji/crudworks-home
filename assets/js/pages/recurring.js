@@ -233,24 +233,24 @@ async function loadRecurring() {
 
     tbody.innerHTML = list.map(r => `
         <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-            <td class="py-4 px-6">
-                <div class="font-bold text-slate-900 dark:text-white">${r.judul}</div>
-                ${r.nama_project ? `<div class="text-xs text-slate-400"><i class="ri-git-branch-line"></i> ${r.nama_project}</div>` : ''}
+            <td class="py-3.5 px-6 align-middle max-w-[240px]">
+                <div class="font-bold text-slate-900 dark:text-white truncate" title="${App.escapeHtml(r.judul)}">${App.escapeHtml(r.judul)}</div>
+                ${r.nama_project ? `<div class="text-xs text-slate-400 truncate" title="${App.escapeHtml(r.nama_project)}"><i class="ri-git-branch-line"></i> ${App.escapeHtml(r.nama_project)}</div>` : ''}
             </td>
-            <td class="py-4 px-6 font-medium text-slate-800 dark:text-slate-200">
-                ${r.client_nama}
+            <td class="py-3.5 px-6 align-middle font-medium text-slate-800 dark:text-slate-200 max-w-[200px]">
+                <div class="truncate" title="${App.escapeHtml(r.client_nama)}">${App.escapeHtml(r.client_nama)}</div>
             </td>
-            <td class="py-4 px-6 text-xs text-slate-600 dark:text-slate-300 capitalize">
-                <div>Setiap <b>${r.frekuensi}</b></div>
-                <div class="text-slate-400">Tanggal ${r.hari_tagihan}</div>
+            <td class="py-3.5 px-6 align-middle text-xs text-slate-600 dark:text-slate-300 capitalize whitespace-nowrap">
+                <div>Setiap <b>${App.escapeHtml(r.frekuensi)}</b></div>
+                <div class="text-slate-400">Tanggal ${App.escapeHtml(r.hari_tagihan)}</div>
             </td>
-            <td class="py-4 px-6 font-mono text-xs text-primary-600 dark:text-primary-400 font-bold">
+            <td class="py-3.5 px-6 align-middle font-mono text-xs text-primary-600 dark:text-primary-400 font-bold whitespace-nowrap">
                 ${App.formatDate(r.berikutnya_dibuat_at)}
             </td>
-            <td class="py-4 px-6">
+            <td class="py-3.5 px-6 align-middle whitespace-nowrap">
                 ${App.renderStatusBadge(r.status, 'recurring')}
             </td>
-            <td class="py-4 px-6 text-right">
+            <td class="py-3.5 px-6 align-middle text-right whitespace-nowrap">
                 <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                     { label: 'Edit Template', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editRecurring(${r.id})' },
                     { label: 'Generate Faktur Sekarang', icon: 'ri-play-circle-line', iconColor: 'text-emerald-600', action: 'window.triggerGenerateInvoice(${r.id})' },

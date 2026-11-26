@@ -52,7 +52,7 @@ export function toggleTableActionMenu(btn, event, items = []) {
     if (!Array.isArray(items) || items.length === 0) return;
 
     const menu = document.createElement('div');
-    menu.className = 'fixed z-50 min-w-[215px] max-w-[275px] max-h-[78vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl py-1.5 text-xs text-slate-700 dark:text-slate-200 transition-opacity duration-150 backdrop-blur-md bg-white/95 dark:bg-slate-900/95';
+    menu.className = 'fixed z-[105] min-w-[205px] max-w-[265px] max-h-[calc(100vh-96px)] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5 space-y-0.5 text-xs text-slate-700 dark:text-slate-200 transition-opacity duration-150 backdrop-blur-md bg-white/95 dark:bg-slate-900/95';
     menu.setAttribute('data-table-action-menu', 'true');
     menu._triggerBtn = btn;
 
@@ -69,8 +69,8 @@ export function toggleTableActionMenu(btn, event, items = []) {
             leafCallbacks.push(item.fn);
             return `
                 <button type="button" data-menu-leaf-cb="${cbIdx}"
-                        class="w-full px-3.5 py-2 text-left flex items-center gap-2.5 font-medium transition rounded-lg ${textClass}">
-                    ${item.icon ? `<i class="${item.icon} text-base ${iconColor} shrink-0"></i>` : ''}
+                        class="w-full px-3 py-1.5 text-left flex items-center gap-2.5 font-medium transition rounded-lg ${textClass}">
+                    ${item.icon ? `<i class="${item.icon} text-sm ${iconColor} shrink-0"></i>` : ''}
                     <span class="truncate">${escapeHtml(item.label)}</span>
                 </button>
             `;
@@ -78,8 +78,8 @@ export function toggleTableActionMenu(btn, event, items = []) {
 
         return `
             <button type="button" onclick="App.closeTableActionMenu(); ${item.action || ''}"
-                    class="w-full px-3.5 py-2 text-left flex items-center gap-2.5 font-medium transition rounded-lg ${textClass}">
-                ${item.icon ? `<i class="${item.icon} text-base ${iconColor} shrink-0"></i>` : ''}
+                    class="w-full px-3 py-1.5 text-left flex items-center gap-2.5 font-medium transition rounded-lg ${textClass}">
+                ${item.icon ? `<i class="${item.icon} text-sm ${iconColor} shrink-0"></i>` : ''}
                 <span class="truncate">${escapeHtml(item.label)}</span>
             </button>
         `;
@@ -113,11 +113,11 @@ export function toggleTableActionMenu(btn, event, items = []) {
             const gIdx = groupChildrenMap.length;
             groupChildrenMap.push(item.children.filter(Boolean));
             html += `
-                <div class="px-1">
+                <div>
                     <button type="button" data-menu-group-toggle="${gIdx}" aria-expanded="false" aria-haspopup="true"
-                            class="w-full px-2.5 py-2 text-left flex items-center justify-between gap-2 font-semibold transition rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+                            class="w-full px-3 py-1.5 text-left flex items-center justify-between gap-2 font-semibold transition rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
                         <span class="flex items-center gap-2.5 min-w-0">
-                            ${item.icon ? `<i class="${item.icon} text-base ${iconColor} shrink-0"></i>` : ''}
+                            ${item.icon ? `<i class="${item.icon} text-sm ${iconColor} shrink-0"></i>` : ''}
                             <span class="truncate">${escapeHtml(item.label)}</span>
                         </span>
                         <i class="ri-arrow-right-s-line text-slate-400 text-sm shrink-0"></i>
@@ -126,27 +126,33 @@ export function toggleTableActionMenu(btn, event, items = []) {
             `;
             return;
         }
-        html += `<div class="px-1" data-menu-leaf-wrap="1">${renderLeafItem(item)}</div>`;
+        html += `<div data-menu-leaf-wrap="1">${renderLeafItem(item)}</div>`;
     });
     menu.innerHTML = html;
     document.body.appendChild(menu);
     bindLeafCallbacks(menu);
 
+    const isTopBar = document.body.classList.contains('layout-top');
+    const isBottomBar = document.body.classList.contains('layout-bottom');
+    const safeTop = isTopBar ? 68 : 12;
+    const safeBottom = isBottomBar ? 76 : 24;
+    menu.style.maxHeight = `${Math.max(160, window.innerHeight - safeTop - safeBottom)}px`;
     const positionMenu = () => {
         const rect = btn.getBoundingClientRect();
-        const menuWidth = Math.max(215, menu.offsetWidth || 215);
+        const menuWidth = Math.max(205, menu.offsetWidth || 205);
         let left = rect.right - menuWidth;
         if (left < 10) left = 10;
         if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
 
-        const menuHeight = menu.offsetHeight || (items.length * 36 + 12);
-        const spaceBelow = window.innerHeight - rect.bottom - 8;
-        const spaceAbove = rect.top - 8;
+        const menuHeight = menu.offsetHeight || (items.length * 32 + 12);
+        const spaceBelow = window.innerHeight - rect.bottom - safeBottom;
+        const spaceAbove = rect.top - safeTop;
 
-        if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-            menu.style.top = `${Math.max(8, rect.top - menuHeight - 4)}px`;
+        if (spaceBelow < menuHeight && spaceAbove >= spaceBelow) {
+            menu.style.top = `${Math.max(safeTop, rect.top - menuHeight - 6)}px`;
         } else {
-            menu.style.top = `${rect.bottom + 4}px`;
+            const maxTop = Math.max(safeTop, window.innerHeight - safeBottom - menuHeight);
+            menu.style.top = `${Math.min(Math.max(safeTop, rect.bottom + 6), maxTop)}px`;
         }
         menu.style.left = `${left}px`;
     };
@@ -189,7 +195,8 @@ export function toggleTableActionMenu(btn, event, items = []) {
         toggleBtn.classList.add('bg-slate-100', 'dark:bg-slate-800');
 
         const sub = document.createElement('div');
-        sub.className = 'fixed z-[55] min-w-[215px] max-w-[270px] max-h-[75vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5 text-xs text-slate-700 dark:text-slate-200 backdrop-blur-md space-y-0.5';
+        sub.className = 'fixed z-[108] min-w-[205px] max-w-[265px] max-h-[calc(100vh-96px)] overflow-y-auto bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5 text-xs text-slate-700 dark:text-slate-200 backdrop-blur-md space-y-0.5';
+        sub.style.maxHeight = `${Math.max(160, window.innerHeight - safeTop - safeBottom)}px`;
         sub.setAttribute('data-table-action-submenu', 'true');
         sub._groupBtn = toggleBtn;
         sub.innerHTML = children.map(renderLeafItem).join('');
@@ -199,8 +206,8 @@ export function toggleTableActionMenu(btn, event, items = []) {
 
         const menuRect = menu.getBoundingClientRect();
         const rowRect = toggleBtn.getBoundingClientRect();
-        const subW = sub.offsetWidth || 225;
-        const subH = sub.offsetHeight || (children.length * 36 + 12);
+        const subW = sub.offsetWidth || 215;
+        const subH = sub.offsetHeight || (children.length * 32 + 12);
 
         let subLeft = menuRect.left - subW - 6;
         if (subLeft < 8) {
@@ -209,9 +216,9 @@ export function toggleTableActionMenu(btn, event, items = []) {
                 subLeft = Math.max(8, window.innerWidth - subW - 8);
             }
         }
-        let subTop = rowRect.top - 4;
-        if (subTop + subH > window.innerHeight - 8) {
-            subTop = Math.max(8, window.innerHeight - subH - 8);
+        let subTop = Math.max(safeTop, rowRect.top - 4);
+        if (subTop + subH > window.innerHeight - safeBottom) {
+            subTop = Math.max(safeTop, window.innerHeight - safeBottom - subH);
         }
 
         sub.style.left = `${subLeft}px`;

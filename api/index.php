@@ -90,6 +90,54 @@ function errorResponse($message = 'Error', $code = 400)
     jsonResponse(['success' => false, 'message' => $message, 'code' => $code], $code);
 }
 
+function requireParams(array $params, array $fields, array $labels = []): void
+{
+    foreach ($fields as $f) {
+        $val = $params[$f] ?? null;
+        if ($val === null || (is_string($val) && trim($val) === '') || (is_array($val) && empty($val))) {
+            $name = $labels[$f] ?? $f;
+            errorResponse("{$name} wajib diisi", 422);
+        }
+    }
+}
+
+function validateEnum(string $value, array $allowed, string $default = '', ?string $errorMessage = null): string
+{
+    $clean = trim($value);
+    if (in_array($clean, $allowed, true)) {
+        return $clean;
+    }
+    if ($errorMessage !== null) {
+        errorResponse($errorMessage, 422);
+    }
+    return $default;
+}
+
+function saveUploadedFile(array $file, string $subDir = 'uploads', array $allowedMimes = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'], int $maxBytes = 5242880): string
+{
+    if (empty($file['tmp_name']) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        errorResponse('File unggahan tidak valid atau gagal diunggah', 422);
+    }
+    if ((int)($file['size'] ?? 0) <= 0 || (int)$file['size'] > $maxBytes) {
+        errorResponse('Ukuran file melebihi batas maksimal (' . round($maxBytes / 1048576, 1) . ' MB)', 422);
+    }
+    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+    $mime = (string)$finfo->file($file['tmp_name']);
+    if (!isset($allowedMimes[$mime])) {
+        errorResponse('Format file tidak diizinkan (' . $mime . ')', 422);
+    }
+    $cleanSub = trim(preg_replace('/[^a-zA-Z0-9_\/-]/', '', $subDir), '/');
+    $targetDir = dirname(__DIR__) . '/' . ($cleanSub ?: 'uploads');
+    if (!is_dir($targetDir) && !@mkdir($targetDir, 0755, true)) {
+        errorResponse('Gagal menyiapkan direktori penyimpanan file', 500);
+    }
+    $filename = bin2hex(random_bytes(16)) . '.' . $allowedMimes[$mime];
+    if (!@move_uploaded_file($file['tmp_name'], $targetDir . '/' . $filename)) {
+        errorResponse('Gagal menyimpan file ke server', 500);
+    }
+    return ($cleanSub ?: 'uploads') . '/' . $filename;
+}
+
 function paginatedResponse($arg1, $arg2, $arg3, $arg4, $arg5 = 15)
 {
     if (is_array($arg1)) {

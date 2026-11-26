@@ -63,18 +63,19 @@ export async function init(container) {
 
         <!-- 1. Record Payment Modal -->
         <div id="payment-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 animate-fadeIn max-h-[92vh] overflow-y-auto">
-                <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+            <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl animate-fadeIn max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
                     <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <i class="ri-money-dollar-circle-line text-emerald-600"></i>
                         <span>Catat Pembayaran Masuk</span>
                     </h3>
-                    <button onclick="document.getElementById('payment-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                    <button type="button" onclick="document.getElementById('payment-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Tutup">
                         <i class="ri-close-line text-2xl"></i>
                     </button>
                 </div>
 
-                <form id="payment-form" class="space-y-4">
+                <form id="payment-form" class="flex flex-col flex-1 min-h-0">
+                    <div class="p-6 sm:px-8 space-y-4 overflow-y-auto flex-1">
                     <div>
                         <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1.5">Pilih Faktur Tagihan *</label>
                         <select id="form-pay-invoice" required
@@ -122,7 +123,9 @@ export async function init(container) {
                         <span class="font-semibold text-indigo-900 dark:text-indigo-200">Potong dari Saldo Deposit / Retainer Klien</span>
                     </label>
 
-                    <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                    </div>
+
+                    <div class="px-6 sm:px-8 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end gap-3 shrink-0">
                         <button type="button" onclick="document.getElementById('payment-modal').classList.add('hidden')"
                                 class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-semibold">Batal</button>
                         <button type="submit" id="btn-save-payment"

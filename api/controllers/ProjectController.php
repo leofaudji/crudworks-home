@@ -52,6 +52,142 @@ if ($id && is_numeric($id)) {
         ], 'Status deployment berhasil disinkronkan');
     }
 
+    // Panel GitOps: Inspeksi detail repo lokal, .env, commit terakhir, & riwayat deploy
+    if ($action === 'gitops') {
+        checkPermission('project.view');
+        $project = $db->fetch("SELECT * FROM projects WHERE id = ?", [$projectId]);
+        if (!$project) errorResponse('Proyek tidak ditemukan', 404);
+
+        $deployPath = trim((string)($project['deploy_path'] ?? ''));
+        $pathExists = $deployPath !== '' && is_dir($deployPath);
+        $isGitRepo = $pathExists && is_dir($deployPath . '/.git');
+        $hasEnv = $pathExists && file_exists($deployPath . '/.env');
+        $appGitInstalled = is_dir('d:/laragon/www/app-git') || is_dir(__DIR__ . '/../../../app-git');
+
+        $branch = (string)($project['git_branch'] ?: 'main');
+        $commitHash = '-';
+        $commitMsg = '-';
+        $commitAuthor = '-';
+        $commitDate = '-';
+        $dirtyCount = 0;
+
+        if ($isGitRepo && function_exists('shell_exec')) {
+            $safePath = escapeshellarg($deployPath);
+            $brOut = trim((string)@shell_exec("git -C {$safePath} rev-parse --abbrev-ref HEAD 2>&1"));
+            if ($brOut !== '' && !str_contains($brOut, 'fatal:')) $branch = $brOut;
+
+            $logOut = trim((string)@shell_exec("git -C {$safePath} log -1 --format=\"%h|%s|%an|%ci\" 2>&1"));
+            if ($logOut !== '' && str_contains($logOut, '|')) {
+                $parts = explode('|', $logOut, 4);
+                $commitHash = $parts[0] ?? '-';
+                $commitMsg = $parts[1] ?? '-';
+                $commitAuthor = $parts[2] ?? '-';
+                $commitDate = $parts[3] ?? '-';
+            }
+
+            $stOut = trim((string)@shell_exec("git -C {$safePath} status --porcelain 2>&1"));
+            if ($stOut !== '' && !str_contains($stOut, 'fatal:')) {
+                $dirtyCount = count(array_filter(explode("\n", $stOut)));
+            }
+        }
+
+        $logs = $db->fetchAll(
+            "SELECT l.*, u.nama_lengkap as triggered_by_name
+             FROM project_deploy_logs l
+             LEFT JOIN users u ON l.triggered_by = u.id
+             WHERE l.project_id = ?
+             ORDER BY l.id DESC LIMIT 10",
+            [$projectId]
+        );
+
+        successResponse([
+            'project_id' => $projectId,
+            'nama_project' => $project['nama_project'],
+            'git_repo_url' => $project['git_repo_url'],
+            'git_branch' => $branch,
+            'deploy_path' => $deployPath,
+            'app_url' => $project['app_url'],
+            'path_exists' => $pathExists,
+            'is_git_repo' => $isGitRepo,
+            'has_env' => $hasEnv,
+            'app_git_installed' => $appGitInstalled,
+            'commit_hash' => $commitHash,
+            'commit_message' => $commitMsg,
+            'commit_author' => $commitAuthor,
+            'commit_date' => $commitDate,
+            'dirty_files' => $dirtyCount,
+            'last_deploy_status' => $project['last_deploy_status'],
+            'last_deploy_at' => $project['last_deploy_at'],
+            'logs' => $logs
+        ]);
+    }
+
+    // Trigger Deploy (git pull origin <branch> pada deploy_path)
+    if ($action === 'deploy') {
+        if ($method !== 'POST') errorResponse('Method not allowed', 405);
+        checkPermission('project.git_sync');
+        $project = $db->fetch("SELECT * FROM projects WHERE id = ?", [$projectId]);
+        if (!$project) errorResponse('Proyek tidak ditemukan', 404);
+
+        $deployPath = trim((string)($project['deploy_path'] ?? ''));
+        $branch = preg_replace('/[^a-zA-Z0-9._\/-]/', '', (string)($project['git_branch'] ?: 'main')) ?: 'main';
+        if ($deployPath === '' || !is_dir($deployPath . '/.git')) {
+            errorResponse('Folder deploy_path belum diatur atau bukan repositori Git valid', 422);
+        }
+
+        $safePath = escapeshellarg($deployPath);
+        $safeBr = escapeshellarg($branch);
+        $cmd = "git -C {$safePath} pull origin {$safeBr} 2>&1";
+        $outLines = [];
+        $exitCode = 1;
+        if (function_exists('exec')) {
+            @exec($cmd, $outLines, $exitCode);
+        } else {
+            $outLines[] = 'Fungsi exec() dinonaktifkan pada PHP server';
+        }
+        $outputText = trim(implode("\n", $outLines));
+        $status = ($exitCode === 0) ? 'success' : 'failed';
+
+        $commitHash = '-';
+        $commitMsg = '-';
+        $logOut = trim((string)@shell_exec("git -C {$safePath} log -1 --format=\"%h|%s\" 2>&1"));
+        if ($logOut !== '' && str_contains($logOut, '|')) {
+            [$commitHash, $commitMsg] = explode('|', $logOut, 2);
+        }
+
+        $userId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+        $db->execute("UPDATE projects SET last_deploy_status = ?, last_deploy_at = NOW() WHERE id = ?", [$status, $projectId]);
+        $db->insert(
+            "INSERT INTO project_deploy_logs (project_id, branch, commit_hash, commit_message, action_type, status, output_log, triggered_by)
+             VALUES (?, ?, ?, ?, 'deploy', ?, ?, ?)",
+            [$projectId, $branch, $commitHash, mb_substr($commitMsg, 0, 255), $status, $outputText, $userId]
+        );
+
+        logActivity('git_deploy', 'projects', $projectId, null, ['status' => $status, 'branch' => $branch, 'commit' => $commitHash]);
+        dispatchWebhook('project.updated', [
+            'project_id' => $projectId,
+            'nama_project' => $project['nama_project'],
+            'action' => 'deploy',
+            'branch' => $branch,
+            'commit_hash' => $commitHash,
+            'status' => $status
+        ]);
+
+        if ($status === 'failed') {
+            createNotification('Deploy Proyek Gagal', "Deploy {$project['nama_project']} ({$branch}) gagal.", '#/projects', 'bahaya');
+            errorResponse('Deploy gagal: ' . ($outputText ?: 'Exit code ' . $exitCode), 500);
+        }
+
+        createNotification('Deploy Proyek Sukses', "{$project['nama_project']} ({$branch} · {$commitHash}) berhasil dideploy.", '#/projects', 'sukses');
+        successResponse([
+            'status' => $status,
+            'branch' => $branch,
+            'commit_hash' => $commitHash,
+            'commit_message' => $commitMsg,
+            'output' => $outputText
+        ], "Deploy branch {$branch} berhasil ({$commitHash})");
+    }
+
     // Tracker Masa Garansi & Adendum / Change Request
     if ($action === 'change-requests') {
         $project = $db->fetch("SELECT * FROM projects WHERE id = ?", [$projectId]);
@@ -134,10 +270,7 @@ if ($id && is_numeric($id)) {
             $status = in_array($params['status'] ?? '', ['draft', 'disetujui', 'dikerjakan', 'selesai', 'ditolak'], true) ? $params['status'] : 'draft';
             if ($judul === '') errorResponse('Judul adendum / change request wajib diisi', 422);
 
-            $prefix = 'ADD-' . date('Ym') . '-';
-            $last = $db->fetch("SELECT nomor_adendum FROM project_change_requests WHERE nomor_adendum LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-            $seq = $last ? ((int)substr($last['nomor_adendum'], -4) + 1) : 1;
-            $nomor = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+            $nomor = generateDocNumber('project_change_requests', 'nomor_adendum', 'ADD-', 4, true, '-');
             $userId = (int)($_SESSION['user_id'] ?? 1);
 
             $newCrId = (int)$db->insert(
@@ -437,14 +570,7 @@ if ($id && is_numeric($id)) {
         $subtotal = (float)$m['nominal'];
         if ($subtotal <= 0) errorResponse('Nominal termin harus lebih besar dari 0', 422);
 
-        $prefix = 'INV-' . date('Ym') . '-';
-        $lastSeq = $db->fetch("SELECT nomor_invoice FROM invoices WHERE nomor_invoice LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-        $seq = 1;
-        if ($lastSeq) {
-            $parts = explode('-', $lastSeq['nomor_invoice']);
-            $seq = (int)end($parts) + 1;
-        }
-        $nomorInvoice = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+        $nomorInvoice = generateInvoiceNo('INV-');
 
         $dueDays = (int)($db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'invoice_due_days'")['nilai'] ?? 14);
         $pajakPersen = getDefaultTaxPercent();
@@ -642,14 +768,7 @@ if ($method === 'POST') {
     }
 
     // Generate kode proyek otomatis (PRJ-0001)
-    $lastProject = $db->fetch("SELECT kode_project FROM projects WHERE kode_project LIKE 'PRJ-%' ORDER BY id DESC LIMIT 1");
-    if ($lastProject && !empty($lastProject['kode_project'])) {
-        $lastNum = (int)str_replace('PRJ-', '', $lastProject['kode_project']);
-        $nextNum = $lastNum + 1;
-    } else {
-        $nextNum = 1;
-    }
-    $kodeProject = 'PRJ-' . str_pad((string)$nextNum, 4, '0', STR_PAD_LEFT);
+    $kodeProject = generateDocNumber('projects', 'kode_project', 'PRJ-', 4, false, '');
 
     $newId = $db->insert(
         "INSERT INTO projects (client_id, kode_project, nama_project, deskripsi, git_repo_url, git_branch, deploy_path, app_url, tanggal_mulai, tanggal_selesai, nilai_project, status) 

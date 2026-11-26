@@ -6,6 +6,60 @@ require_once __DIR__ . '/../middleware/rbac.php';
 
 $db = Database::getInstance();
 
+// 0. Kirim Surat Penawaran (SPH) via Email SMTP
+if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
+    authCheck();
+    checkPermission('quotation.view');
+
+    $quo = $db->fetch(
+        "SELECT q.*, c.nama_perusahaan, c.penanggung_jawab, c.email as client_email
+         FROM quotations q
+         JOIN clients c ON q.client_id = c.id
+         WHERE q.id = ?",
+        [(int)$id]
+    );
+    if (!$quo) errorResponse('Surat penawaran tidak ditemukan', 404);
+    if (empty($quo['client_email'])) errorResponse('Email klien belum diatur pada data pelanggan', 422);
+
+    $cfg = getAppSettingsMap();
+    $token = $quo['public_token'] ?: bin2hex(random_bytes(24));
+    if (empty($quo['public_token'])) {
+        $db->execute("UPDATE quotations SET public_token = ? WHERE id = ?", [$token, (int)$id]);
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
+    $portalUrl = "{$scheme}://{$host}{$base}/#/public-quotation?token=" . urlencode($token);
+
+    $subject = "Surat Penawaran {$quo['nomor_penawaran']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
+    $html = buildQuotationEmailHtml($quo, $cfg, $portalUrl);
+    $mailRes = sendErpEmail((string)$quo['client_email'], (string)($quo['penanggung_jawab'] ?: $quo['nama_perusahaan']), $subject, $html, 'quotation', (int)$id);
+    if (empty($mailRes['success'])) {
+        errorResponse($mailRes['message'] ?? 'Gagal mengirim email penawaran', 500);
+    }
+
+    if ($quo['status'] === 'draft') {
+        $db->execute("UPDATE quotations SET status = 'terkirim', last_sent_at = NOW(), last_sent_via = 'email' WHERE id = ?", [(int)$id]);
+    } else {
+        $db->execute("UPDATE quotations SET last_sent_at = NOW(), last_sent_via = 'email' WHERE id = ?", [(int)$id]);
+    }
+    logActivity('quotation.send_email', 'quotations', (int)$id, null, ['sent_to' => $quo['client_email']]);
+    successResponse(['sent_to' => $quo['client_email']], 'Surat penawaran berhasil dikirim via SMTP ke ' . $quo['client_email']);
+}
+
+// 0b. Catat Riwayat Pengiriman Penawaran (WhatsApp / Portal)
+if ($method === 'POST' && $id && is_numeric($id) && $action === 'log-send') {
+    authCheck();
+    checkPermission('quotation.view');
+    $via = trim((string)($params['via'] ?? 'whatsapp'));
+    if (!in_array($via, ['whatsapp', 'email', 'portal'], true)) $via = 'whatsapp';
+    $quo = $db->fetch("SELECT id, nomor_penawaran FROM quotations WHERE id = ?", [(int)$id]);
+    if (!$quo) errorResponse('Surat penawaran tidak ditemukan', 404);
+    $db->execute("UPDATE quotations SET last_sent_at = NOW(), last_sent_via = ? WHERE id = ?", [$via, (int)$id]);
+    logActivity('quotation.send_' . $via, 'quotations', (int)$id, null, ['via' => $via]);
+    successResponse(['last_sent_at' => date('Y-m-d H:i:s'), 'last_sent_via' => $via], 'Riwayat pengiriman dicatat');
+}
+
 // 1. Get Single Quotation Detail
 if ($method === 'GET' && $id && is_numeric($id)) {
     authCheck();
@@ -140,14 +194,7 @@ if ($method === 'POST' && !$action) {
     }
 
     // Auto-generate nomor penawaran: QUO-YYYYMM-XXXX
-    $prefix = 'QUO-' . date('Ym') . '-';
-    $lastSeq = $db->fetch("SELECT nomor_penawaran FROM quotations WHERE nomor_penawaran LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-    $seq = 1;
-    if ($lastSeq) {
-        $parts = explode('-', $lastSeq['nomor_penawaran']);
-        $seq = (int)end($parts) + 1;
-    }
-    $nomorPenawaran = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+    $nomorPenawaran = generateDocNumber('quotations', 'nomor_penawaran', 'QUO-', 4, true, '-');
 
     // Calculate subtotal
     $subtotal = 0;
@@ -370,14 +417,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'convert') {
     }
 
     // Auto-generate invoice number: INV-YYYYMM-XXXX
-    $prefix = 'INV-' . date('Ym') . '-';
-    $lastSeq = $db->fetch("SELECT nomor_invoice FROM invoices WHERE nomor_invoice LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-    $seq = 1;
-    if ($lastSeq) {
-        $parts = explode('-', $lastSeq['nomor_invoice']);
-        $seq = (int)end($parts) + 1;
-    }
-    $nomorInvoice = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+    $nomorInvoice = generateInvoiceNo('INV-');
 
     $tanggalInvoice = date('Y-m-d');
     $dueDays = (int)($db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'invoice_due_days'")['nilai'] ?? 14);

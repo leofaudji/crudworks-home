@@ -464,15 +464,7 @@ async function loadClients() {
     }).join('');
 
     // Pagination
-    paginationEl.innerHTML = `
-        <div>Menampilkan hal <b>${pagination.page}</b> dari total <b>${pagination.total}</b> klien</div>
-        <div class="flex items-center gap-2">
-            <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changeClientPage(${pagination.page - 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-            <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changeClientPage(${pagination.page + 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadClients(); }, 'klien');
 }
 
 window.openClientDepositModal = async (clientId, clientName) => {
@@ -609,8 +601,8 @@ async function loadKanban() {
 
 function renderKanbanCard(p, currentStage) {
     const dealVal = Number(p.deal_value || 0);
-    const cleanPhone = (p.telepon || '').replace(/[^0-9]/g, '');
-    const waUrl = cleanPhone ? (cleanPhone.startsWith('0') ? `https://wa.me/62${cleanPhone.slice(1)}` : `https://wa.me/${cleanPhone}`) : null;
+    const cleanPhone = App.formatWhatsAppPhone(p.telepon);
+    const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
     return `
         <div class="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-primary-400 dark:hover:border-primary-600 transition space-y-2.5">
@@ -964,11 +956,7 @@ window.sendClientPortalWhatsApp = (token, company, phone, pic) => {
     const greeting = pic ? `Halo Bpk/Ibu ${pic}` : `Halo Rekan`;
     const msg = `${greeting} (${company}),\n\nBerikut kami lampirkan tautan resmi Portal Klien CRUDWorks untuk memantau status faktur, proposal penawaran, dan SLA layanan Anda secara real-time:\n\n${portalUrl}\n\nTerima kasih atas kerja samanya.`;
 
-    const waUrl = waPhone
-        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`
-        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-
-    window.open(waUrl, '_blank');
+    App.openWhatsApp(telepon, msg);
 };
 
 window.openClientPortalPwa = () => {
@@ -1032,9 +1020,7 @@ window.manageClientPortalAccess = async (id, name, active = 0) => {
         try { await navigator.clipboard.writeText(shareText); App.toast('Kredensial portal disalin', 'success'); }
         catch (_) { window.prompt('Salin kredensial portal:', shareText); }
     } else if (second.isDenied) {
-        let wa = String(d.telepon || '').replace(/[^0-9]/g, '');
-        if (wa.startsWith('0')) wa = '62' + wa.substring(1);
-        window.open(`https://wa.me/${wa}?text=${encodeURIComponent(shareText)}`, '_blank');
+        App.openWhatsApp(d.telepon, shareText);
     }
 };
 

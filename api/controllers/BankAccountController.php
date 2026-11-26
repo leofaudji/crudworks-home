@@ -4,6 +4,147 @@
 authCheck();
 $db = Database::getInstance();
 
+// ===== REKONSILIASI MUTASI BANK (Poin 4) =====
+if ($id === 'mutations') {
+    if ($method === 'GET') {
+        checkPermission(['bank.view', 'invoice.view', 'settings.edit', 'payment.view']);
+        $pmId = (int)($params['payment_method_id'] ?? 0);
+        $status = trim((string)($params['status'] ?? ''));
+
+        $where = ["1=1"];
+        $args = [];
+        if ($pmId > 0) {
+            $where[] = "bm.payment_method_id = ?";
+            $args[] = $pmId;
+        }
+        if (in_array($status, ['unmatched', 'matched', 'ignored'], true)) {
+            $where[] = "bm.status = ?";
+            $args[] = $status;
+        }
+
+        $rows = $db->fetchAll(
+            "SELECT bm.*, pm.nama_bank, pm.nomor_rekening,
+                    CASE
+                        WHEN bm.matched_type = 'invoice' THEN (SELECT nomor_invoice FROM invoices WHERE id = bm.matched_id)
+                        WHEN bm.matched_type = 'expense' THEN (SELECT deskripsi FROM expenses WHERE id = bm.matched_id)
+                        WHEN bm.matched_type = 'payment' THEN (SELECT nomor_pembayaran FROM payments WHERE id = bm.matched_id)
+                        ELSE NULL
+                    END as matched_label
+             FROM bank_mutations bm
+             JOIN payment_methods pm ON bm.payment_method_id = pm.id
+             WHERE " . implode(' AND ', $where) . "
+             ORDER BY bm.tanggal_transaksi DESC, bm.id DESC
+             LIMIT 200",
+            $args
+        );
+        successResponse($rows);
+    }
+
+    if ($method === 'POST') {
+        checkPermission(['bank.manage', 'settings.edit']);
+
+        // Import mutasi (array rows hasil parse CSV atau input manual)
+        if ($action === 'import') {
+            $pmId = (int)($params['payment_method_id'] ?? 0);
+            $rows = $params['rows'] ?? [];
+            if ($pmId <= 0 || !is_array($rows) || empty($rows)) {
+                errorResponse('Rekening tujuan dan minimal 1 baris mutasi wajib diisi', 422);
+            }
+
+            $userId = (int)($_SESSION['user_id'] ?? 0) ?: null;
+            $inserted = 0;
+            $stmt = $db->getPdo()->prepare(
+                "INSERT INTO bank_mutations (payment_method_id, tanggal_transaksi, deskripsi, referensi, tipe, nominal, saldo, imported_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            foreach ($rows as $r) {
+                $tgl = trim((string)($r['tanggal_transaksi'] ?? date('Y-m-d')));
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl)) $tgl = date('Y-m-d');
+                $desc = trim((string)($r['deskripsi'] ?? 'Mutasi Bank'));
+                $ref = trim((string)($r['referensi'] ?? ''));
+                $tipe = strtolower(trim((string)($r['tipe'] ?? 'kredit'))) === 'debit' ? 'debit' : 'kredit';
+                $nom = abs((float)($r['nominal'] ?? 0));
+                $saldo = isset($r['saldo']) && $r['saldo'] !== '' ? (float)$r['saldo'] : null;
+                if ($nom <= 0) continue;
+
+                $stmt->execute([$pmId, $tgl, mb_substr($desc, 0, 255), $ref ?: null, $tipe, $nom, $saldo, $userId]);
+                $inserted++;
+            }
+            logActivity('mutation_import', 'bank_mutations', $pmId, null, ['inserted' => $inserted]);
+            successResponse(['inserted' => $inserted], "$inserted baris mutasi berhasil diimpor");
+        }
+
+        // Auto-match mutasi unmatched dengan invoices / payments / expenses
+        if ($action === 'auto-match') {
+            $pmId = (int)($params['payment_method_id'] ?? 0);
+            $where = $pmId > 0 ? "AND payment_method_id = ?" : "";
+            $args = $pmId > 0 ? [$pmId] : [];
+            $unmatched = $db->fetchAll("SELECT * FROM bank_mutations WHERE status = 'unmatched' $where", $args);
+
+            $matchedCount = 0;
+            foreach ($unmatched as $m) {
+                $nom = (float)$m['nominal'];
+                $desc = strtoupper((string)$m['deskripsi'] . ' ' . (string)$m['referensi']);
+
+                if ($m['tipe'] === 'kredit') {
+                    // 1. Cek invoice dengan nomor di deskripsi atau sisa_tagihan / total_tagihan cocok
+                    $inv = $db->fetch(
+                        "SELECT id, nomor_invoice FROM invoices
+                         WHERE status IN ('dikirim','sebagian','jatuh_tempo')
+                           AND (ABS(sisa_tagihan - ?) < 1 OR ABS(total_tagihan - ?) < 1)
+                         ORDER BY id DESC LIMIT 1",
+                        [$nom, $nom]
+                    );
+                    if ($inv) {
+                        $db->execute("UPDATE bank_mutations SET status = 'matched', matched_type = 'invoice', matched_id = ? WHERE id = ?", [(int)$inv['id'], (int)$m['id']]);
+                        $matchedCount++;
+                        continue;
+                    }
+                    // 2. Cek payment yang sudah tercatat dengan nominal sama
+                    $pay = $db->fetch(
+                        "SELECT id FROM payments WHERE ABS(jumlah_bayar - ?) < 1 AND ABS(DATEDIFF(tanggal_bayar, ?)) <= 5 ORDER BY id DESC LIMIT 1",
+                        [$nom, $m['tanggal_transaksi']]
+                    );
+                    if ($pay) {
+                        $db->execute("UPDATE bank_mutations SET status = 'matched', matched_type = 'payment', matched_id = ? WHERE id = ?", [(int)$pay['id'], (int)$m['id']]);
+                        $matchedCount++;
+                        continue;
+                    }
+                } else {
+                    // Debit: cocokkan dengan expenses
+                    $exp = $db->fetch(
+                        "SELECT id FROM expenses WHERE ABS(jumlah - ?) < 1 AND ABS(DATEDIFF(tanggal, ?)) <= 5 ORDER BY id DESC LIMIT 1",
+                        [$nom, $m['tanggal_transaksi']]
+                    );
+                    if ($exp) {
+                        $db->execute("UPDATE bank_mutations SET status = 'matched', matched_type = 'expense', matched_id = ? WHERE id = ?", [(int)$exp['id'], (int)$m['id']]);
+                        $matchedCount++;
+                    }
+                }
+            }
+
+            successResponse(['matched' => $matchedCount, 'checked' => count($unmatched)], "$matchedCount mutasi berhasil dicocokkan otomatis");
+        }
+
+        // Rekonsiliasi manual atau abaikan mutasi
+        if ($action === 'reconcile') {
+            $mutId = (int)($params['id'] ?? 0);
+            $newStatus = in_array($params['status'] ?? '', ['matched', 'ignored', 'unmatched'], true) ? $params['status'] : 'matched';
+            $mType = in_array($params['matched_type'] ?? '', ['invoice', 'expense', 'payment'], true) ? $params['matched_type'] : null;
+            $mId = !empty($params['matched_id']) ? (int)$params['matched_id'] : null;
+            if ($mutId <= 0) errorResponse('ID mutasi tidak valid', 422);
+
+            $db->execute(
+                "UPDATE bank_mutations SET status = ?, matched_type = ?, matched_id = ? WHERE id = ?",
+                [$newStatus, $mType, $mId, $mutId]
+            );
+            successResponse(['id' => $mutId], 'Status rekonsiliasi mutasi diperbarui');
+        }
+    }
+
+    errorResponse('Aksi mutasi bank tidak valid', 400);
+}
+
 if ($method === 'GET') {
     if ($id && is_numeric($id)) {
         checkPermission(['bank.view', 'invoice.view', 'settings.edit']);

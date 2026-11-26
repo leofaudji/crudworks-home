@@ -25,9 +25,9 @@ function verifyCsrfToken()
         return true;
     }
 
-    // Skip CSRF for login endpoint and token-protected public portals
+    // Skip CSRF for login endpoint, webhooks, and token-protected public portals
     $route = isset($_GET['route']) ? trim($_GET['route'], '/') : '';
-    if (in_array($route, ['auth/login', 'auth/check', 'portal-auth/login']) || str_starts_with($route, 'public-invoice') || str_starts_with($route, 'public-quotation') || str_starts_with($route, 'client-portal')) {
+    if (in_array($route, ['auth/login', 'auth/check', 'portal-auth/login']) || str_starts_with($route, 'public-invoice') || str_starts_with($route, 'public-quotation') || str_starts_with($route, 'client-portal') || str_starts_with($route, 'payment-gateway')) {
         return true;
     }
 

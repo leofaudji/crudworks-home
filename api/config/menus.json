@@ -9,6 +9,13 @@
                 "icon": "ri-dashboard-3-line",
                 "url": "#/dashboard",
                 "perm": "dashboard.view"
+            },
+            {
+                "id": 34,
+                "nama": "Alur Aplikasi 3D",
+                "icon": "ri-node-tree",
+                "url": "#/app-flow",
+                "perm": "dashboard.view"
             }
         ]
     },
@@ -72,14 +79,14 @@
         "children": [
             {
                 "id": 16,
-                "nama": "SLA & Pemantau Domain",
+                "nama": "SLA & Domain Klien",
                 "icon": "ri-shield-check-line",
                 "url": "#/maintenance",
                 "perm": "maintenance.view"
             },
             {
                 "id": 22,
-                "nama": "Tiket Gangguan Klien",
+                "nama": "Tiket & Support Klien",
                 "icon": "ri-customer-service-2-line",
                 "url": "#/tickets",
                 "perm": "maintenance.view"
@@ -100,7 +107,7 @@
             },
             {
                 "id": 19,
-                "nama": "Aset & Langganan Cloud",
+                "nama": "Aset & Cloud Internal",
                 "icon": "ri-cloud-line",
                 "url": "#/company-assets",
                 "perm": "asset.view"
@@ -154,7 +161,7 @@
         "children": [
             {
                 "id": 20,
-                "nama": "Laba Rugi & Profit",
+                "nama": "Profitabilitas Proyek & Kas",
                 "icon": "ri-scales-3-line",
                 "url": "#/profit-loss",
                 "perm": "report.view"
@@ -164,6 +171,27 @@
                 "nama": "Laporan Finansial",
                 "icon": "ri-pie-chart-2-line",
                 "url": "#/reports",
+                "perm": "report.view"
+            },
+            {
+                "id": 26,
+                "nama": "Jurnal & Buku Besar",
+                "icon": "ri-file-list-2-line",
+                "url": "#/journals",
+                "perm": "report.view"
+            },
+            {
+                "id": 31,
+                "nama": "Laporan Keuangan (PSAK)",
+                "icon": "ri-funds-line",
+                "url": "#/income-statement",
+                "perm": "report.view"
+            },
+            {
+                "id": 30,
+                "nama": "Tutup Buku & COA",
+                "icon": "ri-lock-2-line",
+                "url": "#/period-closing",
                 "perm": "report.view"
             }
         ]

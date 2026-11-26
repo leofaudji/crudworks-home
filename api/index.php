@@ -25,6 +25,9 @@ require_once __DIR__ . '/config/redis.php';
 require_once __DIR__ . '/config/invoice_helpers.php';
 require_once __DIR__ . '/config/vault_helpers.php';
 require_once __DIR__ . '/config/portal_helpers.php';
+require_once __DIR__ . '/config/enterprise_helpers.php';
+require_once __DIR__ . '/config/smtp_helpers.php';
+require_once __DIR__ . '/config/accounting_helpers.php';
 require_once __DIR__ . '/middleware/auth.php';
 require_once __DIR__ . '/middleware/rbac.php';
 require_once __DIR__ . '/middleware/csrf.php';
@@ -140,42 +143,75 @@ function paginatedResponse($arg1, $arg2, $arg3, $arg4, $arg5 = 15)
     ]);
 }
 
+function cacheGet(string $key)
+{
+    $redis = RedisManager::getInstance();
+    return $redis->isConnected() ? $redis->get($key) : false;
+}
+
+function cacheSet(string $key, $value, int $ttl = 300): void
+{
+    $redis = RedisManager::getInstance();
+    if ($redis->isConnected()) {
+        $redis->set($key, $value, $ttl);
+    }
+}
+
+function initReportCache(string $prefix, string $subRoute, array $params, array $filterKeys = [], bool $allowRead = true, int $ttl = 300): callable
+{
+    $filters = [];
+    foreach ($filterKeys as $k) {
+        $filters[$k] = $params[$k] ?? '';
+    }
+    $cleanSub = preg_replace('/[^a-z0-9_-]/i', '', $subRoute);
+    $cacheKey = "cache_{$prefix}_{$cleanSub}_" . md5(json_encode($filters));
+
+    if ($allowRead && empty($params['fresh'])) {
+        $cached = cacheGet($cacheKey);
+        if ($cached !== false && is_array($cached)) {
+            successResponse($cached);
+        }
+    }
+
+    return static function ($payload, ?int $customTtl = null) use ($cacheKey, $ttl): void {
+        if (is_array($payload)) {
+            cacheSet($cacheKey, $payload, $customTtl ?? $ttl);
+        }
+        successResponse($payload);
+    };
+}
+
 function clearCache(array $types)
 {
     $redis = RedisManager::getInstance();
+    $map = [
+        'clients'    => ['cache_client_*'],
+        'invoices'   => ['cache_invoice_*', 'cache_report_*', 'cache_accounting_*', 'sidebar_menu_badges', 'dashboard_stats'],
+        'payments'   => ['cache_payment_*', 'cache_report_*', 'cache_accounting_*', 'dashboard_stats'],
+        'expenses'   => ['cache_report_*', 'cache_accounting_*', 'dashboard_stats'],
+        'reports'    => ['cache_report_*'],
+        'accounting' => ['cache_accounting_*'],
+        'services'   => ['cache_services_list'],
+        'settings'   => ['app_settings_*'],
+    ];
+
+    $toDelete = [];
     foreach ($types as $key => $val) {
         $type = is_numeric($key) ? $val : $key;
         $id = is_numeric($key) ? null : $val;
 
-        switch ($type) {
-            case 'clients':
-                $redis->delete('cache_client_*');
-                break;
-            case 'invoices':
-                $redis->delete('cache_invoice_*');
-                $redis->delete('sidebar_menu_badges');
-                $redis->delete('dashboard_stats');
-                break;
-            case 'payments':
-                $redis->delete('cache_payment_*');
-                $redis->delete('dashboard_stats');
-                break;
-            case 'services':
-                $redis->delete('cache_services_list');
-                break;
-            case 'settings':
-                $redis->delete('app_settings_*');
-                break;
-            case 'rbac':
-                if ($id) {
-                    $redis->delete("rbac_perms_{$id}");
-                    $redis->delete("rbac_menus_{$id}");
-                } else {
-                    $redis->delete('rbac_perms_*');
-                    $redis->delete('rbac_menus_*');
-                }
-                break;
+        if ($type === 'rbac') {
+            $toDelete[$id ? "rbac_perms_{$id}" : 'rbac_perms_*'] = true;
+            $toDelete[$id ? "rbac_menus_{$id}" : 'rbac_menus_*'] = true;
+            continue;
         }
+        foreach ($map[$type] ?? [] as $pattern) {
+            $toDelete[$pattern] = true;
+        }
+    }
+
+    foreach (array_keys($toDelete) as $pattern) {
+        $redis->delete($pattern);
     }
 }
 
@@ -299,6 +335,10 @@ try {
             require_once $controllerPath . 'PublicQuotationController.php';
             break;
 
+        case 'public-status':
+            require_once $controllerPath . 'PublicStatusController.php';
+            break;
+
         case 'client-portal':
             require_once $controllerPath . 'ClientPortalController.php';
             break;
@@ -347,6 +387,10 @@ try {
             require_once $controllerPath . 'ReportController.php';
             break;
 
+        case 'accounting':
+            require_once $controllerPath . 'AccountingController.php';
+            break;
+
         case 'users':
             require_once $controllerPath . 'UserController.php';
             break;
@@ -365,6 +409,19 @@ try {
 
         case 'backup':
             require_once $controllerPath . 'BackupController.php';
+            break;
+
+        case 'payment-gateway':
+            require_once $controllerPath . 'PaymentGatewayController.php';
+            break;
+
+        case 'notifications':
+            require_once $controllerPath . 'NotificationController.php';
+            break;
+
+        case 'webhooks':
+        case 'api-keys':
+            require_once $controllerPath . 'IntegrationController.php';
             break;
 
         default:

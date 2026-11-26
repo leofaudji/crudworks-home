@@ -25,6 +25,10 @@ export async function init(container) {
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Pencatatan biaya server cloud, lisensi software, subkontraktor, dan project costing.</p>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button type="button" id="btn-export-expenses-csv" class="px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                        <i class="ri-download-2-line text-emerald-600"></i>
+                        <span>Ekspor CSV</span>
+                    </button>
                     <button id="btn-add-expense" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm shadow-primary-500/20 transition">
                         <i class="ri-add-line text-base"></i>
                         <span>Catat Pengeluaran</span>
@@ -152,6 +156,24 @@ export async function init(container) {
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Sumber Rekening Kas/Bank</label>
                             <select id="form-exp-bank" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">PPN Masukan (IDR)</label>
+                            <input type="text" id="form-exp-ppn" placeholder="0" data-currency="idr"
+                                   class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">PPh 23 (%)</label>
+                            <input type="number" id="form-exp-pph23" min="0" max="100" step="0.5" placeholder="0"
+                                   class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">No. Faktur Pajak</label>
+                            <input type="text" id="form-exp-fpajak" placeholder="Opsional"
+                                   class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono">
                         </div>
                     </div>
 
@@ -357,13 +379,7 @@ function renderPagination(p) {
         cont.innerHTML = `<span>Menampilkan ${p.total} data</span>`;
         return;
     }
-    cont.innerHTML = `
-        <span>Halaman ${p.page} dari ${p.total_pages} (${p.total} transaksi)</span>
-        <div class="flex items-center gap-1">
-            <button onclick="window.changeExpensePage(${p.page - 1})" ${p.page <= 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Sebelumnya</button>
-            <button onclick="window.changeExpensePage(${p.page + 1})" ${p.page >= p.total_pages ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(cont, p, (page) => { state.page = page; loadExpenses(); }, 'transaksi');
 }
 
 function openExpenseModal(exp = null) {
@@ -377,6 +393,9 @@ function openExpenseModal(exp = null) {
     document.getElementById('form-exp-penerima').value = exp ? (exp.penerima || '') : '';
     document.getElementById('form-exp-project').value = exp ? (exp.project_id || '') : '';
     document.getElementById('form-exp-bank').value = exp ? (exp.payment_method_id || '') : '';
+    document.getElementById('form-exp-ppn').value = exp && Number(exp.ppn_masukan) > 0 ? App.formatNumber(exp.ppn_masukan) : '';
+    document.getElementById('form-exp-pph23').value = exp && Number(exp.pph23_persen) > 0 ? exp.pph23_persen : '';
+    document.getElementById('form-exp-fpajak').value = exp ? (exp.nomor_faktur_pajak || '') : '';
     document.getElementById('form-exp-deskripsi').value = exp ? (exp.deskripsi || '') : '';
     document.getElementById('form-exp-file').value = '';
 
@@ -391,12 +410,18 @@ async function handleSaveExpense(e) {
 
     const rawJumlah = document.getElementById('form-exp-jumlah').value.replace(/[^0-9]/g, '');
     const jumlah = parseFloat(rawJumlah) || 0;
+    const rawPpn = (document.getElementById('form-exp-ppn')?.value || '').replace(/[^0-9]/g, '');
+    const ppnMasukan = parseFloat(rawPpn) || 0;
+    const pph23Persen = parseFloat(document.getElementById('form-exp-pph23')?.value) || 0;
 
     const payload = {
         tanggal: document.getElementById('form-exp-date').value,
         expense_category_id: document.getElementById('form-exp-cat').value,
         judul: document.getElementById('form-exp-judul').value.trim(),
         jumlah,
+        ppn_masukan: ppnMasukan,
+        pph23_persen: pph23Persen,
+        nomor_faktur_pajak: document.getElementById('form-exp-fpajak')?.value.trim() || '',
         penerima: document.getElementById('form-exp-penerima').value.trim(),
         project_id: document.getElementById('form-exp-project').value || null,
         payment_method_id: document.getElementById('form-exp-bank').value || null,
@@ -456,5 +481,28 @@ window.changeExpensePage = (p) => {
     state.page = p;
     loadExpenses();
 };
+
+document.addEventListener('click', async (e) => {
+    const btn = e.target?.closest('#btn-export-expenses-csv');
+    if (!btn) return;
+    let ep = `expenses?page=1&per_page=100`;
+    if (state.search) ep += `&search=${encodeURIComponent(state.search)}`;
+    if (state.category_id) ep += `&category_id=${encodeURIComponent(state.category_id)}`;
+    if (state.project_id) ep += `&project_id=${encodeURIComponent(state.project_id)}`;
+    if (state.start_date) ep += `&start_date=${encodeURIComponent(state.start_date)}`;
+    if (state.end_date) ep += `&end_date=${encodeURIComponent(state.end_date)}`;
+    const res = await App.api(ep);
+    const rows = res?.data || [];
+    if (rows.length === 0) {
+        App.toast('Tidak ada data pengeluaran untuk diekspor', 'warning');
+        return;
+    }
+    App.exportCsv(
+        `rekap-pengeluaran-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['No. Transaksi', 'Tanggal', 'Kategori', 'Judul / Deskripsi', 'Vendor / Penerima', 'Proyek', 'Nominal', 'Status'],
+        rows.map((r) => [r.nomor_pengeluaran || r.id, r.tanggal, r.kategori_nama || '-', r.judul || r.deskripsi || '-', r.vendor || '-', r.nama_project || '-', r.jumlah, r.status || 'selesai'])
+    );
+    App.toast(`Berhasil mengekspor ${rows.length} pengeluaran ke CSV`, 'success');
+});
 
 export default { init };

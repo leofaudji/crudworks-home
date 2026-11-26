@@ -116,6 +116,21 @@ export async function init(container) {
                             <input type="number" id="form-rec-hari" min="1" max="28" value="1"
                                    class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500">
                         </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1.5">Tanggal Berakhir (Opsional)</label>
+                            <input type="date" id="form-rec-berakhir"
+                                   class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
+
+                        <div id="form-rec-status-wrap" class="hidden sm:col-span-2">
+                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1.5">Status Jadwal</label>
+                            <select id="form-rec-status" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <option value="aktif">Aktif</option>
+                                <option value="jeda">Jeda (Ditangguhkan)</option>
+                                <option value="berakhir">Berakhir</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Line items container -->
@@ -237,6 +252,7 @@ async function loadRecurring() {
             </td>
             <td class="py-4 px-6 text-right">
                 <button type="button" onclick="App.toggleTableActionMenu(this, event, [
+                    { label: 'Edit Template', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editRecurring(${r.id})' },
                     { label: 'Generate Faktur Sekarang', icon: 'ri-play-circle-line', iconColor: 'text-emerald-600', action: 'window.triggerGenerateInvoice(${r.id})' },
                     { divider: true },
                     { label: 'Hapus Template', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteRecurring(${r.id})' }
@@ -248,45 +264,65 @@ async function loadRecurring() {
         </tr>
     `).join('');
 
-    paginationEl.innerHTML = `
-        <div>Menampilkan hal <b>${pagination.page}</b> dari <b>${pagination.total}</b> template</div>
-        <div class="flex items-center gap-2">
-            <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changeRecurringPage(${pagination.page - 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-            <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changeRecurringPage(${pagination.page + 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadRecurring(); }, 'template');
 }
 
-function openRecurringModal() {
+function openRecurringModal(data = null) {
     const modal = document.getElementById('recurring-modal');
+    const isEdit = Boolean(data && data.id);
     document.getElementById('recurring-form').reset();
-    document.getElementById('form-rec-id').value = '';
-    document.getElementById('form-rec-mulai').value = new Date().toISOString().split('T')[0];
+    document.getElementById('form-rec-id').value = isEdit ? data.id : '';
+    document.getElementById('recurring-modal-title').innerHTML = `
+        <i class="${isEdit ? 'ri-edit-line' : 'ri-repeat-line'} text-primary-600"></i>
+        <span>${isEdit ? 'Edit Template Tagihan Berulang' : 'Buat Template Tagihan Berulang'}</span>
+    `;
+    document.getElementById('btn-save-recurring').textContent = isEdit ? 'Simpan Perubahan' : 'Simpan Template';
+    document.getElementById('form-rec-status-wrap')?.classList.toggle('hidden', !isEdit);
+
+    if (isEdit) {
+        document.getElementById('form-rec-judul').value = data.judul || '';
+        document.getElementById('form-rec-client').value = data.client_id || '';
+        document.getElementById('form-rec-frekuensi').value = data.frekuensi || 'bulanan';
+        document.getElementById('form-rec-mulai').value = data.tanggal_mulai || new Date().toISOString().split('T')[0];
+        document.getElementById('form-rec-hari').value = data.hari_tagihan || 1;
+        document.getElementById('form-rec-berakhir').value = data.tanggal_berakhir || '';
+        document.getElementById('form-rec-status').value = data.status || 'aktif';
+    } else {
+        document.getElementById('form-rec-mulai').value = new Date().toISOString().split('T')[0];
+        document.getElementById('form-rec-berakhir').value = '';
+        document.getElementById('form-rec-status').value = 'aktif';
+    }
 
     const cont = document.getElementById('rec-items-container');
     cont.innerHTML = '';
-    addRecItemRow();
+    const items = isEdit && Array.isArray(data.items) && data.items.length > 0 ? data.items : null;
+    if (items) {
+        items.forEach((it) => {
+            addRecItemRow(it.deskripsi || '', it.harga_satuan ?? 0, it.service_id || '', it.kuantitas ?? 1);
+        });
+    } else {
+        addRecItemRow();
+    }
 
     modal.classList.remove('hidden');
 }
 
-function addRecItemRow(desc = '', price = 0) {
+function addRecItemRow(desc = '', price = 0, serviceId = '', qty = 1) {
     const cont = document.getElementById('rec-items-container');
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-2 rec-item-row';
+    row.className = 'flex flex-wrap sm:flex-nowrap items-center gap-2 rec-item-row';
     row.innerHTML = `
-        <select class="rec-service-sel flex-1 text-xs px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+        <select class="rec-service-sel flex-1 min-w-[150px] text-xs px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
             <option value="">-- Pilih Layanan Katalog --</option>
             ${masterServices.map(s => `
-                <option value="${s.id}" data-name="${s.nama_layanan}" data-price="${s.harga_standar}">
-                    ${s.nama_layanan} (${App.formatIDR(s.harga_standar)})
+                <option value="${s.id}" data-name="${App.escapeHtml(s.nama_layanan)}" data-price="${s.harga_standar}">
+                    ${App.escapeHtml(s.nama_layanan)} (${App.formatIDR(s.harga_standar)})
                 </option>
             `).join('')}
         </select>
-        <input type="text" placeholder="Deskripsi item..." value="${desc}" class="rec-desc flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
-        <input type="number" placeholder="Tarif (IDR)" value="${price}" class="rec-price w-32 px-3 py-2 text-right font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+        <input type="text" placeholder="Deskripsi item..." class="rec-desc flex-1 min-w-[140px] px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+        <input type="number" min="1" step="1" placeholder="Qty" class="rec-qty w-16 px-2.5 py-2 text-center font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs" title="Kuantitas">
+        <input type="number" min="0" placeholder="Tarif (IDR)" class="rec-price w-32 px-3 py-2 text-right font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
         <button type="button" onclick="this.parentElement.remove()" class="p-2 text-slate-400 hover:text-rose-600">
             <i class="ri-delete-bin-line"></i>
         </button>
@@ -294,6 +330,11 @@ function addRecItemRow(desc = '', price = 0) {
     cont.appendChild(row);
 
     const sel = row.querySelector('.rec-service-sel');
+    sel.value = serviceId ? String(serviceId) : '';
+    row.querySelector('.rec-desc').value = desc;
+    row.querySelector('.rec-qty').value = qty || 1;
+    row.querySelector('.rec-price').value = price ?? 0;
+
     sel.addEventListener('change', () => {
         const opt = sel.options[sel.selectedIndex];
         if (opt.value) {
@@ -316,27 +357,40 @@ async function handleSaveRecurring(e) {
         items.push({
             service_id: r.querySelector('.rec-service-sel').value || null,
             deskripsi: r.querySelector('.rec-desc').value.trim(),
-            kuantitas: 1,
+            kuantitas: Math.max(1, parseFloat(r.querySelector('.rec-qty')?.value) || 1),
             harga_satuan: parseFloat(r.querySelector('.rec-price').value) || 0
         });
     });
 
+    const id = document.getElementById('form-rec-id').value;
     const body = {
         judul: document.getElementById('form-rec-judul').value.trim(),
         client_id: document.getElementById('form-rec-client').value,
         frekuensi: document.getElementById('form-rec-frekuensi').value,
         tanggal_mulai: document.getElementById('form-rec-mulai').value,
+        tanggal_berakhir: document.getElementById('form-rec-berakhir').value || null,
         hari_tagihan: document.getElementById('form-rec-hari').value,
+        status: document.getElementById('form-rec-status').value || 'aktif',
         items
     };
 
-    const res = await App.api('recurring', { method: 'POST', body });
+    const res = await App.api(id ? `recurring/${id}` : 'recurring', {
+        method: id ? 'PUT' : 'POST',
+        body
+    });
     if (res && res.success) {
         App.toast(res.message, 'success');
         document.getElementById('recurring-modal').classList.add('hidden');
         loadRecurring();
     }
 }
+
+window.editRecurring = async (id) => {
+    const res = await App.api(`recurring/${id}`);
+    if (res && res.success && res.data) {
+        openRecurringModal(res.data);
+    }
+};
 
 window.triggerGenerateInvoice = async (id) => {
     const conf = await App.confirm('Generate Faktur Sekarang', 'Apakah Anda ingin men-generate faktur tagihan dari template ini sekarang?');

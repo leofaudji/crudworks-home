@@ -42,6 +42,9 @@ import {
     parseTimelineGantt,
     renderTimelineDiagramHtml,
     renderStatusBadge,
+    formatWhatsAppPhone,
+    openWhatsApp,
+    renderPagination,
     openWhatsAppInvoiceReminder,
     openWhatsAppQuotation,
     openReportCsvPreview,
@@ -119,6 +122,9 @@ const App = {
     parseTimelineGantt,
     renderTimelineDiagramHtml,
     renderStatusBadge,
+    formatWhatsAppPhone,
+    openWhatsApp,
+    renderPagination,
     openWhatsAppInvoiceReminder,
     openWhatsAppQuotation,
     closeModal,
@@ -265,7 +271,7 @@ const App = {
 
         // Check active session
         const currentHash = window.location.hash || '';
-        const isPublicPortal = currentHash.startsWith('#/public-invoice') || currentHash.startsWith('#/public-quotation') || currentHash.startsWith('#/client-portal');
+        const isPublicPortal = currentHash.startsWith('#/public-invoice') || currentHash.startsWith('#/public-quotation') || currentHash.startsWith('#/client-portal') || currentHash.startsWith('#/status');
         const session = await checkSession();
         if (session.authenticated || isPublicPortal) {
             if (session.authenticated) await this.refreshBranding();
@@ -277,7 +283,7 @@ const App = {
         window.addEventListener('hashchange', () => {
             closeAllAutocompletes();
             const ch = window.location.hash || '';
-            const isPublic = ch.startsWith('#/public-invoice') || ch.startsWith('#/public-quotation') || ch.startsWith('#/client-portal');
+            const isPublic = ch.startsWith('#/public-invoice') || ch.startsWith('#/public-quotation') || ch.startsWith('#/client-portal') || ch.startsWith('#/status');
             if (AuthState.user) {
                 this._setPublicLayoutMode(false);
                 router.handleRoute();
@@ -369,7 +375,7 @@ const App = {
 
     showLogin() {
         const h = window.location.hash || '';
-        if (h.startsWith('#/public-invoice') || h.startsWith('#/public-quotation') || h.startsWith('#/client-portal')) {
+        if (h.startsWith('#/public-invoice') || h.startsWith('#/public-quotation') || h.startsWith('#/client-portal') || h.startsWith('#/status')) {
             this.showApp(true);
             return;
         }
@@ -1070,33 +1076,47 @@ const App = {
 
             body.innerHTML = `
                 <div class="space-y-4 text-xs">
-                    <div class="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-950/30 rounded-2xl border border-primary-100 dark:border-primary-900/40">
-                        <img src="assets/icons/icon.svg" class="w-12 h-12 rounded-xl app-brand-logo" alt="Logo">
+                    <div class="flex items-center gap-3.5 p-4 bg-gradient-to-r from-primary-50 to-indigo-50/60 dark:from-primary-950/40 dark:to-indigo-950/20 rounded-2xl border border-primary-100 dark:border-primary-900/40">
+                        <img src="assets/icons/icon.svg" class="w-12 h-12 rounded-xl app-brand-logo shrink-0" alt="Logo">
                         <div>
-                            <h4 class="font-extrabold text-sm text-slate-800 dark:text-white">CRUDWorks ERP &amp; Project Management</h4>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Platform billing terintegrasi git deployer, invoice printing &amp; financial tracking</p>
-                            <span class="inline-block mt-1 font-mono text-[10px] font-bold text-primary-700 dark:text-primary-300">Versi Terpasang: v${this.version}</span>
+                            <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">CRUDWorks ERP</h4>
+                            <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Sistem manajemen proyek, penagihan, akuntansi &amp; layanan klien terpadu.</p>
+                            <span class="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/60 font-mono text-[10px] font-bold text-primary-700 dark:text-primary-300 border border-primary-200/60 dark:border-primary-800/50">Versi Aktif: v${this.version}</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
-                            <i class="ri-git-branch-line text-primary-600 dark:text-primary-400 text-base"></i>
+                            <div class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 text-primary-600 flex items-center justify-center shrink-0"><i class="ri-file-list-3-line text-base"></i></div>
                             <div>
-                                <div class="font-bold text-slate-800 dark:text-slate-100">Integrasi app-git</div>
-                                <div class="text-slate-400 text-[11px]">Deployer status &amp; sync</div>
+                                <div class="font-bold text-slate-800 dark:text-slate-100">Penagihan &amp; Pembayaran</div>
+                                <div class="text-slate-400 text-[11px]">Faktur PDF, QRIS/VA &amp; Email</div>
                             </div>
                         </div>
                         <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
-                            <i class="ri-printer-line text-emerald-600 dark:text-emerald-400 text-base"></i>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center shrink-0"><i class="ri-scales-line text-base"></i></div>
                             <div>
-                                <div class="font-bold text-slate-800 dark:text-slate-100">Invoice Engine A4</div>
-                                <div class="text-slate-400 text-[11px]">Cetak faktur &amp; QR receipt</div>
+                                <div class="font-bold text-slate-800 dark:text-slate-100">Akuntansi &amp; Pajak</div>
+                                <div class="text-slate-400 text-[11px]">COA, Jurnal, Neraca &amp; Laba Rugi</div>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center shrink-0"><i class="ri-git-branch-line text-base"></i></div>
+                            <div>
+                                <div class="font-bold text-slate-800 dark:text-slate-100">Proyek &amp; Portal Klien</div>
+                                <div class="text-slate-400 text-[11px]">Progres tugas, BAST &amp; Tiket SLA</div>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center shrink-0"><i class="ri-shield-keyhole-line text-base"></i></div>
+                            <div>
+                                <div class="font-bold text-slate-800 dark:text-slate-100">Keamanan Enterprise</div>
+                                <div class="text-slate-400 text-[11px]">2FA Authenticator &amp; Kontrol Sesi</div>
                             </div>
                         </div>
                     </div>
-                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex justify-between">
-                        <span>User Login: <strong class="text-slate-700 dark:text-slate-200">${escapeHtml(userName)} (${escapeHtml(userRole)})</strong></span>
-                        <span>Mode Layout: <strong class="text-slate-700 dark:text-slate-200 uppercase">${escapeHtml(nav.navLayout)}</strong></span>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap justify-between gap-2">
+                        <span>Pengguna: <strong class="text-slate-700 dark:text-slate-200">${escapeHtml(userName)} (${escapeHtml(userRole)})</strong></span>
+                        <span>Tata Letak: <strong class="text-slate-700 dark:text-slate-200 uppercase">${escapeHtml(nav.navLayout)}</strong></span>
                     </div>
                 </div>
             `;
@@ -1104,27 +1124,81 @@ const App = {
             body.innerHTML = `
                 <div class="py-12 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
                     <i class="ri-loader-4-line text-2xl animate-spin text-primary-600"></i>
-                    <span>Memuat catatan rilis dari CHANGELOG.md...</span>
+                    <span>Memuat catatan rilis...</span>
                 </div>
             `;
             try {
                 if (!this._cachedChangelog) {
-                    const res = await fetch(`${apiClient.ROOT_BASE}CHANGELOG.md?_t=${Date.now()}`);
+                    const res = await fetch(`${apiClient.ROOT_BASE}CHANGELOG.md?_t=${Date.now()}`, { cache: 'no-cache' });
                     if (res.ok) this._cachedChangelog = await res.text();
                 }
                 if (!this._cachedChangelog) {
                     body.innerHTML = `
                         <div class="text-center py-8 space-y-2">
                             <i class="ri-file-warning-line text-3xl text-amber-500"></i>
-                            <p class="text-xs text-slate-500">Berkas CHANGELOG.md tidak dapat diakses.</p>
+                            <p class="text-xs text-slate-500">Catatan rilis belum dapat dimuat.</p>
                         </div>
                     `;
                     return;
                 }
 
+                // Format Markdown menjadi kartu rilis yang rapi & ramah pembaca
+                const lines = this._cachedChangelog.split(/\r?\n/);
+                const cards = [];
+                let cur = null;
+                let curGroup = null;
+                const fmtInline = (t) => escapeHtml(t)
+                    .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-slate-800 dark:text-slate-100">$1</strong>')
+                    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+                for (const raw of lines) {
+                    const ln = raw.trim();
+                    const verM = ln.match(/^##\s+\[?([^\]\s]+)\]?\s*(?:-\s*(.+))?$/);
+                    if (verM) {
+                        cur = { ver: verM[1], date: verM[2] || '', groups: [] };
+                        curGroup = null;
+                        cards.push(cur);
+                        continue;
+                    }
+                    const grpM = ln.match(/^###\s+(.+)$/);
+                    if (grpM && cur) {
+                        const rawG = grpM[1].toLowerCase();
+                        const label = rawG.includes('ditambahkan') || rawG.includes('added') ? 'Fitur Baru'
+                            : (rawG.includes('keamanan') || rawG.includes('security') ? 'Keamanan'
+                            : (rawG.includes('diperbaiki') || rawG.includes('fixed') ? 'Perbaikan' : 'Peningkatan'));
+                        const badgeCls = label === 'Fitur Baru' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : (label === 'Keamanan' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : (label === 'Perbaikan' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-sky-50 text-sky-700 border-sky-200'));
+                        curGroup = { label, badgeCls, items: [] };
+                        cur.groups.push(curGroup);
+                        continue;
+                    }
+                    if (/^[-*]\s+/.test(ln) && curGroup) {
+                        curGroup.items.push(fmtInline(ln.replace(/^[-*]\s+/, '')));
+                    }
+                }
+
                 body.innerHTML = `
-                    <div class="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                        <pre class="font-mono text-xs whitespace-pre-wrap text-slate-700 dark:text-slate-300 max-h-96 overflow-y-auto">${escapeHtml(this._cachedChangelog)}</pre>
+                    <div class="space-y-4">
+                        ${cards.slice(0, 6).map((c, idx) => `
+                            <div class="p-4 rounded-2xl border ${idx === 0 ? 'border-primary-200 bg-primary-50/20 dark:border-primary-800/50 dark:bg-primary-950/10' : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900'} space-y-3">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-lg ${idx === 0 ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'} font-mono text-xs font-bold">v${escapeHtml(c.ver)}</span>
+                                        ${idx === 0 ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">Terbaru</span>' : ''}
+                                    </div>
+                                    <span class="text-[11px] text-slate-400">${escapeHtml(c.date)}</span>
+                                </div>
+                                ${c.groups.map(g => `
+                                    <div class="space-y-1.5">
+                                        <span class="inline-block px-2 py-0.5 rounded-full border text-[10px] font-bold ${g.badgeCls}">${g.label}</span>
+                                        <ul class="space-y-1 text-xs text-slate-600 dark:text-slate-300 pl-1">
+                                            ${g.items.map(it => `<li class="flex items-start gap-2"><span class="text-slate-400">•</span><span>${it}</span></li>`).join('')}
+                                        </ul>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')}
                     </div>
                 `;
             } catch (err) {
@@ -1672,12 +1746,19 @@ const App = {
         const list = document.getElementById('topbar-notif-list');
         if (!badge || !list) return;
 
-        const res = await api('dashboard/notifications', { cache: false, silent: true });
-        if (!res || !res.success || !res.data) return;
+        const [dashRes, inAppRes] = await Promise.all([
+            api('dashboard/notifications', { cache: false, silent: true }),
+            api('notifications?limit=15', { cache: false, silent: true })
+        ]);
+        const dashData = dashRes?.success && dashRes.data ? dashRes.data : { total_badge: 0, alerts: [] };
+        const inAppData = inAppRes?.success && inAppRes.data ? inAppRes.data : { unread_count: 0, items: [] };
 
-        const { total_badge = 0, alerts = [] } = res.data;
-        if (total_badge > 0) {
-            badge.textContent = total_badge > 99 ? '99+' : String(total_badge);
+        const alerts = dashData.alerts || [];
+        const inAppItems = inAppData.items || [];
+        const totalBadge = (Number(dashData.total_badge) || 0) + (Number(inAppData.unread_count) || 0);
+
+        if (totalBadge > 0) {
+            badge.textContent = totalBadge > 99 ? '99+' : String(totalBadge);
             badge.classList.remove('hidden');
             badge.style.display = 'inline-flex';
         } else {
@@ -1685,27 +1766,69 @@ const App = {
             badge.style.display = 'none';
         }
 
-        if (alerts.length === 0) {
+        if (alerts.length === 0 && inAppItems.length === 0) {
             list.innerHTML = `<div class="p-6 text-center text-xs text-slate-400"><i class="ri-checkbox-circle-line text-2xl text-emerald-400 block mb-1"></i>Semua terkendali, tidak ada notifikasi baru.</div>`;
-        } else {
-            list.innerHTML = alerts.map((a) => {
-                const badgeCls = a.type === 'danger' ? 'bg-rose-50 text-rose-600 border-rose-100'
-                    : (a.type === 'warning' ? 'bg-amber-50 text-amber-600 border-amber-100'
-                    : (a.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-sky-50 text-sky-600 border-sky-100'));
+            return;
+        }
+
+        const inAppHtml = inAppItems.length ? `
+            <div class="px-3.5 py-2 bg-slate-50/80 dark:bg-slate-800/60 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                <span>Aktivitas Real-Time</span>
+                ${Number(inAppData.unread_count) > 0 ? `<button type="button" onclick="App.markAllNotifRead()" class="text-primary-600 hover:underline font-semibold">Tandai dibaca</button>` : ''}
+            </div>
+            ${inAppItems.map((n) => {
+                const unread = Number(n.is_read) === 0;
+                const badgeCls = n.tipe === 'bahaya' ? 'bg-rose-50 text-rose-600 border-rose-100'
+                    : (n.tipe === 'peringatan' ? 'bg-amber-50 text-amber-600 border-amber-100'
+                    : (n.tipe === 'sukses' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'));
                 return `
-                    <a href="${escapeHtml(a.url || '#/invoices')}" onclick="App.closeNotifications()" class="flex items-start gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <a href="${escapeHtml(n.tautan || '#/dashboard')}" onclick="App.markNotifRead(${n.id}); App.closeNotifications();"
+                       class="flex items-start gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition ${unread ? 'bg-primary-50/30 dark:bg-primary-950/15' : 'opacity-75'}">
                         <div class="w-8 h-8 rounded-xl border ${badgeCls} flex items-center justify-center shrink-0 mt-0.5">
-                            <i class="${escapeHtml(a.icon || 'ri-file-warning-line')}"></i>
+                            <i class="ri-notification-3-line"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="text-xs font-bold text-slate-800 dark:text-white leading-snug">${escapeHtml(a.title)}</div>
-                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">${escapeHtml(a.detail)}</div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-slate-800 dark:text-white leading-snug truncate">${escapeHtml(n.judul)}</span>
+                                ${unread ? '<span class="w-1.5 h-1.5 rounded-full bg-primary-600 shrink-0"></span>' : ''}
+                            </div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">${escapeHtml(n.pesan)}</div>
                         </div>
-                        <i class="ri-arrow-right-s-line text-slate-300 mt-1"></i>
                     </a>
                 `;
-            }).join('');
-        }
+            }).join('')}
+        ` : '';
+
+        const alertsHtml = alerts.map((a) => {
+            const badgeCls = a.type === 'danger' ? 'bg-rose-50 text-rose-600 border-rose-100'
+                : (a.type === 'warning' ? 'bg-amber-50 text-amber-600 border-amber-100'
+                : (a.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-sky-50 text-sky-600 border-sky-100'));
+            return `
+                <a href="${escapeHtml(a.url || '#/invoices')}" onclick="App.closeNotifications()" class="flex items-start gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <div class="w-8 h-8 rounded-xl border ${badgeCls} flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="${escapeHtml(a.icon || 'ri-file-warning-line')}"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-xs font-bold text-slate-800 dark:text-white leading-snug">${escapeHtml(a.title)}</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">${escapeHtml(a.detail)}</div>
+                    </div>
+                    <i class="ri-arrow-right-s-line text-slate-300 mt-1"></i>
+                </a>
+            `;
+        }).join('');
+
+        list.innerHTML = inAppHtml + alertsHtml;
+    },
+
+    async markNotifRead(id) {
+        if (!id) return;
+        await api('notifications/read', { method: 'POST', body: { id }, silent: true });
+        this.loadNotifications(true);
+    },
+
+    async markAllNotifRead() {
+        await api('notifications/read', { method: 'POST', body: { all: true }, silent: true });
+        this.loadNotifications(true);
     },
 
     toggleNotifications(e) {
@@ -1750,6 +1873,26 @@ const App = {
 
     closeNotifications() {
         document.getElementById('topbar-notif-popover')?.classList.add('hidden');
+    },
+
+    exportCsv(filename, headers, rows) {
+        const escCell = (val) => {
+            const str = val === null || val === undefined ? '' : String(val);
+            return '"' + str.replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+        };
+        const lines = [
+            headers.map(escCell).join(','),
+            ...(rows || []).map((r) => r.map(escCell).join(','))
+        ];
+        const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
 
     toggleTableActionMenu,

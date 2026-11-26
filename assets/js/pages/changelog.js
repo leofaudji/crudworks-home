@@ -46,12 +46,12 @@ const ChangelogPage = {
     },
 
     groupMeta: {
-        'added': { title: 'Fitur Baru & Penambahan (Added)', color: 'emerald', icon: 'ri-add-circle-line' },
-        'changed': { title: 'Perubahan & Peningkatan (Changed)', color: 'blue', icon: 'ri-refresh-line' },
-        'fixed': { title: 'Perbaikan Masalah & Bug (Fixed)', color: 'violet', icon: 'ri-bug-line' },
-        'security': { title: 'Keamanan & Autentikasi (Security)', color: 'red', icon: 'ri-shield-check-line' },
-        'deprecated': { title: 'Fitur Usang (Deprecated)', color: 'amber', icon: 'ri-alert-line' },
-        'removed': { title: 'Dihapus (Removed)', color: 'rose', icon: 'ri-delete-bin-line' }
+        'added': { title: 'Fitur Baru', color: 'emerald', icon: 'ri-sparkling-line' },
+        'changed': { title: 'Peningkatan', color: 'blue', icon: 'ri-arrow-up-circle-line' },
+        'fixed': { title: 'Perbaikan', color: 'violet', icon: 'ri-tools-line' },
+        'security': { title: 'Keamanan', color: 'red', icon: 'ri-shield-check-line' },
+        'deprecated': { title: 'Penyesuaian', color: 'amber', icon: 'ri-alert-line' },
+        'removed': { title: 'Dihapus', color: 'rose', icon: 'ri-delete-bin-line' }
     },
 
     /**
@@ -361,167 +361,141 @@ const ChangelogPage = {
         }
 
         this.container.innerHTML = `
-        <div class="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
-            <!-- Header Card -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">Keuangan Bagi Hasil</span>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Dynamic MD Sync
+        <div class="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
+            <!-- Hero Header -->
+            <div class="bg-gradient-to-br from-white via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/60 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 border border-primary-200/60 dark:border-primary-800/60">
+                            Pembaruan Produk
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            Versi Aktif ${installedVersion}
                         </span>
                     </div>
-                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        Catatan Rilis & Pembaruan Sistem
-                    </h2>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">
-                        Sumber data diambil dan diparsing langsung secara dinamis dari <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px]">CHANGELOG.md</code>.
+                    <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        Catatan Rilis &amp; Pembaruan
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+                        Ringkasan fitur baru, penyempurnaan alur kerja, dan peningkatan keamanan terbaru untuk mendukung operasional bisnis Anda.
                     </p>
                 </div>
-                
-                <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
-                    <button id="btn-refresh-changelog" title="Sinkronisasi ulang dari CHANGELOG.md" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5">
+
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button id="btn-refresh-changelog" title="Muat ulang catatan rilis" class="px-3.5 py-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5 shadow-2xs">
                         <i class="ri-refresh-line ${this._isLoading ? 'animate-spin' : ''}"></i>
-                        <span>Sync Ulang</span>
+                        <span>Segarkan</span>
                     </button>
-                    <button id="btn-toggle-raw" class="px-3 py-2 ${this._showRawMarkdown ? 'bg-primary-600 text-white' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'} rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
-                        <i class="ri-markdown-line"></i>
-                        <span>${this._showRawMarkdown ? 'Tampilan Terformat' : 'Lihat Raw MD'}</span>
-                    </button>
-                    <a href="#/dashboard" class="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5">
-                        <i class="ri-arrow-left-line"></i> Dashboard
+                    <a href="#/dashboard" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition">
+                        <i class="ri-arrow-left-line"></i><span>Dashboard</span>
                     </a>
                 </div>
             </div>
 
-            <!-- Stats & Quick Navigation Toolbar -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-                <!-- Version Chips Filter -->
+            <!-- Filter & Search Bar -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
                 <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
-                    <span class="text-xs font-semibold text-slate-400 mr-1 shrink-0"><i class="ri-filter-3-line"></i> Versi:</span>
-                    <button data-ver="all" class="changelog-ver-chip px-3 py-1 rounded-xl text-xs font-semibold transition-all ${this._selectedVersion === 'all' ? 'bg-primary-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                    <button data-ver="all" class="changelog-ver-chip px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${this._selectedVersion === 'all' ? 'bg-slate-900 text-white dark:bg-primary-600 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
                         Semua (${releases.length})
                     </button>
                     ${releases.map(r => `
-                    <button data-ver="${r.version}" class="changelog-ver-chip shrink-0 px-3 py-1 rounded-xl text-xs font-mono font-semibold transition-all ${this._selectedVersion === r.version ? 'bg-primary-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                    <button data-ver="${r.version}" class="changelog-ver-chip shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all ${this._selectedVersion === r.version ? 'bg-slate-900 text-white dark:bg-primary-600 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
                         ${r.version}
                     </button>`).join('')}
                 </div>
 
-                <!-- Right Actions: Search + Expand/Collapse All -->
                 <div class="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
                     <div class="flex items-center gap-1">
-                        <button type="button" id="btn-page-expand-all" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1" title="Buka seluruh versi">
+                        <button type="button" id="btn-page-expand-all" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1" title="Buka semua versi">
                             <i class="ri-expand-up-down-line"></i> <span class="hidden sm:inline">Buka Semua</span>
                         </button>
-                        <button type="button" id="btn-page-collapse-all" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1" title="Tutup seluruh versi">
+                        <button type="button" id="btn-page-collapse-all" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1" title="Tutup semua versi">
                             <i class="ri-collapse-diagonal-line"></i> <span class="hidden sm:inline">Tutup Semua</span>
                         </button>
                     </div>
-
-                    <!-- Search Input -->
-                    <div class="relative w-full md:w-60 shrink-0">
+                    <div class="relative w-full md:w-56 shrink-0">
                         <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="changelog-search" value="${this._searchQuery}" placeholder="Cari fitur, fix..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                        <input type="text" id="changelog-search" value="${this._searchQuery}" placeholder="Cari fitur atau pembaruan..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
                     </div>
                 </div>
             </div>
 
-            <!-- RAW MARKDOWN VIEW (Optional Toggle) -->
-            ${this._showRawMarkdown ? `
-            <div class="bg-slate-900 text-slate-100 rounded-2xl p-6 border border-slate-800 shadow-inner font-mono text-xs overflow-x-auto max-h-[650px] leading-relaxed">
-                <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-slate-400 text-[11px]">
-                    <span class="flex items-center gap-1.5"><i class="ri-file-text-line"></i> CHANGELOG.md (Raw Source)</span>
-                    <button id="btn-copy-raw-md" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1 text-[11px]">
-                        <i class="ri-file-copy-line"></i> Salin Markdown
-                    </button>
-                </div>
-                <pre class="whitespace-pre-wrap selection:bg-primary-600 selection:text-white">${this.escapePre(this._rawMarkdown)}</pre>
-            </div>
-            ` : `
-            <!-- FORMATTED TIMELINE VIEW -->
+            <!-- TIMELINE RELEASE LIST -->
             ${filtered.length === 0 ? `
-                <div class="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div class="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-200/80 dark:border-slate-800 space-y-2">
                     <i class="ri-search-line text-3xl text-slate-400"></i>
-                    <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Tidak ada rilis yang cocok</h4>
-                    <p class="text-xs text-slate-500">Coba gunakan kata kunci pencarian lain atau pilih filter versi "Semua".</p>
+                    <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Tidak ada pembaruan yang cocok</h4>
+                    <p class="text-xs text-slate-500">Coba kata kunci lain atau pilih filter "Semua".</p>
                 </div>
             ` : `
-                <div class="space-y-4">
+                <div class="relative pl-6 sm:pl-8 space-y-5 before:content-[''] before:absolute before:left-2.5 sm:before:left-3 before:top-4 before:bottom-4 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
                     ${filtered.map((rel) => {
                         const isLatest = rel.version === latestRelease.version;
                         const isInstalled = rel.version === installedVersion;
                         const isCollapsed = this._collapsedVersions.has(rel.version);
 
                         return `
-                    <div class="bg-white dark:bg-slate-900 rounded-2xl border ${isLatest ? 'border-primary-500/30 dark:border-primary-500/20 shadow-md ring-1 ring-primary-500/10' : 'border-slate-200/80 dark:border-slate-800 shadow-xs'} overflow-hidden transition-all changelog-page-card" data-ver="${rel.version}">
-                        <!-- Clickable Card Header (Accordion) -->
-                        <button type="button" class="w-full text-left p-6 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors changelog-page-accordion-btn" aria-expanded="${!isCollapsed}">
-                            <div class="flex items-center gap-3">
-                                <span class="px-3 py-1 rounded-xl bg-primary-600 text-white font-mono text-sm font-bold shadow-xs">
+                    <div class="relative bg-white dark:bg-slate-900 rounded-3xl border ${isLatest ? 'border-primary-300/80 dark:border-primary-700/50 shadow-sm' : 'border-slate-200/80 dark:border-slate-800 shadow-2xs'} transition-all changelog-page-card" data-ver="${rel.version}">
+                        <!-- Timeline Dot -->
+                        <span class="absolute -left-[22px] sm:-left-[27px] top-7 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-950 ${isLatest ? 'bg-primary-600 ring-4 ring-primary-500/20' : 'bg-slate-300 dark:bg-slate-700'}"></span>
+
+                        <button type="button" class="w-full text-left p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-3xl transition-colors changelog-page-accordion-btn" aria-expanded="${!isCollapsed}">
+                            <div class="flex items-center gap-3.5">
+                                <span class="px-3 py-1 rounded-xl ${isLatest ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'} font-mono text-xs font-extrabold">
                                     ${rel.version}
                                 </span>
                                 <div>
-                                    <div class="flex items-center gap-2">
-                                        <h3 class="text-base font-bold text-slate-900 dark:text-white">
-                                            Rilis Versi ${rel.version}
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                                            Pembaruan Versi ${rel.version}
                                         </h3>
                                         ${isLatest ? `
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                                                <i class="ri-flashlight-line"></i> Rilis Terbaru
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 inline-flex items-center gap-1">
+                                                <i class="ri-sparkling-line"></i> Terbaru
                                             </span>` : ''}
                                         ${isInstalled ? `
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                                Aktif Terpasang
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800">
+                                                Aktif
                                             </span>` : ''}
                                     </div>
                                     <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                                         <i class="ri-calendar-line text-[11px]"></i>
                                         <span>${rel.date || rel.rawDate}</span>
-                                        ${rel.rawDate ? `<span class="text-slate-300 dark:text-slate-600">•</span><span class="font-mono text-[11px] text-slate-400">${rel.rawDate}</span>` : ''}
                                     </p>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-medium text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                                    ${rel.groups.reduce((acc, g) => acc + g.items.length, 0)} Poin Perubahan
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800">
+                                    ${rel.groups.reduce((acc, g) => acc + g.items.length, 0)} Pembaruan
                                 </span>
                                 <i class="ri-arrow-down-s-line text-xl text-slate-400 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'} changelog-chevron"></i>
                             </div>
                         </button>
 
-                        <!-- Collapsible Body Content -->
-                        <div class="changelog-page-card-body p-6 pt-0 space-y-5 border-t border-slate-100 dark:border-slate-800/80 ${isCollapsed ? 'hidden' : ''}">
-                            <!-- Summary Prose -->
-                            ${rel.summary ? `
-                            <div class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 mt-4">
-                                ${rel.summary}
-                            </div>` : ''}
-
-                            <!-- Release Groups (Added, Changed, Fixed, etc.) -->
-                            <div class="space-y-4 ${rel.summary ? '' : 'mt-4'}">
+                        <div class="changelog-page-card-body px-5 sm:px-6 pb-6 pt-1 space-y-4 border-t border-slate-100 dark:border-slate-800/80 ${isCollapsed ? 'hidden' : ''}">
+                            <div class="space-y-3.5 pt-3">
                                 ${rel.groups.map(g => {
                                     const cls = this.colorClasses[g.color] || this.colorClasses.blue;
                                     return `
-                                <div class="p-4 rounded-xl ${cls.bg} border transition-colors">
-                                    <h4 class="text-xs font-bold uppercase tracking-wider ${cls.title} mb-3 flex items-center gap-2">
-                                        <i class="${g.icon} text-sm"></i>
-                                        <span>${g.title}</span>
-                                        <span class="ml-auto text-[10px] font-semibold opacity-75 px-1.5 py-0.5 rounded bg-white/60 dark:bg-slate-900/40">
-                                            ${g.items.length} item
+                                <div class="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-800 space-y-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${cls.bg} ${cls.title} border">
+                                            <i class="${g.icon}"></i>
+                                            <span>${g.title}</span>
                                         </span>
-                                    </h4>
-                                    <ul class="space-y-2.5 text-xs text-slate-700 dark:text-slate-300 ml-1">
+                                        <span class="text-[11px] font-medium text-slate-400">${g.items.length} poin</span>
+                                    </div>
+                                    <ul class="space-y-2 text-xs sm:text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed">
                                         ${g.items.map(it => `
-                                        <li class="flex items-start gap-2">
-                                            <span class="w-1.5 h-1.5 rounded-full ${cls.dot} mt-1.5 shrink-0"></span>
-                                            <div class="flex-1 space-y-1.5">
+                                        <li class="flex items-start gap-2.5">
+                                            <span class="w-1.5 h-1.5 rounded-full ${cls.dot} mt-2 shrink-0"></span>
+                                            <div class="flex-1 space-y-1">
                                                 <div>${it.text}</div>
                                                 ${it.children && it.children.length > 0 ? `
-                                                <ul class="space-y-1.5 mt-1.5 ml-3 pl-3 border-l-2 border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400">
+                                                <ul class="space-y-1 mt-1.5 ml-1 pl-3 border-l-2 border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400">
                                                     ${it.children.map(ch => `
                                                     <li class="flex items-start gap-1.5">
-                                                        <span class="text-primary-500 font-bold shrink-0">›</span>
+                                                        <span class="text-slate-400 font-bold shrink-0">•</span>
                                                         <span>${ch}</span>
                                                     </li>`).join('')}
                                                 </ul>` : ''}
@@ -536,13 +510,10 @@ const ChangelogPage = {
                     }).join('')}
                 </div>
             `}
-            `}
 
             <!-- Footer Meta -->
-            <div class="text-center text-xs text-slate-400 dark:text-slate-500 pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
-                <span>Total <strong>${releases.length}</strong> versi tercatat (${totalItemsCount} poin pembaruan).</span>
-                <span class="hidden sm:inline">•</span>
-                <span>Standar format <a href="https://keepachangelog.com/id/1.0.0/" target="_blank" rel="noopener" class="underline hover:text-primary-500">Keep a Changelog</a> & <a href="https://semver.org/spec/v2.0.0.html" target="_blank" rel="noopener" class="underline hover:text-primary-500">Semantic Versioning</a></span>
+            <div class="text-center text-xs text-slate-400 dark:text-slate-500 pt-2">
+                Menampilkan <strong>${releases.length}</strong> rilis dengan total <strong>${totalItemsCount}</strong> pembaruan sistem.
             </div>
         </div>`;
 

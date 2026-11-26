@@ -3,7 +3,7 @@ import { $, esc, money, api, toast, openModal, closeModal, state, hooks } from '
 import { renderLogin } from './pages/login.js';
 import { renderProjects, previewBastPdf, openSignModal } from './pages/projects.js';
 import { renderServices, revealPortalCredential } from './pages/services.js';
-import { renderTickets, openNewTicketModal, openTicketDetailModal } from './pages/tickets.js';
+import { renderTickets, renderFilteredTicketList, openNewTicketModal, openTicketDetailModal } from './pages/tickets.js';
 import { renderInvoices, renderFilteredInvoiceList, previewInvoicePdf, openPayInvoiceModal, previewPaymentReceiptPdf } from './pages/invoices.js';
 import { renderQuotations, previewQuotationPdf, openQuotationSignModal, openContractSignModal, previewContractPdf } from './pages/quotations.js';
 import { openAccountModal } from './pages/account.js';
@@ -176,26 +176,26 @@ function renderApp() {
         <div class="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 md:pb-12">
             <!-- Top Navigation Bar -->
             <header class="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200/90 dark:border-slate-800 pt-[env(safe-area-inset-top)]">
-                <div class="max-w-5xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-4" style="height: 3.75rem;">
-                    <div class="flex items-center gap-3 min-w-0">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4" style="height: 3.75rem;">
+                    <div class="flex items-center gap-2.5 min-w-0 max-w-[190px] lg:max-w-[240px]">
                         <img src="../assets/images/logo.png" alt="CRUDWorks" class="h-6 w-auto object-contain shrink-0" onerror="this.style.display='none'">
-                        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+                        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0"></div>
                         <div class="min-w-0 leading-tight">
-                            <div class="text-xs font-bold truncate text-slate-900 dark:text-white">${esc(client.nama_perusahaan)}</div>
-                            <div class="text-[10px] font-mono text-slate-400 hidden sm:block">${esc(client.kode_klien)}</div>
+                            <div class="text-xs font-bold truncate text-slate-900 dark:text-white" title="${esc(client.nama_perusahaan)}">${esc(client.nama_perusahaan)}</div>
+                            <div class="text-[10px] font-mono text-slate-400 hidden sm:block truncate">${esc(client.kode_klien)}</div>
                         </div>
                     </div>
 
-                    <nav id="desktop-nav" class="hidden md:flex items-center gap-1 h-full"></nav>
+                    <nav id="desktop-nav" class="hidden md:flex items-center justify-center gap-1 lg:gap-2 h-full shrink-0"></nav>
 
                     <div class="flex items-center gap-2 shrink-0">
-                        <button data-action="ticket-new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs">
+                        <button data-action="ticket-new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs whitespace-nowrap">
                             <i class="ri-add-line"></i><span class="hidden sm:inline">Lapor Gangguan</span><span class="sm:hidden">Tiket</span>
                         </button>
-                        <button data-action="refresh" class="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition" aria-label="Segarkan data" title="Segarkan">
+                        <button data-action="refresh" class="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition shrink-0" aria-label="Segarkan data" title="Segarkan">
                             <i id="refresh-icon" class="ri-refresh-line text-sm"></i>
                         </button>
-                        <button data-action="account" class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center transition hover:bg-indigo-100" aria-label="Akun">
+                        <button data-action="account" class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center transition hover:bg-indigo-100 shrink-0" aria-label="Akun">
                             ${esc(initials)}
                         </button>
                     </div>
@@ -206,7 +206,7 @@ function renderApp() {
                 Mode offline — menampilkan data tersimpan${state.offlineAt ? ` (${esc(new Date(state.offlineAt).toLocaleString('id-ID'))})` : ''}
             </div>
 
-            <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+            <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
                 <!-- Executive Header & 4-Cell Metric Strip -->
                 <section class="space-y-4">
                     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
@@ -259,7 +259,10 @@ function renderApp() {
 
                 <footer class="pt-5 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                     <span>${esc(company.company_name || 'CRUDWorks')}</span>
-                    <span>${esc(company.company_phone || '')}${company.company_email ? ' · ' + esc(company.company_email) : ''}</span>
+                    <div class="flex items-center gap-3">
+                        <a href="../#/status" target="_blank" rel="noopener" class="text-primary-600 hover:underline font-medium inline-flex items-center gap-1"><i class="ri-pulse-line"></i><span>Status Server Live</span></a>
+                        <span>${esc(company.company_phone || '')}${company.company_email ? ' · ' + esc(company.company_email) : ''}</span>
+                    </div>
                 </footer>
             </main>
 
@@ -281,7 +284,7 @@ function renderNav() {
             const active = state.tab === t.key;
             const n = tabBadge(t.key);
             return `
-                <button data-action="tab" data-tab="${t.key}" class="relative h-full px-3 flex items-center gap-1.5 text-xs font-semibold border-b-2 transition ${active ? 'border-indigo-600 text-slate-900 dark:text-white' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}">
+                <button data-action="tab" data-tab="${t.key}" class="relative h-full px-2.5 lg:px-3.5 flex items-center gap-1.5 text-xs font-semibold border-b-2 whitespace-nowrap shrink-0 transition ${active ? 'border-indigo-600 text-slate-900 dark:text-white' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}">
                     <span>${t.label}</span>
                     ${n ? `<span class="min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[10px] font-mono flex items-center justify-center">${n}</span>` : ''}
                 </button>`;
@@ -368,6 +371,12 @@ function bindGlobalEvents() {
             const wrap = $('#portal-invoice-list-wrap');
             if (wrap && state.data) {
                 wrap.innerHTML = renderFilteredInvoiceList(state.data.invoices || []);
+            }
+        } else if (e.target && e.target.id === 'portal-ticket-search') {
+            state.ticketSearch = e.target.value || '';
+            const wrap = $('#portal-ticket-list-wrap');
+            if (wrap && state.data) {
+                wrap.innerHTML = renderFilteredTicketList(state.data.tickets || []);
             }
         }
     });

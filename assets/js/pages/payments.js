@@ -33,10 +33,16 @@ export async function init(container) {
                     <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Pencatatan Pembayaran</h1>
                     <p class="text-sm text-slate-500 dark:text-slate-400">Kelola riwayat pelunasan invoice, verifikasi bukti transfer pelanggan, dan cetak kuitansi resmi.</p>
                 </div>
-                <button id="btn-add-payment" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md shadow-emerald-500/20 flex items-center gap-2 transition">
-                    <i class="ri-money-dollar-circle-line text-base"></i>
-                    <span>Catat Pembayaran Masuk</span>
-                </button>
+                <div class="flex items-center gap-2.5">
+                    <button type="button" id="btn-export-payments-csv" class="px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <i class="ri-download-2-line text-emerald-600"></i>
+                        <span>Ekspor CSV</span>
+                    </button>
+                    <button id="btn-add-payment" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md shadow-emerald-500/20 flex items-center gap-2 transition">
+                        <i class="ri-money-dollar-circle-line text-base"></i>
+                        <span>Catat Pembayaran Masuk</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Tab Navigation -->
@@ -630,15 +636,7 @@ async function loadPayments() {
     `).join('');
 
     if (paginationEl) {
-        paginationEl.innerHTML = `
-            <div>Menampilkan hal <b>${pagination.page}</b> dari <b>${pagination.total}</b> transaksi</div>
-            <div class="flex items-center gap-2">
-                <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changePaymentPage(${pagination.page - 1})"
-                        class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-                <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changePaymentPage(${pagination.page + 1})"
-                        class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-            </div>
-        `;
+        App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadPayments(); }, 'transaksi');
     }
 }
 
@@ -840,3 +838,23 @@ window.changePaymentPage = (p) => {
     state.page = p;
     loadPayments();
 };
+
+document.addEventListener('click', async (e) => {
+    const btn = e.target?.closest('#btn-export-payments-csv');
+    if (!btn) return;
+    let ep = `payments?page=1&per_page=100`;
+    if (state.search) ep += `&search=${encodeURIComponent(state.search)}`;
+    if (state.invoiceId) ep += `&invoice_id=${encodeURIComponent(state.invoiceId)}`;
+    const res = await App.api(ep);
+    const rows = res?.data || [];
+    if (rows.length === 0) {
+        App.toast('Tidak ada data pembayaran untuk diekspor', 'warning');
+        return;
+    }
+    App.exportCsv(
+        `rekap-pembayaran-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['No. Pembayaran', 'Tanggal Bayar', 'No. Faktur', 'Pelanggan', 'Metode/Bank', 'No. Referensi', 'Jumlah Bayar'],
+        rows.map((r) => [r.nomor_pembayaran, r.tanggal_bayar, r.nomor_invoice || '-', r.client_nama || '-', r.nama_bank || r.nama_metode || '-', r.nomor_referensi || '-', r.jumlah_bayar])
+    );
+    App.toast(`Berhasil mengekspor ${rows.length} pembayaran ke CSV`, 'success');
+});

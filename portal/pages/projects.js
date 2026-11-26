@@ -33,9 +33,22 @@ export function renderProjects(d) {
                                 <h3 class="text-sm font-bold text-slate-900 dark:text-white mt-1">${esc(p.nama_project)}</h3>
                                 ${p.app_url ? `<a href="${esc(p.app_url)}" target="_blank" rel="noopener" class="text-xs font-mono text-primary-600 hover:underline inline-flex items-center gap-1 mt-0.5 break-all">${esc(p.app_url)} <i class="ri-external-link-line text-[11px]"></i></a>` : ''}
                             </div>
-                            <div class="sm:text-right shrink-0">
-                                <div class="text-xl font-bold font-mono tabular-nums ${done ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${pct}%</div>
-                                <div class="text-[11px] text-slate-500 font-mono tabular-nums">${st.done}/${st.total} tugas selesai</div>
+                            <div class="sm:text-right shrink-0 flex sm:flex-col items-center sm:items-end justify-between gap-2">
+                                <div>
+                                    <div class="text-xl font-bold font-mono tabular-nums ${done ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}">${pct}%</div>
+                                    ${st.total > 0 ? `<div class="text-[11px] text-slate-500 font-mono tabular-nums">${st.done}/${st.total} tugas selesai</div>` : ''}
+                                </div>
+                                ${(p.documents?.basts?.length || p.documents?.contracts?.length) ? `
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        ${(p.documents?.contracts || []).slice(0, 1).map((ct) => `
+                                            <button type="button" data-action="contract-pdf" data-id="${ct.id}" class="px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-indigo-100">
+                                                <i class="ri-file-shield-2-line"></i><span>SPK</span>
+                                            </button>`).join('')}
+                                        ${(p.documents?.basts || []).slice(0, 1).map((b) => `
+                                            <button type="button" data-action="bast-pdf" data-id="${b.id}" class="px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-emerald-100">
+                                                <i class="ri-file-check-line"></i><span>BAST</span>
+                                            </button>`).join('')}
+                                    </div>` : ''}
                             </div>
                         </div>
 
@@ -47,12 +60,13 @@ export function renderProjects(d) {
                                     <div class="h-full bg-indigo-500 transition-all" style="width:${(st.in_progress / st.total) * 100}%"></div>
                                 ` : `<div class="h-full ${done ? 'bg-emerald-500' : 'bg-indigo-600'}" style="width:${pct}%"></div>`}
                             </div>
-                            <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-slate-500 font-mono tabular-nums">
-                                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>Antrean <b class="text-slate-700 dark:text-slate-300">${st.todo}</b></span>
-                                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Dikerjakan <b class="text-slate-700 dark:text-slate-300">${st.in_progress}</b></span>
-                                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Uji/UAT <b class="text-slate-700 dark:text-slate-300">${st.review}</b></span>
-                                <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Selesai <b class="text-slate-700 dark:text-slate-300">${st.done}</b></span>
-                            </div>
+                            ${st.total > 0 ? `
+                                <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-slate-500 font-mono tabular-nums">
+                                    ${st.todo > 0 ? `<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>Antrean <b class="text-slate-700 dark:text-slate-300">${st.todo}</b></span>` : ''}
+                                    ${st.in_progress > 0 ? `<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Dikerjakan <b class="text-slate-700 dark:text-slate-300">${st.in_progress}</b></span>` : ''}
+                                    ${st.review > 0 ? `<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Uji/UAT <b class="text-slate-700 dark:text-slate-300">${st.review}</b></span>` : ''}
+                                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Selesai <b class="text-slate-700 dark:text-slate-300">${st.done}</b></span>
+                                </div>` : ''}
                         </div>
 
                         ${(p.milestones || []).length ? `
@@ -60,6 +74,8 @@ export function renderProjects(d) {
                                 ${p.milestones.map((m, i) => {
                                     const mp = Number(m.progress_pct || 0);
                                     const tone = m.status === 'lunas' ? 'green' : (m.status === 'ditagih' ? 'amber' : 'slate');
+                                    const mLabel = m.status === 'lunas' ? 'Lunas' : (m.status === 'ditagih' ? 'Menunggu Tagihan' : (mp > 0 ? 'Berjalan' : 'Belum Mulai'));
+                                    const mTotal = Number(m.task_stats?.total ?? 0);
                                     return `
                                         <div class="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 p-3 space-y-1.5">
                                             <div class="flex items-center justify-between gap-2 text-xs">
@@ -68,8 +84,8 @@ export function renderProjects(d) {
                                             </div>
                                             <div class="h-1 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden"><div class="h-full ${mp >= 100 ? 'bg-emerald-500' : 'bg-slate-700 dark:bg-primary-500'}" style="width:${mp}%"></div></div>
                                             <div class="flex items-center justify-between text-[11px] text-slate-500">
-                                                <span class="font-mono tabular-nums">Porsi ${esc(m.persentase)}% · ${m.task_stats?.done ?? 0}/${m.task_stats?.total ?? 0}</span>
-                                                ${badge(m.status === 'rencana' ? 'Direncanakan' : m.status, tone)}
+                                                <span class="font-mono tabular-nums">Porsi ${esc(m.persentase)}%${mTotal > 0 ? ` · ${m.task_stats?.done ?? 0}/${mTotal}` : ''}</span>
+                                                ${badge(mLabel, tone)}
                                             </div>
                                         </div>`;
                                 }).join('')}

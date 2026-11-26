@@ -232,6 +232,7 @@ export async function init(container) {
                 children: [
                     { label: 'Cek Uptime & SSL', icon: 'ri-pulse-line', iconColor: 'text-rose-500', fn: () => window.checkProjectHealth(p.id) },
                     { label: 'Analisis Profitabilitas (P&L)', icon: 'ri-pie-chart-2-line', iconColor: 'text-indigo-600', fn: () => window.viewProjectProfitability(p.id) },
+                    { label: 'Panel GitOps & Deploy', icon: 'ri-terminal-box-line', iconColor: 'text-indigo-600', fn: () => window.openProjectGitOps(p.id) },
                     { label: 'Sinkronkan Status Git', icon: 'ri-refresh-line', iconColor: 'text-emerald-600', fn: () => window.syncGitProject(p.id) }
                 ]
             },
@@ -345,15 +346,7 @@ async function loadProjects() {
         `;
     }).join('');
 
-    paginationEl.innerHTML = `
-        <div>Menampilkan hal <b>${pagination.page}</b> dari <b>${pagination.total}</b> proyek</div>
-        <div class="flex items-center gap-2">
-            <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changeProjectPage(${pagination.page - 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-            <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changeProjectPage(${pagination.page + 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadProjects(); }, 'proyek');
 }
 
 function renderProjectLifecycleBadge(p) {
@@ -531,6 +524,98 @@ window.syncGitProject = async (id) => {
         App.toast(res.message, 'success');
         loadProjects();
     }
+};
+
+window.openProjectGitOps = async (id) => {
+    const res = await App.api(`projects/${id}/gitops`, { cache: false });
+    if (!res?.success || !res.data) return;
+    const d = res.data;
+
+    const statusBadge = d.is_git_repo
+        ? '<span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">REPO GIT AKTIF</span>'
+        : (d.path_exists
+            ? '<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">NON-GIT FOLDER</span>'
+            : '<span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">PATH TIDAK DITEMUKAN</span>');
+
+    App.openModal(`
+        <div class="p-6 space-y-5">
+            <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="ri-terminal-box-line text-indigo-600"></i> Panel GitOps &amp; Deploy
+                        </h3>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">${App.escapeHtml(d.nama_project)} · Branch <code class="font-mono font-bold text-indigo-600">${App.escapeHtml(d.git_branch || 'main')}</code></p>
+                </div>
+                <button type="button" onclick="App.closeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800 space-y-1">
+                    <div class="text-[10px] font-bold uppercase text-slate-400">Commit Terakhir</div>
+                    <div class="font-mono font-bold text-slate-800 dark:text-slate-100">${App.escapeHtml(d.commit_hash)} · ${App.escapeHtml(d.commit_author)}</div>
+                    <div class="text-[11px] text-slate-500 truncate">${App.escapeHtml(d.commit_message)}</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-800 space-y-1">
+                    <div class="text-[10px] font-bold uppercase text-slate-400">Lingkungan &amp; Path</div>
+                    <div class="font-mono text-[11px] text-slate-700 dark:text-slate-200 truncate">${App.escapeHtml(d.deploy_path || 'Belum diatur')}</div>
+                    <div class="flex items-center gap-2 text-[11px] pt-0.5">
+                        <span class="${d.has_env ? 'text-emerald-600' : 'text-amber-600'} font-semibold"><i class="${d.has_env ? 'ri-checkbox-circle-line' : 'ri-error-warning-line'}"></i> .env ${d.has_env ? 'Tersedia' : 'Tidak Ada'}</span>
+                        <span class="text-slate-400">· Dirty: <b>${d.dirty_files}</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    ${d.app_url ? `<a href="${App.escapeHtml(d.app_url)}" target="_blank" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-xs font-semibold inline-flex items-center gap-1"><i class="ri-external-link-line"></i> Buka App</a>` : ''}
+                    ${d.app_git_installed ? `<a href="../app-git/" target="_blank" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-xs font-semibold inline-flex items-center gap-1"><i class="ri-git-repository-line"></i> Buka app-git</a>` : ''}
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn-gitops-sync" class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800">Sinkronkan</button>
+                    <button type="button" id="btn-gitops-deploy" ${d.is_git_repo ? '' : 'disabled'} class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm">
+                        <i class="ri-rocket-line"></i><span>Trigger Deploy (git pull)</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div class="text-[11px] font-bold uppercase text-slate-400">Riwayat Deployment Terakhir</div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto text-xs">
+                    ${Array.isArray(d.logs) && d.logs.length ? d.logs.map(l => `
+                        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="font-mono font-bold text-slate-800 dark:text-slate-100">${App.escapeHtml(l.branch || '-')} · ${App.escapeHtml(l.commit_hash || '-')}</div>
+                                <div class="text-[11px] text-slate-500 truncate">${App.escapeHtml(l.output_log || l.commit_message || '-')}</div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${l.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${String(l.status || '').toUpperCase()}</span>
+                        </div>
+                    `).join('') : '<div class="text-slate-400 text-center py-3">Belum ada riwayat deployment tercatat.</div>'}
+                </div>
+            </div>
+        </div>
+    `, 'max-w-2xl');
+
+    document.getElementById('btn-gitops-sync')?.addEventListener('click', async () => {
+        await window.syncGitProject(id);
+        window.openProjectGitOps(id);
+    });
+    document.getElementById('btn-gitops-deploy')?.addEventListener('click', async () => {
+        if (!await App.confirm('Jalankan Deploy Sekarang?', `Menjalankan git pull origin ${d.git_branch || 'main'} di ${d.deploy_path}.`)) return;
+        const btn = document.getElementById('btn-gitops-deploy');
+        App.btnLoading(btn, true, 'Deploying...');
+        const depRes = await App.api(`projects/${id}/deploy`, { method: 'POST' });
+        App.btnLoading(btn, false);
+        if (depRes?.success) {
+            App.toast(depRes.message, 'success');
+            loadProjects();
+            window.openProjectGitOps(id);
+        }
+    });
 };
 
 window.editProject = async (id) => {

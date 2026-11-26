@@ -192,13 +192,7 @@ if ($method === 'POST') {
 
         // Nomor Pengeluaran Unik EXP-YYYYMM-XXXX
         $ym = date('Ym');
-        $prefix = "EXP-{$ym}-";
-        $lastExp = $db->fetch("SELECT nomor_pengeluaran FROM expenses WHERE nomor_pengeluaran LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-        $seq = 1;
-        if ($lastExp && preg_match('/-(\d+)$/', $lastExp['nomor_pengeluaran'], $m)) {
-            $seq = (int)$m[1] + 1;
-        }
-        $nomorPengeluaran = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+        $nomorPengeluaran = generateDocNumber('expenses', 'nomor_pengeluaran', 'EXP-', 4, true, '-');
 
         $tglBayar = !empty($params['tanggal_bayar']) ? $params['tanggal_bayar'] : date('Y-m-d');
         $jumlahIdr = !empty($params['jumlah_idr']) ? (float)$params['jumlah_idr'] : (float)$asset['biaya_idr'];

@@ -280,10 +280,13 @@ function portalBuildData(Database $db, array $client): array
     // Tiket Gangguan Klien
     $tickets = $db->fetchAll(
         "SELECT t.*, p.nama_project, p.kode_project, ms.nama_aset, ms.domain_name,
+                q.nomor_penawaran, inv.nomor_invoice,
                 (SELECT COUNT(*) FROM client_ticket_replies r WHERE r.ticket_id = t.id) as reply_count
          FROM client_tickets t
          LEFT JOIN projects p ON t.project_id = p.id
          LEFT JOIN maintenance_sla ms ON t.maintenance_id = ms.id
+         LEFT JOIN quotations q ON t.quotation_id = q.id
+         LEFT JOIN invoices inv ON t.invoice_id = inv.id
          WHERE t.client_id = ?
          ORDER BY FIELD(t.status, 'menunggu_klien', 'terbuka', 'diproses', 'selesai', 'ditutup'), t.id DESC",
         [$clientId]

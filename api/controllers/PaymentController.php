@@ -108,14 +108,7 @@ if ($method === 'POST' && $action === 'verify-transfer' && $id) {
     $userId = $_SESSION['user_id'] ?? 1;
 
     // Generate nomor pembayaran
-    $prefix = 'PAY-' . date('Ym') . '-';
-    $lastSeq = $db->fetch("SELECT nomor_pembayaran FROM payments WHERE nomor_pembayaran LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-    $seq = 1;
-    if ($lastSeq) {
-        $parts = explode('-', $lastSeq['nomor_pembayaran']);
-        $seq = (int)end($parts) + 1;
-    }
-    $nomorPembayaran = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+    $nomorPembayaran = generatePaymentNo('PAY-');
 
     $pdo = $db->getPdo();
     $pdo->beginTransaction();
@@ -137,6 +130,7 @@ if ($method === 'POST' && $action === 'verify-transfer' && $id) {
 
         $pdo->commit();
         clearCache(['invoices', 'payments', 'dashboard']);
+        postJournalForPayment((int)$payId);
         logActivity('payment.verify', "Menyetujui bukti transfer faktur {$inv['nomor_invoice']} senilai Rp " . number_format($jumlahBayar, 0, ',', '.'));
 
         successResponse([
@@ -292,6 +286,7 @@ if ($method === 'POST') {
 
         $pdo->commit();
         clearCache(['invoices', 'payments']);
+        postJournalForPayment((int)$newPayId);
         logActivity('create', 'payments', $newPayId, null, [
             'nomor_pembayaran' => $nomorPembayaran,
             'invoice_id' => $invoiceId,

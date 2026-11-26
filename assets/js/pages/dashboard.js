@@ -59,6 +59,23 @@ export async function init(container) {
                 </div>
             </div>
 
+            <!-- Widget Perlu Tindakan Hari Ini -->
+            <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="ri-task-line text-primary-600"></i>
+                            <span>Perlu Tindakan Hari Ini</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Item operasional yang menunggu verifikasi bukti bayar, balasan tiket SLA, BAST/termin, atau perpanjangan segera.</p>
+                    </div>
+                    <span id="action-queue-total-badge" class="self-start sm:self-center px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-mono font-bold">Memuat...</span>
+                </div>
+                <div id="action-queue-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="col-span-full py-6 text-center text-xs text-slate-400">Memeriksa antrean tindakan...</div>
+                </div>
+            </div>
+
             <!-- KPI Cards Grid -->
             <div id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
@@ -103,23 +120,6 @@ export async function init(container) {
                     </div>
                     <div id="kpi-clients" class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">0 Klien</div>
                     <div id="kpi-projects" class="text-xs text-slate-400 mt-2">0 Proyek aktif</div>
-                </div>
-            </div>
-
-            <!-- Widget Antrean Tindakan Hari Ini -->
-            <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                        <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <i class="ri-task-line text-primary-600"></i>
-                            <span>Antrean Tindakan Hari Ini</span>
-                        </h2>
-                        <p class="text-xs text-slate-400">Item operasional yang menunggu verifikasi, balasan, BAST/termin, atau perpanjangan segera.</p>
-                    </div>
-                    <span id="action-queue-total-badge" class="self-start sm:self-center px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-mono font-bold">Memuat...</span>
-                </div>
-                <div id="action-queue-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="col-span-full py-6 text-center text-xs text-slate-400">Memeriksa antrean tindakan...</div>
                 </div>
             </div>
 

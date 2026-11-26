@@ -22,48 +22,34 @@ function formatDateIndo($date)
     return "$d $m $y";
 }
 
-function generateInvoiceNo($prefix = 'INV-')
+function generateDocNumber(string $table, string $column, string $prefix, int $pad = 4, bool $withYearMonth = true, string $separator = '-'): string
 {
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+        throw new \InvalidArgumentException('Invalid table or column name');
+    }
     $db = Database::getInstance();
-    $yearMonth = date('Ym');
-    $pattern = $prefix . $yearMonth . '-%';
-    
+    $basePrefix = $withYearMonth ? ($prefix . date('Ym') . $separator) : $prefix;
     $last = $db->fetch(
-        "SELECT nomor_invoice FROM invoices WHERE nomor_invoice LIKE ? ORDER BY id DESC LIMIT 1",
-        [$pattern]
+        "SELECT `{$column}` AS doc_no FROM `{$table}` WHERE `{$column}` LIKE ? ORDER BY id DESC LIMIT 1",
+        [$basePrefix . '%']
     );
 
-    if ($last && !empty($last['nomor_invoice'])) {
-        $parts = explode('-', $last['nomor_invoice']);
-        $lastSeq = (int)end($parts);
-        $nextSeq = $lastSeq + 1;
-    } else {
-        $nextSeq = 1;
+    $nextSeq = 1;
+    if ($last && !empty($last['doc_no']) && preg_match('/(\d+)$/', (string)$last['doc_no'], $m)) {
+        $nextSeq = (int)$m[1] + 1;
     }
 
-    return $prefix . $yearMonth . '-' . str_pad((string)$nextSeq, 4, '0', STR_PAD_LEFT);
+    return $basePrefix . str_pad((string)$nextSeq, $pad, '0', STR_PAD_LEFT);
+}
+
+function generateInvoiceNo($prefix = 'INV-')
+{
+    return generateDocNumber('invoices', 'nomor_invoice', $prefix, 4, true, '-');
 }
 
 function generatePaymentNo($prefix = 'PAY-')
 {
-    $db = Database::getInstance();
-    $yearMonth = date('Ym');
-    $pattern = $prefix . $yearMonth . '-%';
-
-    $last = $db->fetch(
-        "SELECT nomor_pembayaran FROM payments WHERE nomor_pembayaran LIKE ? ORDER BY id DESC LIMIT 1",
-        [$pattern]
-    );
-
-    if ($last && !empty($last['nomor_pembayaran'])) {
-        $parts = explode('-', $last['nomor_pembayaran']);
-        $lastSeq = (int)end($parts);
-        $nextSeq = $lastSeq + 1;
-    } else {
-        $nextSeq = 1;
-    }
-
-    return $prefix . $yearMonth . '-' . str_pad((string)$nextSeq, 4, '0', STR_PAD_LEFT);
+    return generateDocNumber('payments', 'nomor_pembayaran', $prefix, 4, true, '-');
 }
 
 function getDefaultTaxPercent()

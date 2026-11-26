@@ -190,8 +190,16 @@ CREATE TABLE IF NOT EXISTS `client_tickets` (
     `lampiran_json` TEXT NULL,
     `status` ENUM('terbuka', 'diproses', 'menunggu_klien', 'selesai', 'ditutup') DEFAULT 'terbuka',
     `pelapor_nama` VARCHAR(100) NOT NULL,
+    `sumber_laporan` ENUM('portal', 'whatsapp', 'telepon', 'email', 'internal') NOT NULL DEFAULT 'portal',
+    `cakupan_biaya` ENUM('sla_gratis', 'garansi', 'berbayar') NOT NULL DEFAULT 'sla_gratis',
+    `total_durasi_menit` INT UNSIGNED NOT NULL DEFAULT 0,
+    `quotation_id` INT UNSIGNED NULL,
+    `invoice_id` INT UNSIGNED NULL,
     `assigned_to` INT UNSIGNED NULL,
     `resolved_at` DATETIME NULL,
+    `first_response_at` DATETIME NULL,
+    `sla_response_due` DATETIME NULL,
+    `sla_resolve_due` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_ctickets_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE CASCADE,
@@ -211,6 +219,20 @@ CREATE TABLE IF NOT EXISTS `client_ticket_replies` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_ctreplies_ticket` FOREIGN KEY (`ticket_id`) REFERENCES `client_tickets` (`id`) ON DELETE CASCADE,
     INDEX `idx_ctreplies_ticket` (`ticket_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `client_ticket_logs` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `ticket_id` INT UNSIGNED NOT NULL,
+    `user_id` INT UNSIGNED NULL,
+    `actor_name` VARCHAR(100) NOT NULL,
+    `tipe_aktivitas` ENUM('investigasi', 'perbaikan', 'komunikasi', 'deploy', 'konversi', 'lainnya') NOT NULL DEFAULT 'investigasi',
+    `durasi_menit` INT UNSIGNED NOT NULL DEFAULT 0,
+    `is_billable` TINYINT(1) NOT NULL DEFAULT 0,
+    `ringkasan` TEXT NOT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_ctlogs_ticket` FOREIGN KEY (`ticket_id`) REFERENCES `client_tickets` (`id`) ON DELETE CASCADE,
+    INDEX `idx_ctlogs_ticket` (`ticket_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Services (Katalog Layanan Standar)
@@ -862,4 +884,166 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_us_user` (`user_id`),
     INDEX `idx_us_revoked` (`is_revoked`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Transaksi Payment Gateway Online (Midtrans / Xendit / QRIS / Sandbox)
+CREATE TABLE IF NOT EXISTS `payment_gateway_transactions` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `order_id` VARCHAR(64) NOT NULL UNIQUE,
+    `invoice_id` INT UNSIGNED NOT NULL,
+    `provider` VARCHAR(32) NOT NULL DEFAULT 'sandbox',
+    `channel` VARCHAR(32) NOT NULL DEFAULT 'qris',
+    `amount` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `status` ENUM('pending', 'paid', 'expired', 'failed') NOT NULL DEFAULT 'pending',
+    `payment_url` VARCHAR(500) NULL,
+    `qr_string` TEXT NULL,
+    `va_number` VARCHAR(64) NULL,
+    `raw_payload` TEXT NULL,
+    `paid_at` DATETIME NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_pgt_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE,
+    INDEX `idx_pgt_invoice` (`invoice_id`),
+    INDEX `idx_pgt_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Mutasi Rekening Bank (Rekonsiliasi Bank)
+CREATE TABLE IF NOT EXISTS `bank_mutations` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `payment_method_id` INT UNSIGNED NOT NULL,
+    `tanggal_transaksi` DATE NOT NULL,
+    `deskripsi` VARCHAR(255) NOT NULL,
+    `referensi` VARCHAR(100) NULL,
+    `tipe` ENUM('kredit', 'debit') NOT NULL DEFAULT 'kredit',
+    `nominal` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `saldo` DECIMAL(15,2) NULL,
+    `matched_type` ENUM('invoice', 'expense', 'payment') NULL,
+    `matched_id` INT UNSIGNED NULL,
+    `status` ENUM('unmatched', 'matched', 'ignored') NOT NULL DEFAULT 'unmatched',
+    `imported_by` INT UNSIGNED NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_bm_pm` FOREIGN KEY (`payment_method_id`) REFERENCES `payment_methods` (`id`) ON DELETE CASCADE,
+    INDEX `idx_bm_pm_status` (`payment_method_id`, `status`),
+    INDEX `idx_bm_tanggal` (`tanggal_transaksi`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- API Keys Eksternal
+CREATE TABLE IF NOT EXISTS `api_keys` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `nama` VARCHAR(100) NOT NULL,
+    `key_prefix` VARCHAR(16) NOT NULL,
+    `key_hash` VARCHAR(64) NOT NULL UNIQUE,
+    `scopes` VARCHAR(255) NOT NULL DEFAULT 'read',
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `last_used_at` DATETIME NULL,
+    `created_by` INT UNSIGNED NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Webhook Keluar
+CREATE TABLE IF NOT EXISTS `webhooks` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `nama` VARCHAR(100) NOT NULL,
+    `target_url` VARCHAR(500) NOT NULL,
+    `secret` VARCHAR(128) NOT NULL,
+    `events` VARCHAR(255) NOT NULL DEFAULT 'invoice.paid,ticket.created,project.updated',
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Log Pengiriman Webhook
+CREATE TABLE IF NOT EXISTS `webhook_logs` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `webhook_id` INT UNSIGNED NOT NULL,
+    `event_name` VARCHAR(64) NOT NULL,
+    `payload_json` TEXT NOT NULL,
+    `response_code` INT NULL,
+    `response_body` TEXT NULL,
+    `status` ENUM('success', 'failed') NOT NULL DEFAULT 'failed',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_wl_webhook` FOREIGN KEY (`webhook_id`) REFERENCES `webhooks` (`id`) ON DELETE CASCADE,
+    INDEX `idx_wl_webhook` (`webhook_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Log Deployment GitOps Proyek
+CREATE TABLE IF NOT EXISTS `project_deploy_logs` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `project_id` INT UNSIGNED NOT NULL,
+    `branch` VARCHAR(100) NULL,
+    `commit_hash` VARCHAR(40) NULL,
+    `commit_message` VARCHAR(255) NULL,
+    `action_type` ENUM('sync', 'deploy') NOT NULL DEFAULT 'deploy',
+    `status` ENUM('success', 'failed') NOT NULL DEFAULT 'success',
+    `output_log` TEXT NULL,
+    `triggered_by` INT UNSIGNED NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_pdl_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+    INDEX `idx_pdl_project` (`project_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Log Pengiriman Email SMTP
+CREATE TABLE IF NOT EXISTS `email_logs` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `entity_type` VARCHAR(32) NOT NULL DEFAULT 'invoice',
+    `entity_id` INT UNSIGNED NULL,
+    `recipient_email` VARCHAR(150) NOT NULL,
+    `subject` VARCHAR(255) NOT NULL,
+    `status` ENUM('sent', 'failed') NOT NULL DEFAULT 'sent',
+    `error_message` TEXT NULL,
+    `sent_by` INT UNSIGNED NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_el_entity` (`entity_type`, `entity_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Master Bagan Akun (Chart of Accounts / COA)
+CREATE TABLE IF NOT EXISTS `chart_of_accounts` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `kode_akun` VARCHAR(20) NOT NULL UNIQUE,
+    `nama_akun` VARCHAR(150) NOT NULL,
+    `tipe_akun` ENUM('aset', 'kewajiban', 'ekuitas', 'pendapatan', 'beban') NOT NULL,
+    `saldo_normal` ENUM('debit', 'kredit') NOT NULL,
+    `is_system` TINYINT(1) NOT NULL DEFAULT 0,
+    `status` ENUM('aktif', 'nonaktif') NOT NULL DEFAULT 'aktif',
+    `keterangan` VARCHAR(255) NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_coa_tipe` (`tipe_akun`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Header Jurnal Umum (Double-Entry)
+CREATE TABLE IF NOT EXISTS `journal_entries` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `nomor_jurnal` VARCHAR(40) NOT NULL UNIQUE,
+    `tanggal` DATE NOT NULL,
+    `deskripsi` VARCHAR(255) NOT NULL,
+    `sumber_tipe` ENUM('manual', 'invoice', 'payment', 'expense', 'closing') NOT NULL DEFAULT 'manual',
+    `sumber_id` INT UNSIGNED NULL,
+    `total_debit` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `total_kredit` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `created_by` INT UNSIGNED NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_je_tanggal` (`tanggal`),
+    INDEX `idx_je_sumber` (`sumber_tipe`, `sumber_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Detail Baris Jurnal Umum
+CREATE TABLE IF NOT EXISTS `journal_items` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `journal_id` INT UNSIGNED NOT NULL,
+    `coa_id` INT UNSIGNED NOT NULL,
+    `debit` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `kredit` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `keterangan` VARCHAR(255) NULL,
+    CONSTRAINT `fk_ji_journal` FOREIGN KEY (`journal_id`) REFERENCES `journal_entries` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_ji_coa` FOREIGN KEY (`coa_id`) REFERENCES `chart_of_accounts` (`id`) ON DELETE RESTRICT,
+    INDEX `idx_ji_coa` (`coa_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tutup Buku & Penguncian Periode Akuntansi
+CREATE TABLE IF NOT EXISTS `accounting_periods` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `periode` VARCHAR(7) NOT NULL UNIQUE,
+    `status` ENUM('open', 'closed') NOT NULL DEFAULT 'open',
+    `closing_journal_id` INT UNSIGNED NULL,
+    `closed_by` INT UNSIGNED NULL,
+    `closed_at` DATETIME NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

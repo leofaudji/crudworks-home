@@ -45,8 +45,25 @@ if ($id && is_numeric($id)) {
             errorResponse('Email klien belum diatur');
         }
 
+        $cfg = getAppSettingsMap();
+        $token = $inv['public_token'] ?: bin2hex(random_bytes(24));
+        if (empty($inv['public_token'])) {
+            $db->execute("UPDATE invoices SET public_token = ? WHERE id = ?", [$token, $invoiceId]);
+        }
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
+        $portalUrl = "{$scheme}://{$host}{$base}/#/public-invoice?token=" . urlencode($token);
+
+        $subject = "Faktur Tagihan {$inv['nomor_invoice']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
+        $html = buildInvoiceEmailHtml($inv, $cfg, $portalUrl);
+        $mailRes = sendErpEmail((string)$inv['client_email'], (string)($inv['penanggung_jawab'] ?: $inv['nama_perusahaan']), $subject, $html, 'invoice', $invoiceId);
+        if (empty($mailRes['success'])) {
+            errorResponse($mailRes['message'] ?? 'Gagal mengirim email faktur', 500);
+        }
+
         // Tandai email terkirim & ubah status ke 'dikirim' jika masih draft
-        $updateSql = "UPDATE invoices SET email_terkirim_at = NOW()";
+        $updateSql = "UPDATE invoices SET email_terkirim_at = NOW(), last_sent_at = NOW(), last_sent_via = 'email'";
         if ($inv['status'] === 'draft') {
             $updateSql .= ", status = 'dikirim'";
         }
@@ -54,13 +71,29 @@ if ($id && is_numeric($id)) {
         $db->execute($updateSql, [$invoiceId]);
 
         clearCache(['invoices']);
+        postJournalForInvoice((int)$invoiceId);
         logActivity('send_email', 'invoices', $invoiceId, null, ['sent_to' => $inv['client_email']]);
 
         successResponse([
             'invoice_id' => $invoiceId,
             'sent_to' => $inv['client_email'],
             'sent_at' => date('Y-m-d H:i:s')
-        ], 'Invoice berhasil dikirimkan ke email: ' . $inv['client_email']);
+        ], 'Faktur tagihan berhasil dikirim ke email ' . $inv['client_email']);
+    }
+
+    // Action: Log Send / Reminder (WhatsApp / Manual)
+    if ($action === 'log-send') {
+        if ($method !== 'POST') errorResponse('Method not allowed', 405);
+        checkPermission('invoice.view');
+        $via = trim((string)($params['via'] ?? 'whatsapp'));
+        if (!in_array($via, ['whatsapp', 'email', 'portal'], true)) $via = 'whatsapp';
+
+        $inv = $db->fetch("SELECT id, nomor_invoice, status FROM invoices WHERE id = ?", [$invoiceId]);
+        if (!$inv) errorResponse('Invoice tidak ditemukan', 404);
+
+        $db->execute("UPDATE invoices SET last_sent_at = NOW(), last_sent_via = ? WHERE id = ?", [$via, $invoiceId]);
+        logActivity('invoice.send_' . $via, 'invoices', $invoiceId, null, ['via' => $via]);
+        successResponse(['last_sent_at' => date('Y-m-d H:i:s'), 'last_sent_via' => $via], 'Riwayat pengiriman dicatat');
     }
 
     // Single Invoice Detail
@@ -195,6 +228,7 @@ if ($id && is_numeric($id)) {
 
             $pdo->commit();
             clearCache(['invoices']);
+            postJournalForInvoice((int)$invoiceId);
             logActivity('update', 'invoices', $invoiceId, $inv, $params);
 
             successResponse(['id' => $invoiceId], 'Invoice berhasil diperbarui');
@@ -355,6 +389,7 @@ if ($method === 'POST') {
 
         $pdo->commit();
         clearCache(['invoices']);
+        postJournalForInvoice((int)$newInvoiceId);
         logActivity('create', 'invoices', $newInvoiceId, null, ['nomor_invoice' => $nomorInvoice, 'total' => $totalTagihan]);
 
         successResponse(['id' => $newInvoiceId, 'nomor_invoice' => $nomorInvoice], 'Invoice berhasil dibuat');

@@ -182,15 +182,7 @@ async function loadAuditLogs() {
     // Store log data in window for payload inspection
     window._cachedLogs = logs;
 
-    paginationEl.innerHTML = `
-        <div>Menampilkan hal <b>${pagination.page}</b> dari <b>${pagination.total}</b> baris log</div>
-        <div class="flex items-center gap-2">
-            <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changeAuditPage(${pagination.page - 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-            <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changeAuditPage(${pagination.page + 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadAudit(); }, 'baris log');
 }
 
 window.viewAuditPayload = (logId) => {

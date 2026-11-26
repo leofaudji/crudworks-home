@@ -17,6 +17,10 @@ export async function init(container) {
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button id="btn-open-reconcile" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-sm transition">
+                        <i class="ri-exchange-funds-line text-sm"></i>
+                        <span>Rekonsiliasi Mutasi</span>
+                    </button>
                     <button id="btn-add-bank" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-sm transition">
                         <i class="ri-add-line text-sm"></i>
                         <span>Tambah Rekening</span>
@@ -346,6 +350,7 @@ export async function init(container) {
     }
 
     document.getElementById('btn-add-bank')?.addEventListener('click', () => openModal(null));
+    document.getElementById('btn-open-reconcile')?.addEventListener('click', () => openReconcileModal());
     document.getElementById('btn-close-bank-modal')?.addEventListener('click', closeModal);
     document.getElementById('btn-cancel-bank-modal')?.addEventListener('click', closeModal);
 
@@ -444,4 +449,129 @@ export async function init(container) {
 
     // Initial load
     await loadBankAccounts();
+
+    async function openReconcileModal() {
+        const bankRes = await App.api('bank-accounts?status=aktif');
+        const banks = bankRes?.success ? (bankRes.data || []) : [];
+        const bankOpts = banks.map(b => `<option value="${b.id}">${App.escapeHtml(b.nama_bank)} (${App.escapeHtml(b.nomor_rekening || '-')})</option>`).join('');
+
+        App.openModal(`
+            <div class="p-6 space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="ri-exchange-funds-line text-emerald-600"></i> Rekonsiliasi Mutasi Bank
+                        </h3>
+                        <p class="text-xs text-slate-500">Impor mutasi CSV rekening &amp; cocokkan otomatis dengan Faktur / Pembayaran / Pengeluaran.</p>
+                    </div>
+                    <button type="button" onclick="App.closeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                        <i class="ri-close-line text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Rekening Bank</label>
+                            <select id="rec-bank-id" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">${bankOpts}</select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Unggah CSV (tgl,deskripsi,tipe,nominal)</label>
+                            <input type="file" id="rec-csv-file" accept=".csv,text/csv" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 file:font-semibold">
+                        </div>
+                    </div>
+                    <textarea id="rec-csv-paste" rows="3" placeholder="Atau tempel baris CSV: 2026-11-25,TRSF INV-001,kredit,1500000"
+                              class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono"></textarea>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <button type="button" id="btn-rec-import" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold">Impor Mutasi</button>
+                        <button type="button" id="btn-rec-automatch" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5">
+                            <i class="ri-magic-line"></i><span>Auto-Match Otomatis</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="rec-mutations-list" class="space-y-2 max-h-72 overflow-y-auto text-xs">
+                    <div class="text-center text-slate-400 py-4">Memuat mutasi...</div>
+                </div>
+            </div>
+        `, 'max-w-3xl');
+
+        const parseCsvText = (txt) => txt.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+            const cols = line.split(/[,;]/).map(c => c.trim().replace(/^"|"$/g, ''));
+            if (cols.length < 4 || isNaN(parseFloat(cols[3].replace(/[^0-9.-]/g, '')))) return null;
+            return {
+                tanggal_transaksi: cols[0],
+                deskripsi: cols[1],
+                tipe: cols[2].toLowerCase().includes('deb') ? 'debit' : 'kredit',
+                nominal: Math.abs(parseFloat(cols[3].replace(/[^0-9.-]/g, '')) || 0),
+                referensi: cols[4] || ''
+            };
+        }).filter(Boolean);
+
+        const loadMutations = async () => {
+            const pmId = document.getElementById('rec-bank-id')?.value || '';
+            const res = await App.api(`bank-accounts/mutations?payment_method_id=${pmId}`, { cache: false });
+            const el = document.getElementById('rec-mutations-list');
+            if (!el) return;
+            const rows = res?.success ? (res.data || []) : [];
+            if (!rows.length) {
+                el.innerHTML = `<div class="text-center text-slate-400 py-4">Belum ada data mutasi untuk rekening ini.</div>`;
+                return;
+            }
+            el.innerHTML = rows.map(m => {
+                const badge = m.status === 'matched'
+                    ? `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">COCOK (${App.escapeHtml(m.matched_type || '')}: ${App.escapeHtml(m.matched_label || '#' + m.matched_id)})</span>`
+                    : (m.status === 'ignored'
+                        ? `<span class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold">DIABAIKAN</span>`
+                        : `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">BELUM COCOK</span>`);
+                return `
+                    <div class="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-mono text-[11px] text-slate-500">${App.escapeHtml(m.tanggal_transaksi)}</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-100">${App.escapeHtml(m.deskripsi)}</span>
+                                ${badge}
+                            </div>
+                            <div class="font-mono text-xs mt-0.5 ${m.tipe === 'kredit' ? 'text-emerald-600' : 'text-rose-600'} font-bold">
+                                ${m.tipe === 'kredit' ? '+' : '-'} ${App.formatIDR(m.nominal)}
+                            </div>
+                        </div>
+                        ${m.status === 'unmatched' ? `
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="window.reconcileMutation(${m.id}, 'matched')" class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-[11px]">Tandai Cocok</button>
+                                <button type="button" onclick="window.reconcileMutation(${m.id}, 'ignored')" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-semibold text-[11px]">Abaikan</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.reconcileMutation = async (id, status) => {
+            const r = await App.api('bank-accounts/mutations/reconcile', { method: 'POST', body: { id, status } });
+            if (r?.success) { App.toast(r.message, 'success'); loadMutations(); }
+        };
+
+        document.getElementById('rec-bank-id')?.addEventListener('change', loadMutations);
+        document.getElementById('rec-csv-file')?.addEventListener('change', (e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = () => { document.getElementById('rec-csv-paste').value = String(reader.result || ''); };
+            reader.readAsText(f);
+        });
+        document.getElementById('btn-rec-import')?.addEventListener('click', async () => {
+            const pmId = document.getElementById('rec-bank-id')?.value;
+            const rows = parseCsvText(document.getElementById('rec-csv-paste')?.value || '');
+            const r = await App.api('bank-accounts/mutations/import', { method: 'POST', body: { payment_method_id: pmId, rows } });
+            if (r?.success) { App.toast(r.message, 'success'); loadMutations(); }
+        });
+        document.getElementById('btn-rec-automatch')?.addEventListener('click', async () => {
+            const pmId = document.getElementById('rec-bank-id')?.value;
+            const r = await App.api('bank-accounts/mutations/auto-match', { method: 'POST', body: { payment_method_id: pmId } });
+            if (r?.success) { App.toast(r.message, 'success'); loadMutations(); }
+        });
+
+        loadMutations();
+    }
 }

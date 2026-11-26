@@ -452,15 +452,7 @@ async function loadTimesheets() {
         });
     });
 
-    paginationEl.innerHTML = `
-        <div>Menampilkan hal <b>${pagination.page}</b> dari <b>${pagination.total}</b> entri timesheet</div>
-        <div class="flex items-center gap-2">
-            <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changeTimesheetPage(${pagination.page - 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-            <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changeTimesheetPage(${pagination.page + 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadTimesheets(); }, 'entri timesheet');
 
     updateSelectedUI();
 }

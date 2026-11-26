@@ -1727,8 +1727,48 @@ export function openWhatsAppInvoiceReminder(inv) {
             + `Salam hormat,\n*Bagian Billing & Finansial ${companyName}*`;
     }
 
-    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, '_blank');
+    openWhatsApp(inv.client_telepon || inv.telepon || '', text);
+}
+
+export function formatWhatsAppPhone(phone) {
+    let waPhone = String(phone || '').replace(/[^0-9]/g, '');
+    if (waPhone.startsWith('0')) {
+        waPhone = '62' + waPhone.slice(1);
+    }
+    return waPhone;
+}
+
+export function openWhatsApp(phone, message = '') {
+    const waPhone = formatWhatsAppPhone(phone);
+    const query = message ? `?text=${encodeURIComponent(message)}` : '';
+    const url = waPhone ? `https://wa.me/${waPhone}${query}` : `https://wa.me/${query}`;
+    window.open(url, '_blank', 'noopener');
+}
+
+export function renderPagination(containerEl, pagination, onPageChange, itemLabel = 'data') {
+    if (!containerEl) return;
+    const p = pagination || { page: 1, total: 0, total_pages: 1 };
+    const page = Number(p.page || 1);
+    const total = Number(p.total || 0);
+    const totalPages = Math.max(1, Number(p.total_pages || 1));
+
+    containerEl.innerHTML = `
+        <div>Menampilkan hal <b>${page}</b> dari <b>${total}</b> ${escapeHtml(itemLabel)}</div>
+        <div class="flex items-center gap-2">
+            <button type="button" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}
+                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Sebelumnya</button>
+            <button type="button" data-page="${page + 1}" ${page >= totalPages ? 'disabled' : ''}
+                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Berikutnya</button>
+        </div>
+    `;
+    containerEl.querySelectorAll('button[data-page]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const target = parseInt(btn.getAttribute('data-page'), 10);
+            if (target >= 1 && target <= totalPages && typeof onPageChange === 'function') {
+                onPageChange(target);
+            }
+        });
+    });
 }
 
 /**
@@ -1773,8 +1813,7 @@ export function openWhatsAppReceipt(pay, inv) {
             + `Salam hormat,\n*Kasir Finansial ${companyName}*`;
     }
 
-    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, '_blank');
+    openWhatsApp(inv?.client_telepon || pay?.client_telepon || '', text);
 }
 
 /**
@@ -1819,8 +1858,7 @@ export function openWhatsAppQuotation(quo) {
             + `Salam hangat,\n*Tim Bisnis & Legal ${companyName}*`;
     }
 
-    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, '_blank');
+    openWhatsApp(inv?.client_telepon || pay?.client_telepon || '', text);
 }
 
 function _resolveCompanyInfo(sourceObj = null) {

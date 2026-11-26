@@ -105,24 +105,25 @@ export async function exportPdf({
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.35);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 5.5;
+    y += 7;
 
-    // Report Title & Subtitle Banner
+    // Report Title & Subtitle Banner (Centered & Proportional)
+    const centerX = pageWidth / 2;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
+    doc.setFontSize(13.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(String(title), margin, y);
+    doc.text(String(title), centerX, y, { align: 'center', maxWidth: contentWidth });
 
     if (subtitle) {
-        y += 4.5;
+        y += 5;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.2);
-        doc.setTextColor(79, 70, 229); // indigo-600 subtitle
-        const subLines = doc.splitTextToSize(String(subtitle), contentWidth);
-        doc.text(subLines, margin, y);
+        doc.setTextColor(100, 116, 139);
+        const subLines = doc.splitTextToSize(String(subtitle), contentWidth * 0.85);
+        doc.text(subLines, centerX, y, { align: 'center' });
         y += (subLines.length - 1) * 4;
     }
-    y += 4;
+    y += 5.5;
 
     const ensureSpace = (needed = 18) => {
         if (y + needed > bottomLimit) {
@@ -317,7 +318,13 @@ export async function exportPdf({
             alternateRowStyles: {
                 fillColor: [248, 250, 252]
             },
-            columnStyles: sec.columnStyles || {}
+            columnStyles: sec.columnStyles || {},
+            didParseCell: (data) => {
+                const colStyle = (sec.columnStyles || {})[data.column.index];
+                if (colStyle && colStyle.halign && (data.section === 'head' || data.section === 'foot')) {
+                    data.cell.styles.halign = colStyle.halign;
+                }
+            }
         });
 
         y = (doc.lastAutoTable?.finalY || y) + 5;

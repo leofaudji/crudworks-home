@@ -3,10 +3,75 @@
 
 $db = Database::getInstance();
 
+if ($id === 'system-health' && $method === 'GET') {
+    authCheck();
+    checkPermission('settings.edit');
+    $redis = RedisManager::getInstance();
+    $dbRow = $db->fetch(
+        "SELECT DATABASE() as db_name,
+                VERSION() as mysql_version,
+                COUNT(*) as table_count,
+                ROUND(COALESCE(SUM(data_length + index_length), 0) / 1024 / 1024, 2) as db_size_mb
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()"
+    );
+    $lastBackup = null;
+    $backupDirs = [__DIR__ . '/../../backups', __DIR__ . '/../../storage/backups'];
+    foreach ($backupDirs as $dir) {
+        if (is_dir($dir)) {
+            $files = glob($dir . '/*.sql*') ?: [];
+            foreach ($files as $f) {
+                $mtime = @filemtime($f) ?: 0;
+                if (!$lastBackup || $mtime > $lastBackup['ts']) {
+                    $lastBackup = ['file' => basename($f), 'ts' => $mtime, 'date' => date('Y-m-d H:i:s', $mtime)];
+                }
+            }
+        }
+    }
+    successResponse([
+        'redis_connected' => $redis->isConnected(),
+        'php_version' => PHP_VERSION,
+        'mysql_version' => $dbRow['mysql_version'] ?? '-',
+        'db_name' => $dbRow['db_name'] ?? '-',
+        'table_count' => (int)($dbRow['table_count'] ?? 0),
+        'db_size_mb' => (float)($dbRow['db_size_mb'] ?? 0),
+        'last_backup' => $lastBackup
+    ]);
+}
+
+if ($id === 'clear-cache' && $method === 'POST') {
+    authCheck();
+    checkPermission('settings.edit');
+    clearCache(['reports', 'accounting', 'clients', 'invoices', 'payments', 'expenses', 'services', 'settings']);
+    logActivity('settings.clear_cache', 'system', 0, null, ['keterangan' => 'Membersihkan seluruh cache laporan & sistem Redis']);
+    successResponse(null, 'Seluruh cache laporan & sistem berhasil dibersihkan');
+}
+
+if ($id === 'test-email' && $method === 'POST') {
+    authCheck();
+    checkPermission('settings.edit');
+    $to = trim((string)($params['to_email'] ?? ''));
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        errorResponse('Alamat email tujuan tidak valid', 422);
+    }
+    $cfg = getAppSettingsMap();
+    $comp = htmlspecialchars((string)($cfg['company_name'] ?? 'CRUDWorks ERP'));
+    $res = sendErpEmail($to, '', "Test Konfigurasi SMTP - {$comp}", "<p>Halo,</p><p>Ini adalah email uji coba dari <b>{$comp}</b>. Konfigurasi SMTP Anda berfungsi dengan baik.</p>", 'test', null);
+    if (empty($res['success'])) {
+        errorResponse($res['message'] ?? 'Gagal mengirim email uji coba', 500);
+    }
+    successResponse(null, $res['message']);
+}
+
 if ($id === 'payment-methods') {
     authCheck();
     if ($method === 'GET') {
-        $methods = $db->fetchAll("SELECT * FROM payment_methods ORDER BY id ASC");
+        $methods = $db->fetchAll(
+            "SELECT pm.*, coa.kode_akun as coa_kode, coa.nama_akun as coa_nama
+             FROM payment_methods pm
+             LEFT JOIN chart_of_accounts coa ON pm.coa_id = coa.id
+             ORDER BY pm.id ASC"
+        );
         successResponse($methods);
     }
 
@@ -17,6 +82,7 @@ if ($id === 'payment-methods') {
         $atasNama = trim($params['atas_nama'] ?? '');
         $instruksi = trim($params['instruksi'] ?? '');
         $status = in_array($params['status'] ?? '', ['aktif', 'nonaktif']) ? $params['status'] : 'aktif';
+        $coaId = !empty($params['coa_id']) ? (int)$params['coa_id'] : null;
 
         if (empty($namaMetode)) errorResponse('Nama metode pembayaran wajib diisi');
 
@@ -24,14 +90,14 @@ if ($id === 'payment-methods') {
 
         if ($methodId) {
             $db->execute(
-                "UPDATE payment_methods SET nama_metode = ?, nomor_rekening = ?, atas_nama = ?, instruksi = ?, status = ? WHERE id = ?",
-                [$namaMetode, $nomorRekening, $atasNama, $instruksi, $status, $methodId]
+                "UPDATE payment_methods SET nama_metode = ?, nomor_rekening = ?, atas_nama = ?, instruksi = ?, status = ?, coa_id = ? WHERE id = ?",
+                [$namaMetode, $nomorRekening, $atasNama, $instruksi, $status, $coaId, $methodId]
             );
             successResponse(['id' => $methodId], 'Metode pembayaran berhasil diperbarui');
         } else {
             $newId = $db->insert(
-                "INSERT INTO payment_methods (nama_metode, nomor_rekening, atas_nama, instruksi, status) VALUES (?, ?, ?, ?, ?)",
-                [$namaMetode, $nomorRekening, $atasNama, $instruksi, $status]
+                "INSERT INTO payment_methods (nama_metode, nomor_rekening, atas_nama, instruksi, status, coa_id) VALUES (?, ?, ?, ?, ?, ?)",
+                [$namaMetode, $nomorRekening, $atasNama, $instruksi, $status, $coaId]
             );
             successResponse(['id' => $newId], 'Metode pembayaran berhasil ditambahkan');
         }

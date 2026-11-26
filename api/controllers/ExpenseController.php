@@ -156,14 +156,7 @@ if ($method === 'POST') {
     }
 
     // Auto-generate nomor pengeluaran: EXP-YYYYMM-XXXX
-    $prefix = 'EXP-' . date('Ym') . '-';
-    $lastSeq = $db->fetch("SELECT nomor_pengeluaran FROM expenses WHERE nomor_pengeluaran LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-    $seq = 1;
-    if ($lastSeq) {
-        $parts = explode('-', $lastSeq['nomor_pengeluaran']);
-        $seq = (int)end($parts) + 1;
-    }
-    $nomorPengeluaran = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+    $nomorPengeluaran = generateDocNumber('expenses', 'nomor_pengeluaran', 'EXP-', 4, true, '-');
 
     // Handle receipt upload if attached
     $buktiLampiran = null;
@@ -186,16 +179,23 @@ if ($method === 'POST') {
     }
 
     $userId = $_SESSION['user_id'] ?? 1;
+    $ppnMasukan = max(0.0, (float)($params['ppn_masukan'] ?? 0));
+    $pph23Persen = max(0.0, min(100.0, (float)($params['pph23_persen'] ?? 0)));
+    $pph23Nominal = isset($params['pph23_nominal']) && $params['pph23_nominal'] !== ''
+        ? max(0.0, (float)$params['pph23_nominal'])
+        : round($jumlah * ($pph23Persen / 100), 2);
+    $noFakturPajak = trim((string)($params['nomor_faktur_pajak'] ?? '')) ?: null;
 
     $stmt = $db->getPdo()->prepare(
-        "INSERT INTO expenses (`nomor_pengeluaran`, `tanggal`, `expense_category_id`, `project_id`, `payment_method_id`, `judul`, `jumlah`, `penerima`, `deskripsi`, `bukti_lampiran`, `status`, `created_by`)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO expenses (`nomor_pengeluaran`, `tanggal`, `expense_category_id`, `project_id`, `payment_method_id`, `judul`, `jumlah`, `ppn_masukan`, `pph23_persen`, `pph23_nominal`, `nomor_faktur_pajak`, `penerima`, `deskripsi`, `bukti_lampiran`, `status`, `created_by`)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     $stmt->execute([
         $nomorPengeluaran, $tanggal, $categoryId, $projectId, $paymentMethodId,
-        $judul, $jumlah, $penerima, $deskripsi, $buktiLampiran, $status, $userId
+        $judul, $jumlah, $ppnMasukan, $pph23Persen, $pph23Nominal, $noFakturPajak, $penerima, $deskripsi, $buktiLampiran, $status, $userId
     ]);
     $newId = $db->getPdo()->lastInsertId();
+    postJournalForExpense((int)$newId);
 
     logActivity('expense.create', "Mencatat beban pengeluaran {$nomorPengeluaran}: {$judul} sebesar Rp " . number_format($jumlah, 0, ',', '.'));
     clearCache(['expenses', 'reports', 'dashboard']);
@@ -227,13 +227,21 @@ if ($method === 'PUT' && $id && is_numeric($id)) {
         errorResponse('Kategori beban, judul pengeluaran, dan nominal wajib diisi valid', 422);
     }
 
+    $ppnMasukan = isset($params['ppn_masukan']) ? max(0.0, (float)$params['ppn_masukan']) : (float)($expense['ppn_masukan'] ?? 0);
+    $pph23Persen = isset($params['pph23_persen']) ? max(0.0, min(100.0, (float)$params['pph23_persen'])) : (float)($expense['pph23_persen'] ?? 0);
+    $pph23Nominal = isset($params['pph23_nominal']) && $params['pph23_nominal'] !== ''
+        ? max(0.0, (float)$params['pph23_nominal'])
+        : round($jumlah * ($pph23Persen / 100), 2);
+    $noFakturPajak = array_key_exists('nomor_faktur_pajak', $params) ? (trim((string)$params['nomor_faktur_pajak']) ?: null) : ($expense['nomor_faktur_pajak'] ?? null);
+
     $stmt = $db->getPdo()->prepare(
-        "UPDATE expenses SET `tanggal`=?, `expense_category_id`=?, `project_id`=?, `payment_method_id`=?, `judul`=?, `jumlah`=?, `penerima`=?, `deskripsi`=?, `status`=? WHERE id = ?"
+        "UPDATE expenses SET `tanggal`=?, `expense_category_id`=?, `project_id`=?, `payment_method_id`=?, `judul`=?, `jumlah`=?, `ppn_masukan`=?, `pph23_persen`=?, `pph23_nominal`=?, `nomor_faktur_pajak`=?, `penerima`=?, `deskripsi`=?, `status`=? WHERE id = ?"
     );
     $stmt->execute([
         $tanggal, $categoryId, $projectId, $paymentMethodId,
-        $judul, $jumlah, $penerima, $deskripsi, $status, (int)$id
+        $judul, $jumlah, $ppnMasukan, $pph23Persen, $pph23Nominal, $noFakturPajak, $penerima, $deskripsi, $status, (int)$id
     ]);
+    postJournalForExpense((int)$id);
 
     logActivity('expense.edit', "Memperbarui beban pengeluaran {$expense['nomor_pengeluaran']}");
     clearCache(['expenses', 'reports', 'dashboard']);

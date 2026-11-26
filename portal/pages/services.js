@@ -11,7 +11,7 @@ export function renderServices(d) {
     const liveApps = projects.filter((p) => p.app_url || p.last_health_status);
     const liveHtml = liveApps.length === 0 ? '' : `
         <div class="space-y-3">
-            ${sectionTitle('Status Aplikasi & Server')}
+            ${sectionTitle('Status Aplikasi & Server', `<a href="../#/status" target="_blank" rel="noopener" class="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-xs font-semibold text-primary-600 inline-flex items-center gap-1.5"><i class="ri-pulse-line"></i><span>Status Server Live</span><i class="ri-external-link-line text-[11px]"></i></a>`)}
             ${panel(`<div class="divide-y divide-slate-200 dark:divide-slate-800">
                 ${liveApps.map((p) => {
                     const hs = p.last_health_status || 'unknown';
@@ -39,16 +39,22 @@ export function renderServices(d) {
         : panel(`<div class="divide-y divide-slate-200 dark:divide-slate-800">
             ${activeServices.map((s) => {
                 const stTone = s.status === 'aktif' ? 'green' : (s.status === 'segera_kadaluwarsa' || s.status === 'dijeda' ? 'amber' : 'red');
+                const matchedSla = maintenance.find((m) => m.nama_aset === s.nama_layanan || (m.domain_name && m.domain_name === s.detail));
+                const uptimeBadge = matchedSla?.uptime_status === 'online'
+                    ? badge('Online', 'green')
+                    : (matchedSla?.uptime_status === 'down' ? badge('Down', 'red') : '');
                 return `
                     <div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div class="min-w-0 space-y-0.5">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-sm font-bold text-slate-900 dark:text-white">${esc(s.nama_layanan)}</span>
                                 ${badge(String(s.status || 'aktif').replace(/_/g, ' '), stTone)}
+                                ${uptimeBadge}
                             </div>
                             <div class="text-xs text-slate-500 break-all">
                                 ${esc(s.detail || '-')} · <span class="uppercase font-mono text-[11px]">${esc(s.sumber === 'langganan' ? 'Langganan' : 'SLA')}</span>
                                 ${s.berakhir ? ` · ${s.sumber === 'langganan' ? 'Tagihan' : 'Berakhir'} <span class="font-mono">${fdate(s.berakhir)}</span>` : ''}
+                                ${matchedSla?.ssl_days_left !== null && matchedSla?.ssl_days_left !== undefined ? ` · <span class="font-mono">SSL ${esc(matchedSla.ssl_days_left)} hr</span>` : ''}
                             </div>
                         </div>
                         <div class="sm:text-right shrink-0">
@@ -59,11 +65,12 @@ export function renderServices(d) {
             }).join('')}
         </div>`);
 
-    const slaHtml = maintenance.length === 0 ? '' : `
+    const unmergedSla = maintenance.filter((m) => !activeServices.some((s) => s.nama_layanan === m.nama_aset || (m.domain_name && m.domain_name === s.detail)));
+    const slaHtml = unmergedSla.length === 0 ? '' : `
         <div class="space-y-3">
             ${sectionTitle('Pemantauan Domain, SSL & Hosting')}
             ${panel(`<div class="divide-y divide-slate-200 dark:divide-slate-800">
-                ${maintenance.map((m) => {
+                ${unmergedSla.map((m) => {
                     const sisa = Number(m.sisa_hari);
                     const soon = sisa <= 30;
                     return `

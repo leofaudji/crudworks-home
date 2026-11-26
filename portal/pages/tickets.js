@@ -26,58 +26,100 @@ const PRIO_META = {
     rendah: { label: 'Rendah', tone: 'slate' }
 };
 
+const SCOPE_META = {
+    sla_gratis: { label: 'Cakupan SLA', tone: 'green' },
+    garansi: { label: 'Garansi', tone: 'indigo' },
+    berbayar: { label: 'Berbayar', tone: 'amber' }
+};
+
+function formatDuration(minutes) {
+    const m = parseInt(minutes || 0, 10);
+    if (m <= 0) return '';
+    const h = Math.floor(m / 60);
+    const rem = m % 60;
+    return h > 0 ? (rem > 0 ? `${h}j ${rem}m` : `${h}j`) : `${m}m`;
+}
+
+export function renderFilteredTicketList(all = []) {
+    const filter = state.ticketFilter || '';
+    const q = (state.ticketSearch || '').trim().toLowerCase();
+    const list = all.filter((t) => {
+        if (filter && t.status !== filter) return false;
+        if (q) {
+            const hay = `${t.nomor_tiket || ''} ${t.judul || ''} ${t.nama_project || ''} ${KAT_LABELS[t.kategori] || ''}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        return true;
+    });
+
+    if (list.length === 0) {
+        return empty(filter || q ? 'Tidak ada tiket yang sesuai dengan filter atau pencarian.' : 'Belum ada tiket gangguan.');
+    }
+
+    return panel(`<div class="max-h-[62vh] overflow-y-auto divide-y divide-slate-200 dark:divide-slate-800">
+        ${list.map((t) => {
+            const st = STATUS_META[t.status] || { label: t.status, tone: 'slate' };
+            const pr = PRIO_META[t.prioritas] || { label: t.prioritas, tone: 'slate' };
+            const sc = SCOPE_META[t.cakupan_biaya] || null;
+            const dur = formatDuration(t.total_durasi_menit);
+            return `
+                <div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition">
+                    <div class="min-w-0 space-y-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-mono font-bold text-xs text-slate-900 dark:text-white">${esc(t.nomor_tiket)}</span>
+                            ${badge(st.label, st.tone)}
+                            ${sc ? badge(sc.label, sc.tone) : ''}
+                            ${t.prioritas === 'kritis' || t.prioritas === 'tinggi' ? badge(pr.label, pr.tone) : `<span class="text-[11px] text-slate-400 font-medium">${esc(pr.label)}</span>`}
+                        </div>
+                        <div class="text-sm font-bold text-slate-900 dark:text-white leading-snug">${esc(t.judul)}</div>
+                        <div class="text-xs text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5">
+                            <span>${esc(KAT_LABELS[t.kategori] || t.kategori)}</span>
+                            ${t.nama_project ? `<span>${esc(t.nama_project)}</span>` : ''}
+                            ${dur ? `<span class="font-mono text-primary-600 font-semibold">Penanganan ${dur}</span>` : ''}
+                            ${t.nomor_penawaran ? `<span class="font-mono text-indigo-600 font-semibold">${esc(t.nomor_penawaran)}</span>` : ''}
+                            ${t.nomor_invoice ? `<span class="font-mono text-emerald-600 font-semibold">${esc(t.nomor_invoice)}</span>` : ''}
+                            <span class="font-mono">${fdate(t.created_at)}</span>
+                        </div>
+                    </div>
+                    <button data-action="ticket-detail" data-id="${t.id}" class="shrink-0 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5">
+                        <i class="ri-mail-open-line text-slate-500"></i>
+                        <span>Buka Utas${Number(t.reply_count) > 0 ? ` (${t.reply_count})` : ''}</span>
+                    </button>
+                </div>`;
+        }).join('')}
+    </div>`);
+}
+
 export function renderTickets(d) {
     const all = d.tickets || [];
     const filter = state.ticketFilter || '';
-    const list = filter ? all.filter((t) => t.status === filter) : all;
-
-    const listHtml = list.length === 0
-        ? empty(filter ? 'Tidak ada tiket dengan status ini.' : 'Belum ada tiket gangguan.')
-        : panel(`<div class="max-h-[62vh] overflow-y-auto divide-y divide-slate-200 dark:divide-slate-800">
-            ${list.map((t) => {
-                const st = STATUS_META[t.status] || { label: t.status, tone: 'slate' };
-                const pr = PRIO_META[t.prioritas] || { label: t.prioritas, tone: 'slate' };
-                return `
-                    <div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition">
-                        <div class="min-w-0 space-y-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-mono font-bold text-xs text-slate-900 dark:text-white">${esc(t.nomor_tiket)}</span>
-                                ${badge(st.label, st.tone)}
-                                ${t.prioritas === 'kritis' || t.prioritas === 'tinggi' ? badge(pr.label, pr.tone) : `<span class="text-[11px] text-slate-400 font-medium">${esc(pr.label)}</span>`}
-                            </div>
-                            <div class="text-sm font-bold text-slate-900 dark:text-white leading-snug">${esc(t.judul)}</div>
-                            <div class="text-xs text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5">
-                                <span>${esc(KAT_LABELS[t.kategori] || t.kategori)}</span>
-                                ${t.nama_project ? `<span>${esc(t.nama_project)}</span>` : ''}
-                                <span class="font-mono">${fdate(t.created_at)}</span>
-                            </div>
-                        </div>
-                        <button data-action="ticket-detail" data-id="${t.id}" class="shrink-0 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5">
-                            <i class="ri-mail-open-line text-slate-500"></i>
-                            <span>Buka Utas${Number(t.reply_count) > 0 ? ` (${t.reply_count})` : ''}</span>
-                        </button>
-                    </div>`;
-            }).join('')}
-        </div>`);
+    const listHtml = renderFilteredTicketList(all);
 
     return `
         <div class="space-y-3">
             ${sectionTitle('Tiket Gangguan', `<button data-action="ticket-new" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white text-xs font-semibold flex items-center gap-1.5"><i class="ri-add-line"></i><span>Buat Tiket</span></button>`)}
 
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                ${[
-                    { k: '', l: `Semua (${all.length})` },
-                    { k: 'terbuka', l: 'Terbuka' },
-                    { k: 'diproses', l: 'Diproses' },
-                    { k: 'menunggu_klien', l: 'Menunggu Balasan' },
-                    { k: 'selesai', l: 'Selesai' }
-                ].map((f) => `
-                    <button data-action="ticket-filter" data-val="${f.k}" class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === f.k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'}">
-                        ${f.l}
-                    </button>`).join('')}
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    ${[
+                        { k: '', l: `Semua (${all.length})` },
+                        { k: 'terbuka', l: 'Terbuka' },
+                        { k: 'diproses', l: 'Diproses' },
+                        { k: 'menunggu_klien', l: 'Menunggu Balasan' },
+                        { k: 'selesai', l: 'Selesai' }
+                    ].map((f) => `
+                        <button data-action="ticket-filter" data-val="${f.k}" class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === f.k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'}">
+                            ${f.l}
+                        </button>`).join('')}
+                </div>
+                <div class="relative w-full sm:w-64 shrink-0">
+                    <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="search" id="portal-ticket-search" value="${esc(state.ticketSearch || '')}" placeholder="Cari nomor atau subjek tiket..."
+                           class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500">
+                </div>
             </div>
 
-            ${listHtml}
+            <div id="portal-ticket-list-wrap">${listHtml}</div>
         </div>`;
 }
 

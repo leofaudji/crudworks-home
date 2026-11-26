@@ -704,14 +704,7 @@ if ($method === 'POST') {
     }
 
     // Generate kode klien otomatis (CLI-0001)
-    $lastClient = $db->fetch("SELECT kode_klien FROM clients WHERE kode_klien LIKE 'CLI-%' ORDER BY id DESC LIMIT 1");
-    if ($lastClient && !empty($lastClient['kode_klien'])) {
-        $lastNum = (int)str_replace('CLI-', '', $lastClient['kode_klien']);
-        $nextNum = $lastNum + 1;
-    } else {
-        $nextNum = 1;
-    }
-    $kodeKlien = 'CLI-' . str_pad((string)$nextNum, 4, '0', STR_PAD_LEFT);
+    $kodeKlien = generateDocNumber('clients', 'kode_klien', 'CLI-', 4, false, '');
 
     $portalToken = bin2hex(random_bytes(24));
 

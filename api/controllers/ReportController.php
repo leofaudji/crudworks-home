@@ -5,6 +5,8 @@ authCheck();
 checkPermission('report.view');
 $db = Database::getInstance();
 
+$reportRespond = initReportCache('report', (string)$id, $params, ['start_date', 'end_date', 'tahun', 'client_id']);
+
 switch ($id) {
     case 'aging':
         // Laporan Aging Piutang per Klien
@@ -50,7 +52,7 @@ switch ($id) {
             $grandTotal['total_piutang'] += (float)$r['total_piutang'];
         }
 
-        successResponse([
+        $reportRespond([
             'items' => $rows,
             'totals' => $grandTotal
         ]);
@@ -81,7 +83,7 @@ switch ($id) {
             $byMethod[$mName] = ($byMethod[$mName] ?? 0) + $amt;
         }
 
-        successResponse([
+        $reportRespond([
             'start_date' => $startDate,
             'end_date' => $endDate,
             'total_revenue' => $totalRevenue,
@@ -130,7 +132,7 @@ switch ($id) {
             $entry['saldo_berjalan'] = $runningBalance;
         }
 
-        successResponse([
+        $reportRespond([
             'client' => $client,
             'ledger' => $ledger,
             'final_balance' => $runningBalance
@@ -385,7 +387,7 @@ switch ($id) {
             $pp['margin_persen'] = $pp['pendapatan_proyek'] > 0 ? round(($pp['margin_bersih'] / $pp['pendapatan_proyek']) * 100, 1) : 0;
         }
 
-        successResponse([
+        $reportRespond([
             'periode' => [
                 'tahun' => $tahun,
                 'start_date' => $startDate, 
@@ -432,17 +434,38 @@ switch ($id) {
             [$tahun]
         );
 
+        $expTaxRows = $db->fetchAll(
+            "SELECT DATE_FORMAT(tanggal, '%Y-%m') as bulan,
+                    COALESCE(SUM(ppn_masukan), 0) as ppn_masukan,
+                    COALESCE(SUM(pph23_nominal), 0) as pph23_terpotong
+             FROM expenses
+             WHERE YEAR(tanggal) = ? AND status != 'batal'
+             GROUP BY DATE_FORMAT(tanggal, '%Y-%m')",
+            [$tahun]
+        );
+        $expTaxMap = [];
+        foreach ($expTaxRows as $er) {
+            $expTaxMap[$er['bulan']] = $er;
+        }
+
         $totalDpp = 0.0;
         $totalPpn = 0.0;
+        $totalPpnMasukan = 0.0;
         $totalEstPph23 = 0.0;
+        $totalPph23Terpotong = 0.0;
         foreach ($taxRows as &$tr) {
             $tr['dpp'] = (float)$tr['dpp'];
             $tr['ppn_keluaran'] = (float)$tr['ppn_keluaran'];
+            $tr['ppn_masukan'] = (float)($expTaxMap[$tr['bulan']]['ppn_masukan'] ?? 0);
+            $tr['ppn_kurang_bayar'] = round($tr['ppn_keluaran'] - $tr['ppn_masukan'], 2);
             $tr['total_faktur'] = (float)$tr['total_faktur'];
             $tr['est_pph23'] = round($tr['dpp'] * 0.02, 2);
+            $tr['pph23_terpotong'] = (float)($expTaxMap[$tr['bulan']]['pph23_terpotong'] ?? 0);
             $totalDpp += $tr['dpp'];
             $totalPpn += $tr['ppn_keluaran'];
+            $totalPpnMasukan += $tr['ppn_masukan'];
             $totalEstPph23 += $tr['est_pph23'];
+            $totalPph23Terpotong += $tr['pph23_terpotong'];
         }
         unset($tr);
 
@@ -469,13 +492,16 @@ switch ($id) {
             $monthlyRecurring += ($freq === 'tahunan') ? ($sumRec / 12) : (($freq === 'triwulan') ? ($sumRec / 3) : $sumRec);
         }
 
-        successResponse([
+        $reportRespond([
             'tahun' => $tahun,
             'pajak_bulanan' => $taxRows,
             'ringkasan_pajak' => [
                 'total_dpp' => $totalDpp,
                 'total_ppn_keluaran' => $totalPpn,
-                'estimasi_pph23_2persen' => $totalEstPph23
+                'total_ppn_masukan' => $totalPpnMasukan,
+                'ppn_kurang_bayar' => round($totalPpn - $totalPpnMasukan, 2),
+                'estimasi_pph23_2persen' => $totalEstPph23,
+                'total_pph23_terpotong' => $totalPph23Terpotong
             ],
             'proyeksi_arus_kas' => [
                 'hari_30' => round((float)($projRow['masuk_30'] ?? 0) + $monthlyRecurring, 2),

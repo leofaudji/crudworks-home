@@ -174,7 +174,7 @@ if ($method === 'POST' && ($action === 'check-health' || ($params['action'] ?? '
 }
 
 // 2c. Health Check All Active Domains
-if ($method === 'POST' && ($action === 'check-all' || ($params['action'] ?? '') === 'check-all')) {
+if ($method === 'POST' && ($id === 'check-all' || $action === 'check-all' || ($params['action'] ?? '') === 'check-all')) {
     authCheck();
     checkPermission('maintenance.manage');
 
@@ -339,14 +339,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'create-invoice'
     }
 
     // Auto-generate invoice number: INV-YYYYMM-XXXX
-    $prefix = 'INV-' . date('Ym') . '-';
-    $lastSeq = $db->fetch("SELECT nomor_invoice FROM invoices WHERE nomor_invoice LIKE ? ORDER BY id DESC LIMIT 1", [$prefix . '%']);
-    $seq = 1;
-    if ($lastSeq) {
-        $parts = explode('-', $lastSeq['nomor_invoice']);
-        $seq = (int)end($parts) + 1;
-    }
-    $nomorInvoice = $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+    $nomorInvoice = generateInvoiceNo('INV-');
 
     $tanggalInvoice = date('Y-m-d');
     $dueDays = (int)($db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'invoice_due_days'")['nilai'] ?? 14);

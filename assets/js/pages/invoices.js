@@ -29,7 +29,11 @@ export async function init(container) {
                     <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Faktur & Tagihan Pelanggan</h1>
                     <p class="text-sm text-slate-500 dark:text-slate-400">Pantau status pembayaran, cetak faktur resmi, dan kelola piutang klien.</p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5">
+                    <button type="button" id="btn-export-invoices-csv" class="px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <i class="ri-download-2-line text-emerald-600"></i>
+                        <span>Ekspor CSV</span>
+                    </button>
                     <button id="btn-create-invoice" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm shadow-md shadow-primary-500/20 flex items-center gap-2 transition">
                         <i class="ri-file-add-line text-base"></i>
                         <span>Buat Faktur Baru</span>
@@ -456,10 +460,16 @@ async function loadInvoices() {
                 <td class="py-4 px-6 font-mono font-bold ${Number(inv.sisa_tagihan) > 0 ? 'text-rose-600' : 'text-emerald-600'}">
                     ${App.formatIDR(inv.sisa_tagihan)}
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-4 px-6 whitespace-nowrap">
                     ${App.renderStatusBadge(isOverdue && inv.status !== 'lunas' ? 'jatuh_tempo' : inv.status, 'invoice')}
                     ${inv.payment_verification_status === 'pending' ? `
                         <div class="mt-1">${App.renderStatusBadge('pending', 'general')}</div>
+                    ` : ''}
+                    ${inv.last_sent_at ? `
+                        <div class="mt-1 text-[10px] text-slate-400 font-mono flex items-center gap-1" title="Terakhir dikirim ke klien">
+                            <i class="${inv.last_sent_via === 'email' ? 'ri-mail-check-line text-indigo-500' : 'ri-whatsapp-line text-emerald-500'}"></i>
+                            <span>${String(inv.last_sent_via || 'wa').toUpperCase()} · ${App.formatDate(inv.last_sent_at)}</span>
+                        </div>
                     ` : ''}
                 </td>
                 <td class="py-4 px-6 text-right">
@@ -488,15 +498,7 @@ async function loadInvoices() {
         `;
     }).join('');
 
-    paginationEl.innerHTML = `
-        <div>Menampilkan hal <b>${pagination.page}</b> dari <b>${pagination.total}</b> faktur</div>
-        <div class="flex items-center gap-2">
-            <button ${pagination.page <= 1 ? 'disabled' : ''} onclick="window.changeInvoicePage(${pagination.page - 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Sebelumnya</button>
-            <button ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="window.changeInvoicePage(${pagination.page + 1})"
-                    class="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(paginationEl, pagination, (p) => { state.page = p; loadInvoices(); }, 'faktur');
 }
 
 function openInvoiceEditor() {
@@ -905,10 +907,32 @@ window.sendInvoiceWA = async (id) => {
             return;
         }
         App.openWhatsAppInvoiceReminder(res.data);
+        App.api(`invoices/${id}/log-send`, { method: 'POST', body: { via: 'whatsapp' }, silent: true }).then(() => loadInvoices());
     } catch (err) {
         App.toast('Gagal membuka WhatsApp: ' + err.message, 'error');
     }
 };
+
+document.addEventListener('click', async (e) => {
+    const btn = e.target?.closest('#btn-export-invoices-csv');
+    if (!btn) return;
+    let ep = `invoices?page=1&per_page=100`;
+    if (state.search) ep += `&search=${encodeURIComponent(state.search)}`;
+    if (state.status) ep += `&status=${encodeURIComponent(state.status)}`;
+    if (state.clientId) ep += `&client_id=${encodeURIComponent(state.clientId)}`;
+    const res = await App.api(ep);
+    const rows = res?.data || [];
+    if (rows.length === 0) {
+        App.toast('Tidak ada data faktur untuk diekspor', 'warning');
+        return;
+    }
+    App.exportCsv(
+        `rekap-faktur-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Nomor Faktur', 'Tanggal Terbit', 'Jatuh Tempo', 'Pelanggan', 'Proyek', 'Total Tagihan', 'Sisa Tagihan', 'Status', 'Terakhir Dikirim'],
+        rows.map((r) => [r.nomor_invoice, r.tanggal_invoice, r.tanggal_jatuh_tempo, r.client_nama, r.nama_project || '-', r.total_tagihan, r.sisa_tagihan, r.status, r.last_sent_at ? `${r.last_sent_via} (${r.last_sent_at})` : '-'])
+    );
+    App.toast(`Berhasil mengekspor ${rows.length} faktur ke CSV`, 'success');
+});
 
 window.openPublicPortal = (token) => {
     if (!token) {

@@ -643,6 +643,7 @@ async function loadQuotations() {
                         children: [
                             { label: 'Buka Portal E-Sign', icon: 'ri-external-link-line', iconColor: 'text-indigo-600', action: 'window.openPublicQuotation(\\'${q.public_token || q.nomor_penawaran}\\')' },
                             { label: 'Salin Tautan E-Sign Klien', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicQuotationLink(\\'${q.public_token || q.nomor_penawaran}\\')' },
+                            { label: 'Kirim Email (SMTP)', icon: 'ri-mail-send-line', iconColor: 'text-sky-600', action: 'window.sendQuotationEmail(${q.id})' },
                             { label: 'Kirim WhatsApp', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendQuotationWA(${q.id})' }
                         ]
                     },
@@ -678,13 +679,7 @@ function renderPagination(p) {
         cont.innerHTML = `<span>Menampilkan ${p.total || 0} data</span>`;
         return;
     }
-    cont.innerHTML = `
-        <span>Halaman ${p.page} dari ${p.total_pages} (${p.total} penawaran)</span>
-        <div class="flex items-center gap-1">
-            <button onclick="window.changeQuoPage(${p.page - 1})" ${p.page <= 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Sebelumnya</button>
-            <button onclick="window.changeQuoPage(${p.page + 1})" ${p.page >= p.total_pages ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(cont, p, (page) => { state.page = page; loadQuotations(); }, 'penawaran');
 }
 
 function updateQuoTimelineDiagramPreview() {
@@ -1038,6 +1033,16 @@ window.sendQuotationWA = async (id) => {
     const res = await App.api(`quotations/${id}`);
     if (res && res.success) {
         App.openWhatsAppQuotation(res.data);
+    }
+};
+
+window.sendQuotationEmail = async (id) => {
+    if (!await App.confirm('Kirim Penawaran via Email?', 'Surat penawaran dan tautan E-Sign akan dikirimkan ke email klien via SMTP.')) return;
+    App.toast('Mengirim email penawaran...', 'info');
+    const res = await App.api(`quotations/${id}/send-email`, { method: 'POST' });
+    if (res && res.success) {
+        App.toast(res.message, 'success');
+        loadQuotations();
     }
 };
 

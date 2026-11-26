@@ -22,7 +22,11 @@ export async function init(container) {
                     <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">SLA, Domain &amp; Kontrak Hosting</h1>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Pemantauan masa aktif nama domain, server VPS cloud, SSL, dan perpanjangan kontrak SLA klien.</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="#/status" target="_blank" class="px-3.5 py-2 bg-white hover:bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition">
+                        <i class="ri-external-link-line text-primary-600"></i>
+                        <span>Status Page Publik</span>
+                    </a>
                     <button id="btn-check-all-uptime" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition">
                         <i class="ri-pulse-line text-emerald-400"></i>
                         <span>Uji Semua Uptime &amp; SSL</span>
@@ -82,15 +86,15 @@ export async function init(container) {
                 <div class="overflow-x-auto">
                     <table class="data-table w-full text-left text-xs border-collapse">
                         <thead>
-                            <tr class="bg-slate-50/70 dark:bg-slate-800/40 text-[10px] font-bold uppercase text-slate-500 font-mono border-b border-slate-200/80 dark:border-slate-800">
-                                <th class="py-3 px-6">Nama Aset / Layanan</th>
-                                <th class="py-3 px-4">Jenis</th>
-                                <th class="py-3 px-4">Klien & Proyek</th>
-                                <th class="py-3 px-4">Provider / Domain</th>
-                                <th class="py-3 px-4 text-center">Uptime & SSL</th>
-                                <th class="py-3 px-4 text-right">Biaya Perpanjangan</th>
-                                <th class="py-3 px-4 text-center">Masa Aktif & Sisa Hari</th>
-                                <th class="py-3 px-6 text-right">Aksi</th>
+                            <tr class="bg-slate-50/70 dark:bg-slate-800/40 text-[10px] font-bold uppercase text-slate-500 font-mono border-b border-slate-200/80 dark:border-slate-800 whitespace-nowrap">
+                                <th class="py-3.5 pl-6 pr-4 min-w-[200px]">Nama Aset / Layanan</th>
+                                <th class="py-3.5 px-4 text-center">Jenis</th>
+                                <th class="py-3.5 px-4 min-w-[190px]">Klien & Proyek</th>
+                                <th class="py-3.5 px-4">Provider / Domain</th>
+                                <th class="py-3.5 px-4 text-center">Uptime & SSL</th>
+                                <th class="py-3.5 px-4 text-right">Biaya Perpanjangan</th>
+                                <th class="py-3.5 px-4 text-center">Masa Aktif & Sisa Hari</th>
+                                <th class="py-3.5 pl-4 pr-6 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="maintenance-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -311,52 +315,52 @@ async function loadMaintenanceList() {
             sisaBadge = `<span class="badge-status badge-status-success"><span class="status-dot"></span><i class="ri-checkbox-circle-line text-[11px]"></i><span>${sisa} Hari Lagi</span></span>`;
         }
 
-        let uptimeBadge = `<span class="text-[10px] text-slate-400 font-mono">Belum Diuji</span>`;
+        let uptimeBadge = `<span class="text-[10px] text-slate-400 font-mono whitespace-nowrap">Belum Diuji</span>`;
         if (m.uptime_status === 'online') {
-            uptimeBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 font-mono inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>ONLINE (${m.response_time_ms || 0}ms)</span>`;
+            uptimeBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 font-mono inline-flex items-center gap-1 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>ONLINE (${m.response_time_ms || 0}ms)</span>`;
         } else if (m.uptime_status === 'warning') {
-            uptimeBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 font-mono inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>HTTP ${m.http_status_code || 400}</span>`;
+            uptimeBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 font-mono inline-flex items-center gap-1 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>HTTP ${m.http_status_code || 400}</span>`;
         } else if (m.uptime_status === 'down') {
-            uptimeBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400 font-mono inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>DOWN</span>`;
+            uptimeBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400 font-mono inline-flex items-center gap-1 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>DOWN</span>`;
         }
 
         let sslBadge = '';
         if (m.ssl_days_left !== null && m.ssl_days_left !== undefined) {
             const sslDays = parseInt(m.ssl_days_left);
             const isSslExpiring = sslDays <= 14;
-            sslBadge = `<div class="text-[10px] font-mono mt-0.5 flex items-center justify-center gap-1 ${isSslExpiring ? 'text-amber-600 font-bold' : 'text-slate-400'}"><i class="ri-shield-check-line text-emerald-500"></i> SSL: ${sslDays > 0 ? sslDays + ' hr' : 'Expired'}</div>`;
+            sslBadge = `<div class="text-[10px] font-mono mt-1 flex items-center justify-center gap-1 whitespace-nowrap ${isSslExpiring ? 'text-amber-600 font-bold' : 'text-slate-400'}"><i class="ri-shield-check-line text-emerald-500"></i> SSL: ${sslDays > 0 ? sslDays + ' hr' : 'Expired'}</div>`;
         }
 
         return `
             <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition">
-                <td class="py-3.5 px-6">
-                    <div class="font-bold text-slate-900 dark:text-white">${m.nama_aset}</div>
-                    ${m.domain_name ? `<div class="text-[11px] font-mono text-primary-600">${m.domain_name}</div>` : ''}
+                <td class="py-3.5 pl-6 pr-4 align-middle min-w-[200px] max-w-[260px]">
+                    <div class="font-bold text-slate-900 dark:text-white leading-snug">${m.nama_aset}</div>
+                    ${m.domain_name ? `<div class="text-[11px] font-mono text-primary-600 truncate mt-0.5" title="${App.escapeHtml(m.domain_name)}">${m.domain_name}</div>` : ''}
                 </td>
-                <td class="py-3.5 px-4">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${j.bg}">${j.label}</span>
+                <td class="py-3.5 px-4 align-middle text-center whitespace-nowrap">
+                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${j.bg}">${j.label}</span>
                 </td>
-                <td class="py-3.5 px-4 font-sans">
-                    <div class="font-bold text-slate-800 dark:text-slate-200">${m.nama_perusahaan}</div>
-                    ${m.nama_project ? `<div class="text-[10px] text-slate-400">Proyek: ${m.nama_project}</div>` : ''}
+                <td class="py-3.5 px-4 align-middle font-sans min-w-[190px] max-w-[250px]">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 leading-snug">${m.nama_perusahaan}</div>
+                    ${m.nama_project ? `<div class="text-[10px] text-slate-400 mt-0.5 leading-snug">Proyek: ${m.nama_project}</div>` : ''}
                 </td>
-                <td class="py-3.5 px-4">
+                <td class="py-3.5 px-4 align-middle whitespace-nowrap">
                     <div class="text-slate-700 dark:text-slate-300 font-semibold">${m.provider || '-'}</div>
-                    ${m.ip_address ? `<div class="text-[10px] font-mono text-slate-400">IP: ${m.ip_address}</div>` : ''}
+                    ${m.ip_address ? `<div class="text-[10px] font-mono text-slate-400 mt-0.5">IP: ${m.ip_address}</div>` : ''}
                 </td>
-                <td class="py-3.5 px-4 text-center">
+                <td class="py-3.5 px-4 align-middle text-center whitespace-nowrap">
                     <div>${uptimeBadge}</div>
                     ${sslBadge}
                 </td>
-                <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                <td class="py-3.5 px-4 align-middle text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                     ${App.formatIDR(m.biaya_perpanjangan)}
-                    <div class="text-[10px] text-slate-400 font-sans font-normal uppercase">/ ${m.siklus}</div>
+                    <div class="text-[10px] text-slate-400 font-sans font-normal uppercase mt-0.5">/ ${m.siklus}</div>
                 </td>
-                <td class="py-3.5 px-4 text-center">
-                    <div>${sisaBadge}</div>
+                <td class="py-3.5 px-4 align-middle text-center whitespace-nowrap">
+                    <div class="inline-flex justify-center">${sisaBadge}</div>
                     <div class="text-[10px] font-mono text-slate-400 mt-1">s/d ${App.formatDate(m.tanggal_berakhir)}</div>
                 </td>
-                <td class="py-3.5 px-6 text-right">
+                <td class="py-3.5 pl-4 pr-6 align-middle text-right whitespace-nowrap">
                     <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                         { label: 'Uji Uptime & SSL Sekarang', icon: 'ri-pulse-line', iconColor: 'text-emerald-600', action: 'window.checkSlaHealth(${m.id})' },
                         { label: 'Edit Kontrak SLA / Domain', icon: 'ri-edit-line', iconColor: 'text-primary-600', action: 'window.editSla(${m.id})' },
@@ -390,13 +394,7 @@ function renderPagination(p) {
         cont.innerHTML = `<span>Menampilkan ${p.total} data</span>`;
         return;
     }
-    cont.innerHTML = `
-        <span>Halaman ${p.page} dari ${p.total_pages} (${p.total} aset/SLA)</span>
-        <div class="flex items-center gap-1">
-            <button onclick="window.changeSlaPage(${p.page - 1})" ${p.page <= 1 ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Sebelumnya</button>
-            <button onclick="window.changeSlaPage(${p.page + 1})" ${p.page >= p.total_pages ? 'disabled' : ''} class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40">Berikutnya</button>
-        </div>
-    `;
+    App.renderPagination(cont, p, (page) => { state.page = page; loadMaintenanceList(); }, 'aset/SLA');
 }
 
 function openSlaModal(item = null) {
@@ -528,14 +526,11 @@ window.changeSlaPage = (p) => {
 };
 
 window.sendSlaReminderWA = (aset, clientNama, telepon, sisa, tglBerakhir, biaya) => {
-    let phone = String(telepon || '').replace(/[^0-9]/g, '');
-    if (phone.startsWith('0')) phone = '62' + phone.slice(1);
     const statusText = sisa < 0
         ? `telah melewati masa berlaku (${Math.abs(sisa)} hari lalu pada ${tglBerakhir})`
         : `akan berakhir dalam ${sisa} hari (${tglBerakhir})`;
     const msg = `Halo Bapak/Ibu tim ${clientNama},\n\nKami menginformasikan bahwa layanan *${aset}* ${statusText} dengan estimasi biaya perpanjangan *${App.formatIDR(biaya)}*.\n\nSilakan konfirmasi jika ingin kami proses perpanjangannya atau cek detail di Portal Klien. Terima kasih.`;
-    const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank', 'noopener');
+    App.openWhatsApp(telepon, msg);
 };
 
 export default { init };

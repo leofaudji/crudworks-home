@@ -86,10 +86,12 @@ function renderTab() {
     if (activeTab === 'cashflow-tax') renderCashflowTaxReport(cont);
 }
 
-async function renderCashflowTaxReport(container) {
-    const tahun = new Date().getFullYear();
-    container.innerHTML = `<div class="p-10 text-center text-xs text-slate-400">Memuat proyeksi arus kas & rekap pajak...</div>`;
+async function renderCashflowTaxReport(container, selectedYear = null) {
+    const curY = new Date().getFullYear();
+    const tahun = selectedYear || curY;
+    container.classList.add('opacity-60', 'pointer-events-none', 'transition-opacity', 'duration-150');
     const res = await App.api(`reports/cashflow-tax?tahun=${tahun}`);
+    container.classList.remove('opacity-60', 'pointer-events-none');
     if (!res?.success || !res.data) {
         container.innerHTML = `<div class="p-8 text-center text-xs text-rose-500">Gagal memuat laporan arus kas & pajak.</div>`;
         return;
@@ -119,10 +121,25 @@ async function renderCashflowTaxReport(container) {
                         <h3 class="font-bold text-slate-900 dark:text-white text-base">Rekap Pajak Keluaran Tahun ${tahun}</h3>
                         <p class="text-xs text-slate-400">Akumulasi DPP, PPN Keluaran, dan estimasi potongan PPh 23 jasa (2%)</p>
                     </div>
-                    <div class="flex flex-wrap gap-3 text-xs font-mono">
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+                        <select id="rep-tax-year" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-sans font-bold text-xs">
+                            ${[curY, curY - 1, curY - 2].map(y => `<option value="${y}" ${Number(y) === Number(tahun) ? 'selected' : ''}>Tahun ${y}</option>`).join('')}
+                        </select>
                         <span class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800">DPP: <b>${App.formatIDR(rp.total_dpp)}</b></span>
-                        <span class="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">PPN: <b>${App.formatIDR(rp.total_ppn_keluaran)}</b></span>
-                        <span class="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">Est. PPh 23: <b>${App.formatIDR(rp.estimasi_pph23_2persen)}</b></span>
+                        <span class="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">PPN Keluaran: <b>${App.formatIDR(rp.total_ppn_keluaran)}</b></span>
+                        <span class="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">PPN Masukan: <b>${App.formatIDR(rp.total_ppn_masukan || 0)}</b></span>
+                        <span class="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300">PPN Kurang Bayar: <b>${App.formatIDR(rp.ppn_kurang_bayar ?? rp.total_ppn_keluaran)}</b></span>
+                        <span class="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">PPh 23 Terpotong: <b>${App.formatIDR(rp.total_pph23_terpotong || 0)}</b></span>
+                        <div class="relative inline-block font-sans" id="rep-tax-exp-wrap">
+                            <button type="button" id="rep-tax-exp-btn" class="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-primary-600 text-white font-bold text-xs inline-flex items-center gap-1">
+                                <i class="ri-download-2-line"></i><span>Ekspor</span><i class="ri-arrow-down-s-line"></i>
+                            </button>
+                            <div id="rep-tax-exp-menu" class="hidden absolute right-0 mt-1.5 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-1.5 z-40">
+                                <button type="button" id="btn-tax-preview-pdf" class="w-full px-3.5 py-2 text-left text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"><i class="ri-eye-line text-primary-600"></i><span>Pratinjau PDF</span></button>
+                                <button type="button" id="btn-tax-download-pdf" class="w-full px-3.5 py-2 text-left text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"><i class="ri-file-pdf-2-line text-rose-600"></i><span>Unduh PDF</span></button>
+                                <button type="button" id="btn-export-tax-csv" class="w-full px-3.5 py-2 text-left text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"><i class="ri-file-excel-2-line text-emerald-600"></i><span>Unduh CSV</span></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -131,9 +148,12 @@ async function renderCashflowTaxReport(container) {
                             <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase text-slate-500 font-mono">
                                 <th class="py-3 px-4">Bulan</th>
                                 <th class="py-3 px-4 text-center">Jml Faktur</th>
-                                <th class="py-3 px-4 text-right">DPP (Sebelum Pajak)</th>
+                                <th class="py-3 px-4 text-right">DPP</th>
                                 <th class="py-3 px-4 text-right">PPN Keluaran</th>
+                                <th class="py-3 px-4 text-right">PPN Masukan</th>
+                                <th class="py-3 px-4 text-right">PPN Kurang Bayar</th>
                                 <th class="py-3 px-4 text-right">Est. PPh 23 (2%)</th>
+                                <th class="py-3 px-4 text-right">PPh 23 Beban</th>
                                 <th class="py-3 px-4 text-right font-black">Total Tagihan</th>
                             </tr>
                         </thead>
@@ -144,15 +164,75 @@ async function renderCashflowTaxReport(container) {
                                     <td class="py-3 px-4 text-center">${r.jumlah_faktur}</td>
                                     <td class="py-3 px-4 text-right">${App.formatIDR(r.dpp)}</td>
                                     <td class="py-3 px-4 text-right text-amber-600">${App.formatIDR(r.ppn_keluaran)}</td>
+                                    <td class="py-3 px-4 text-right text-emerald-600">${App.formatIDR(r.ppn_masukan || 0)}</td>
+                                    <td class="py-3 px-4 text-right font-bold text-rose-600">${App.formatIDR(r.ppn_kurang_bayar ?? r.ppn_keluaran)}</td>
                                     <td class="py-3 px-4 text-right text-indigo-600">${App.formatIDR(r.est_pph23)}</td>
+                                    <td class="py-3 px-4 text-right text-slate-600">${App.formatIDR(r.pph23_terpotong || 0)}</td>
                                     <td class="py-3 px-4 text-right font-bold">${App.formatIDR(r.total_faktur)}</td>
-                                </tr>`).join('') : `<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada faktur terbit pada tahun ${tahun}</td></tr>`}
+                                </tr>`).join('') : `<tr><td colspan="9" class="py-8 text-center text-slate-400">Belum ada faktur terbit pada tahun ${tahun}</td></tr>`}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
     `;
+    document.getElementById('rep-tax-year')?.addEventListener('change', (e) => {
+        renderCashflowTaxReport(container, e.target.value);
+    });
+    const taxBtn = document.getElementById('rep-tax-exp-btn');
+    const taxMenu = document.getElementById('rep-tax-exp-menu');
+    const taxWrap = document.getElementById('rep-tax-exp-wrap');
+    taxBtn?.addEventListener('click', (e) => { e.stopPropagation(); taxMenu?.classList.toggle('hidden'); });
+    document.addEventListener('click', (e) => { if (taxWrap && !taxWrap.contains(e.target)) taxMenu?.classList.add('hidden'); });
+
+    const exportTaxPdf = async (output = 'bloburl') => {
+        taxMenu?.classList.add('hidden');
+        const pdfRes = await App.exportPdf({
+            filename: `rekap_pajak_${tahun}.pdf`,
+            title: `REKAPITULASI PAJAK TAHUN ${tahun}`,
+            subtitle: 'PPN Keluaran, PPN Masukan, PPN Kurang Bayar & PPh 23',
+            orientation: 'landscape',
+            output,
+            summaryCards: [
+                { label: 'Total DPP', value: App.formatIDR(rp.total_dpp), tone: 'default' },
+                { label: 'PPN Keluaran', value: App.formatIDR(rp.total_ppn_keluaran), tone: 'default' },
+                { label: 'PPN Masukan', value: App.formatIDR(rp.total_ppn_masukan || 0), tone: 'default' },
+                { label: 'PPN Kurang Bayar', value: App.formatIDR(rp.ppn_kurang_bayar ?? rp.total_ppn_keluaran), tone: 'default' }
+            ],
+            sections: [
+                {
+                    type: 'table',
+                    heading: `Rekapitulasi Pajak Masa — Tahun ${tahun}`,
+                    head: ['Bulan', 'Faktur', 'DPP', 'PPN Keluaran', 'PPN Masukan', 'PPN Kurang Bayar', 'Est. PPh 23 (2%)', 'Total Tagihan'],
+                    body: rows.map((r) => [r.bulan, String(r.jumlah_faktur), App.formatIDR(r.dpp), App.formatIDR(r.ppn_keluaran), App.formatIDR(r.ppn_masukan || 0), App.formatIDR(r.ppn_kurang_bayar ?? r.ppn_keluaran), App.formatIDR(r.est_pph23), App.formatIDR(r.total_faktur)]),
+                    foot: ['TOTAL', String(rows.reduce((a, b) => a + Number(b.jumlah_faktur || 0), 0)), App.formatIDR(rp.total_dpp), App.formatIDR(rp.total_ppn_keluaran), App.formatIDR(rp.total_ppn_masukan || 0), App.formatIDR(rp.ppn_kurang_bayar ?? rp.total_ppn_keluaran), App.formatIDR(rp.estimasi_pph23_2persen || 0), App.formatIDR(rows.reduce((a, b) => a + Number(b.total_faktur || 0), 0))],
+                    columnStyles: {
+                        0: { fontStyle: 'bold' },
+                        1: { halign: 'center' },
+                        2: { halign: 'right' },
+                        3: { halign: 'right' },
+                        4: { halign: 'right' },
+                        5: { halign: 'right', fontStyle: 'bold' },
+                        6: { halign: 'right' },
+                        7: { halign: 'right', fontStyle: 'bold' }
+                    }
+                }
+            ]
+        });
+        if (output === 'bloburl' && pdfRes?.blobUrl) {
+            App.openPdfModal({ title: `Pratinjau Rekap Pajak ${tahun}`, filename: pdfRes.filename, blobUrl: pdfRes.blobUrl });
+        }
+    };
+    document.getElementById('btn-tax-preview-pdf')?.addEventListener('click', () => exportTaxPdf('bloburl'));
+    document.getElementById('btn-tax-download-pdf')?.addEventListener('click', () => exportTaxPdf('download'));
+    document.getElementById('btn-export-tax-csv')?.addEventListener('click', () => {
+        taxMenu?.classList.add('hidden');
+        App.exportCsv(
+            `rekap_pajak_${tahun}.csv`,
+            ['Bulan', 'Jumlah Faktur', 'DPP', 'PPN Keluaran', 'PPN Masukan', 'PPN Kurang Bayar', 'Est PPh 23', 'PPh 23 Beban', 'Total Tagihan'],
+            rows.map((r) => [r.bulan, r.jumlah_faktur, r.dpp, r.ppn_keluaran, r.ppn_masukan || 0, r.ppn_kurang_bayar ?? r.ppn_keluaran, r.est_pph23, r.pph23_terpotong || 0, r.total_faktur])
+        );
+    });
 }
 
 // 1. Aging Report

@@ -38,16 +38,7 @@ function defaultSpkClauses(array $data): string
 
 function generateNomorKontrak(Database $db): string
 {
-    $prefix = 'SPK/' . date('Y/m') . '/';
-    $last = $db->fetch(
-        "SELECT nomor_kontrak FROM contracts WHERE nomor_kontrak LIKE ? ORDER BY id DESC LIMIT 1",
-        [$prefix . '%']
-    );
-    $seq = 1;
-    if ($last && preg_match('/(\d+)$/', $last['nomor_kontrak'], $m)) {
-        $seq = (int)$m[1] + 1;
-    }
-    return $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
+    return generateDocNumber('contracts', 'nomor_kontrak', 'SPK/' . date('Y/m') . '/', 4, false, '');
 }
 
 // 1. Detail Kontrak

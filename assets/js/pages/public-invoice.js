@@ -314,8 +314,33 @@ async function loadPublicInvoice(token) {
                 </div>
             </div>
 
-            <!-- Upload Proof of Payment Box (Only if not fully paid) -->
             ${!isLunas ? `
+                <!-- Online Payment Gateway (QRIS / Virtual Account) -->
+                <div class="bg-indigo-50/70 dark:bg-indigo-950/20 rounded-3xl border border-indigo-200 dark:border-indigo-900/60 p-6 sm:p-8 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-200/70 dark:border-indigo-900/60">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="ri-qr-code-line text-indigo-600 text-base"></i> Pembayaran Online Instan (QRIS &amp; Virtual Account)
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Faktur otomatis terverifikasi lunas seketika setelah pembayaran berhasil.</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 text-[10px] font-bold uppercase self-start">Otomatis</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="pg-channel-select" class="px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold">
+                            <option value="qris">QRIS (Semua E-Wallet &amp; Mobile Banking)</option>
+                            <option value="va_bca">BCA Virtual Account</option>
+                            <option value="va_mandiri">Mandiri Virtual Account</option>
+                            <option value="ewallet">E-Wallet Instan</option>
+                        </select>
+                        <button type="button" id="btn-pg-pay-now" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-sm transition">
+                            <i class="ri-secure-payment-line"></i><span>Bayar Online Sekarang</span>
+                        </button>
+                    </div>
+                    <div id="pg-checkout-box" class="hidden"></div>
+                </div>
+
+                <!-- Upload Proof of Payment Box (Only if not fully paid) -->
                 <div class="p-6 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 rounded-3xl space-y-4">
                     <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                         <div>
@@ -398,6 +423,73 @@ async function loadPublicInvoice(token) {
         } catch (err) {
             App.toast('Gagal mengunduh dokumen PDF', 'error');
         }
+    });
+
+    // Online Payment Gateway Checkout
+    document.getElementById('btn-pg-pay-now')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-pg-pay-now');
+        const channel = document.getElementById('pg-channel-select')?.value || 'qris';
+        const box = document.getElementById('pg-checkout-box');
+        if (!box) return;
+
+        App.btnLoading(btn, true, 'Membuat Kode Bayar...');
+        const res = await App.api('payment-gateway/create', {
+            method: 'POST',
+            body: { token: inv.public_token || token, channel }
+        });
+        App.btnLoading(btn, false);
+
+        if (!res?.success || !res.data) return;
+        const tx = res.data;
+        box.classList.remove('hidden');
+        box.innerHTML = `
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="font-mono font-bold text-slate-700 dark:text-slate-200">Order: ${App.escapeHtml(tx.order_id)}</span>
+                    <span class="font-mono font-extrabold text-indigo-600">${App.formatIDR(tx.amount)}</span>
+                </div>
+                ${tx.va_number ? `
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-between gap-2">
+                        <div>
+                            <div class="text-[10px] uppercase font-bold text-slate-400">Nomor Virtual Account</div>
+                            <div class="text-base font-mono font-black text-slate-900 dark:text-white tracking-wider">${App.escapeHtml(tx.va_number)}</div>
+                        </div>
+                        <button type="button" onclick="navigator.clipboard.writeText('${App.escapeHtml(tx.va_number)}');App.toast('Nomor VA disalin','success')" class="px-3 py-1.5 rounded-lg bg-slate-200/70 dark:bg-slate-700 text-xs font-semibold">Salin</button>
+                    </div>
+                ` : ''}
+                ${tx.qr_string ? `
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 flex flex-col sm:flex-row items-center gap-3">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(tx.qr_string)}" alt="QRIS" width="128" height="128" class="w-32 h-32 rounded-xl border border-slate-200 bg-white p-1 shrink-0">
+                        <div class="text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                            <div class="font-bold">Scan QRIS di atas dengan aplikasi pembayaran Anda</div>
+                            <div class="text-[11px] text-slate-400">Mode saat ini: <b class="uppercase">${App.escapeHtml(tx.provider)}</b></div>
+                        </div>
+                    </div>
+                ` : ''}
+                ${tx.provider === 'sandbox' ? `
+                    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-[11px] text-amber-600 dark:text-amber-400"><i class="ri-flask-line"></i> Mode Sandbox aktif — uji pelunasan otomatis via webhook:</span>
+                        <button type="button" id="btn-pg-sim-pay" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition">
+                            Simulasikan Pembayaran Sukses
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        document.getElementById('btn-pg-sim-pay')?.addEventListener('click', async () => {
+            const simBtn = document.getElementById('btn-pg-sim-pay');
+            App.btnLoading(simBtn, true, 'Memproses...');
+            const simRes = await App.api('payment-gateway/simulate-pay', {
+                method: 'POST',
+                body: { order_id: tx.order_id }
+            });
+            App.btnLoading(simBtn, false);
+            if (simRes?.success) {
+                App.toast(simRes.message, 'success');
+                await loadPublicInvoice(inv.public_token || token);
+            }
+        });
     });
 
     // Upload proof form handler

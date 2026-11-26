@@ -106,14 +106,7 @@ if ($method === 'POST') {
     }
 
     // Generate kode layanan otomatis (SRV-0001)
-    $lastService = $db->fetch("SELECT kode_layanan FROM services WHERE kode_layanan LIKE 'SRV-%' ORDER BY id DESC LIMIT 1");
-    if ($lastService && !empty($lastService['kode_layanan'])) {
-        $lastNum = (int)str_replace('SRV-', '', $lastService['kode_layanan']);
-        $nextNum = $lastNum + 1;
-    } else {
-        $nextNum = 1;
-    }
-    $kodeLayanan = 'SRV-' . str_pad((string)$nextNum, 4, '0', STR_PAD_LEFT);
+    $kodeLayanan = generateDocNumber('services', 'kode_layanan', 'SRV-', 4, false, '');
 
     $newId = $db->insert(
         "INSERT INTO services (kode_layanan, nama_layanan, kategori, deskripsi, harga_standar, siklus_tagihan, status) 

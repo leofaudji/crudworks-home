@@ -7,6 +7,47 @@ $db = Database::getInstance();
 if ($id && is_numeric($id)) {
     $paymentId = (int)$id;
 
+    if ($action === 'send-email') {
+        if ($method !== 'POST') errorResponse('Method not allowed', 405);
+        checkPermission('payment.view');
+
+        $p = $db->fetch(
+            "SELECT py.*,
+                    i.nomor_invoice, i.public_token, i.sisa_tagihan as current_sisa,
+                    c.nama_perusahaan as client_nama, c.penanggung_jawab as client_pic, c.email as client_email,
+                    pm.nama_metode, pm.nama_bank
+             FROM payments py
+             JOIN invoices i ON py.invoice_id = i.id
+             JOIN clients c ON i.client_id = c.id
+             JOIN payment_methods pm ON py.payment_method_id = pm.id
+             WHERE py.id = ?",
+            [$paymentId]
+        );
+        if (!$p) errorResponse('Data pembayaran tidak ditemukan', 404);
+        if (empty($p['client_email'])) errorResponse('Email klien belum diatur pada data pelanggan', 422);
+
+        $cfg = getAppSettingsMap();
+        $portalUrl = '';
+        if (!empty($p['public_token'])) {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
+            $portalUrl = "{$scheme}://{$host}{$base}/#/public-invoice?token=" . urlencode((string)$p['public_token']);
+        }
+
+        $attachments = extractPdfAttachmentFromParams($params, "kuitansi_{$p['nomor_pembayaran']}.pdf");
+        $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
+        $subject = "Kuitansi Pembayaran {$p['nomor_pembayaran']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
+        $html = buildPaymentReceiptEmailHtml($p, $cfg, $portalUrl, $hasLogo, !empty($attachments));
+        $mailRes = sendErpEmail((string)$p['client_email'], (string)($p['client_pic'] ?: $p['client_nama']), $subject, $html, 'payment', $paymentId, $attachments);
+        if (empty($mailRes['success'])) {
+            errorResponse($mailRes['message'] ?? 'Gagal mengirim email kuitansi pembayaran', 500);
+        }
+
+        logActivity('send_email', 'payments', $paymentId, null, ['sent_to' => $p['client_email']]);
+        successResponse(['sent_to' => $p['client_email']], 'Kuitansi pembayaran berhasil dikirim via SMTP ke ' . $p['client_email']);
+    }
+
     if ($method === 'GET') {
         checkPermission('payment.view');
 

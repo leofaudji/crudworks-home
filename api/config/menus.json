@@ -229,6 +229,13 @@
                 "perm": "audit.view"
             },
             {
+                "id": 35,
+                "nama": "Riwayat Email",
+                "icon": "ri-mail-check-line",
+                "url": "#/email-logs",
+                "perm": "audit.view"
+            },
+            {
                 "id": 18,
                 "nama": "Cadangan Database",
                 "icon": "ri-database-2-line",

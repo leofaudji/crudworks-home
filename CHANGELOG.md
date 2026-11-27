@@ -4,6 +4,24 @@ Daftar pembaruan fitur, peningkatan kenyamanan, dan perbaikan sistem **CRUDWorks
 
 ---
 
+## [1.8.15] - 2026-11-27
+
+### Ditambahkan (Added)
+
+- **Menu Riwayat Pengiriman Email**: Menu baru untuk memantau status pengiriman email Faktur, Surat Penawaran (SPH), Kuitansi Pembayaran, dan uji coba server email, lengkap dengan pencarian, filter status/jenis dokumen, serta detail kendala bila pengiriman gagal.
+- **Kirim Email Kuitansi Pembayaran & Aksi Cepat di Faktur**: Pembayaran Masuk kini dapat mengirim kuitansi resmi langsung ke email pelanggan, dan daftar Tagihan & Faktur memiliki tombol **Kirim via Email** langsung dari menu aksi tabel.
+- **Tambah, Edit & Hapus Termin Proyek**: Pengelolaan Daftar Termin Proyek kini mendukung penambahan termin satuan, pengubahan nama/porsi/nominal/tanggal target, serta penghapusan termin yang belum ditagihkan.
+
+### Disempurnakan (Improved)
+
+- **Lampiran PDF Otomatis & Logo Perusahaan pada Email**: Pengiriman email Surat Penawaran, Faktur Tagihan, dan Kuitansi Pembayaran kini otomatis melampirkan dokumen PDF resmi serta menampilkan logo perusahaan di bagian atas email. Khusus email penawaran, nominal harga tidak ditampilkan di isi email agar pelanggan meninjau rincian lengkap langsung dari PDF terlampir.
+- **Tampilan Dokumen PDF Lebih Ringkas**: Faktur Tagihan, Kuitansi Pembayaran, dan Laporan Keuangan tidak lagi menampilkan kolom paraf manual, sedangkan PDF Surat Penawaran hanya menampilkan ruang tanda tangan calon pelanggan dengan keterangan penerbitan resmi sistem.
+- **Nama Layanan Otomatis pada PDF Faktur**: Faktur yang tidak terhubung ke proyek kini menampilkan nama layanan atau item yang ditagihkan, bukan lagi label umum.
+- **Diagram Timeline Penawaran dalam Satuan Minggu**: Jadwal pengerjaan pada Surat Penawaran menggunakan satuan **Minggu** secara default.
+- **Ringkasan Laporan Arus Kas**: Aktivitas Operasional, Investasi, dan Pendanaan pada Laporan Arus Kas tampil ringkas per kelompok akun transaksi, dengan tombol beralih ke mode Rincian Jurnal bila dibutuhkan.
+
+---
+
 ## [1.8.14] - 2026-11-26
 
 ### Ditambahkan (Added)

@@ -654,6 +654,8 @@ window.checkProjectHealth = async (id) => (await import('./projects/insights.js'
 window.viewProjectProfitability = async (id) => (await import('./projects/insights.js')).viewProjectProfitability(id);
 window.manageProjectMilestones = async (id) => (await import('./projects/insights.js')).manageProjectMilestones(id);
 window.applyMilestonePattern = async (id, pattern) => (await import('./projects/insights.js')).applyMilestonePattern(id, pattern);
+window.openMilestoneForm = async (projectId, milestone = null, projectValue = 0) => (await import('./projects/insights.js')).openMilestoneForm(projectId, milestone, projectValue);
+window.deleteMilestone = async (projectId, milestoneId, nama) => (await import('./projects/insights.js')).deleteMilestone(projectId, milestoneId, nama);
 window.createMilestoneInvoice = async (projectId, milestoneId, nama) => (await import('./projects/insights.js')).createMilestoneInvoice(projectId, milestoneId, nama);
 
 window.openProjectKanban = async (projectId, milestoneFilter = '') => (await import('./projects/kanban.js')).openProjectKanban(projectId, milestoneFilter);

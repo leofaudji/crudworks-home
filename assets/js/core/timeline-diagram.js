@@ -9,8 +9,8 @@ export function parseTimelineGantt(rawText) {
     const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) return null;
 
-    const isWeek = /\b(?:minggu|week|mgg|w)\b/i.test(rawText) && !/\b(?:bulan|month|bln)\b/i.test(rawText);
-    const unitLabel = isWeek ? 'MINGGU' : 'BULAN';
+    const isExplicitMonth = /\b(?:bulan|month|bln)\b/i.test(rawText) && !/\b(?:minggu|week|mgg|w)\b/i.test(rawText);
+    const unitLabel = isExplicitMonth ? 'BULAN' : 'MINGGU';
 
     const rows = [];
     let currentRow = null;
@@ -127,8 +127,8 @@ export function parseTimelineStages(rawText) {
     const gantt = parseTimelineGantt(rawText);
     if (!gantt) {
         return [
-            { step: '01', title: 'Instalasi & Penyesuaian', duration: 'Bulan 4', deliverables: ['Instalasi sistem, konfigurasi awal, dan sosialisasi pengguna'] },
-            { step: '02', title: 'Pendampingan & Penggunaan', duration: 'Bulan 5 – 9', deliverables: ['Pendampingan operasional berkala dan pengawalan aplikasi'] }
+            { step: '01', title: 'Instalasi & Penyesuaian', duration: 'Minggu 1', deliverables: ['Instalasi sistem, konfigurasi awal, dan sosialisasi pengguna'] },
+            { step: '02', title: 'Pendampingan & Penggunaan', duration: 'Minggu 2 – 4', deliverables: ['Pendampingan operasional berkala dan pengawalan aplikasi'] }
         ];
     }
     return gantt.rows.map(r => ({

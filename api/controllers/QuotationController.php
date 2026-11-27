@@ -31,9 +31,11 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
     $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
     $portalUrl = "{$scheme}://{$host}{$base}/#/public-quotation?token=" . urlencode($token);
 
+    $attachments = extractPdfAttachmentFromParams($params, "penawaran_{$quo['nomor_penawaran']}.pdf");
+    $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
     $subject = "Surat Penawaran {$quo['nomor_penawaran']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
-    $html = buildQuotationEmailHtml($quo, $cfg, $portalUrl);
-    $mailRes = sendErpEmail((string)$quo['client_email'], (string)($quo['penanggung_jawab'] ?: $quo['nama_perusahaan']), $subject, $html, 'quotation', (int)$id);
+    $html = buildQuotationEmailHtml($quo, $cfg, $portalUrl, $hasLogo, !empty($attachments));
+    $mailRes = sendErpEmail((string)$quo['client_email'], (string)($quo['penanggung_jawab'] ?: $quo['nama_perusahaan']), $subject, $html, 'quotation', (int)$id, $attachments);
     if (empty($mailRes['success'])) {
         errorResponse($mailRes['message'] ?? 'Gagal mengirim email penawaran', 500);
     }

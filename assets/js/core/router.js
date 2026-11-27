@@ -44,6 +44,7 @@ export const ROUTE_META = {
     'roles':      { file: 'roles',      title: 'Hak Akses (RBAC)',      subtitle: 'Konfigurasi peran dan hak akses sistem' },
     'settings':   { file: 'settings',   title: 'Pengaturan Sistem',     subtitle: 'Identitas bisnis, bank, dan preferensi ERP' },
     'audit':      { file: 'audit',      title: 'Jejak Audit',           subtitle: 'Log aktivitas dan rekam jejak transaksi' },
+    'email-logs': { file: 'email-logs', title: 'Riwayat Pengiriman Email', subtitle: 'Log pengiriman email faktur, penawaran, dan uji coba SMTP' },
     'backup':     { file: 'backup',     title: 'Cadangan & Pemulihan',  subtitle: 'Arsip pencadangan database MySQL, unduh berkas SQL & pemulihan data' },
     'changelog':  { file: 'changelog',  title: 'Catatan Rilis',         subtitle: 'Riwayat versi dan pembaruan sistem' }
 };

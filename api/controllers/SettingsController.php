@@ -63,6 +63,54 @@ if ($id === 'test-email' && $method === 'POST') {
     successResponse(null, $res['message']);
 }
 
+if ($id === 'email-logs' && $method === 'GET') {
+    authCheck();
+    checkPermission(['settings.edit', 'audit.view', 'invoice.view', 'quotation.view']);
+
+    $page = max(1, (int)($params['page'] ?? 1));
+    $perPage = min(100, max(5, (int)($params['per_page'] ?? 15)));
+    $offset = ($page - 1) * $perPage;
+    $status = trim((string)($params['status'] ?? ''));
+    $entityType = trim((string)($params['entity_type'] ?? ''));
+    $search = trim((string)($params['search'] ?? ''));
+
+    $where = [];
+    $bind = [];
+    if (in_array($status, ['sent', 'failed'], true)) {
+        $where[] = "el.status = ?";
+        $bind[] = $status;
+    }
+    if ($entityType !== '') {
+        $where[] = "el.entity_type = ?";
+        $bind[] = $entityType;
+    }
+    if ($search !== '') {
+        $like = "%{$search}%";
+        $where[] = "(el.recipient_email LIKE ? OR el.subject LIKE ? OR el.error_message LIKE ? OR COALESCE(inv.nomor_invoice, q.nomor_penawaran, py.nomor_pembayaran, '') LIKE ? OR COALESCE(u.nama_lengkap, '') LIKE ?)";
+        array_push($bind, $like, $like, $like, $like, $like);
+    }
+
+    $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+    $joins = "LEFT JOIN users u ON el.sent_by = u.id
+              LEFT JOIN invoices inv ON el.entity_type = 'invoice' AND el.entity_id = inv.id
+              LEFT JOIN quotations q ON el.entity_type = 'quotation' AND el.entity_id = q.id
+              LEFT JOIN payments py ON el.entity_type = 'payment' AND el.entity_id = py.id";
+
+    $total = (int)$db->count("SELECT COUNT(*) FROM email_logs el {$joins} {$whereSql}", $bind);
+    $rows = $db->fetchAll(
+        "SELECT el.*, u.nama_lengkap as sent_by_name,
+                COALESCE(inv.nomor_invoice, q.nomor_penawaran, py.nomor_pembayaran, '') as doc_number
+         FROM email_logs el
+         {$joins}
+         {$whereSql}
+         ORDER BY el.id DESC
+         LIMIT {$perPage} OFFSET {$offset}",
+        $bind
+    );
+
+    paginatedResponse($rows, $total, $page, $perPage);
+}
+
 if ($id === 'payment-methods') {
     authCheck();
     if ($method === 'GET') {

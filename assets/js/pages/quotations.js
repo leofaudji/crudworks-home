@@ -26,15 +26,15 @@ const DEFAULT_RUANG_LINGKUP_FITUR = `1. Modul Autentikasi & Hak Akses Pengguna (
 4. Pengujian Sistem, Pelatihan Pengguna & Dokumentasi
    - Uji coba UAT bersama tim klien, pelatihan penggunaan sistem, dan deploy ke server produksi.`;
 
-const DEFAULT_TIMELINE_PENGERJAAN = `1. Analisis Kebutuhan & Perancangan Desain (Bulan 1)
+const DEFAULT_TIMELINE_PENGERJAAN = `1. Analisis Kebutuhan & Perancangan Desain (Minggu 1)
 - Penggalian proses bisnis klien, perancangan prototipe antarmuka UI/UX, dan penyusunan skema database.
-2. Pengembangan Inti Sistem & Integrasi Modul (Bulan 2 – 3)
+2. Pengembangan Inti Sistem & Integrasi Modul (Minggu 2 – 3)
 - Pengkodean modul utama aplikasi, logika bisnis, hak akses pengguna (RBAC), dan pengujian internal tim developer.
-3. Pengujian Bersama, UAT & Revisi Minor (Bulan 4)
+3. Pengujian Bersama, UAT & Revisi Minor (Minggu 4)
 - User Acceptance Testing (UAT) bersama pihak klien, penyesuaian evaluasi alur kerja, dan persiapan rilis.
-4. Deployment Server, Pelatihan Staf & BAST (Bulan 4)
+4. Deployment Server, Pelatihan Staf & BAST (Minggu 4)
 - Pemasangan sistem di server produksi klien/cloud, pelatihan staf pengguna (*user training*), dan Berita Acara Serah Terima (BAST).
-5. Pendampingan, Garansi & Pemeliharaan Sistem (Bulan 5 – 9)
+5. Pendampingan, Garansi & Pemeliharaan Sistem (Minggu 5 – 6)
 - Pemantauan stabilitas sistem dan pendampingan penggunaan aplikasi selama masa pemeliharaan resmi.`;
 
 const DEFAULT_PASAL_HAK_KEWAJIBAN = `PASAL 1 — HAK DAN KEWAJIBAN PIHAK PERTAMA (PENYEDIA JASA)
@@ -244,7 +244,7 @@ export async function init(container) {
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <label class="block text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Rencana Tahapan &amp; Timeline Waktu Pengerjaan</label>
-                                <p class="text-[11px] text-slate-400">Jelaskan estimasi durasi (minggu/bulan), deliverable per tahap pengerjaan, hingga masa garansi sistem.</p>
+                                <p class="text-[11px] text-slate-400">Jelaskan estimasi durasi (minggu), deliverable per tahap pengerjaan, hingga masa garansi sistem.</p>
                             </div>
                         </div>
 
@@ -261,14 +261,14 @@ export async function init(container) {
 
                         <div class="flex flex-wrap items-center gap-1.5">
                             <span class="text-[10px] font-bold uppercase text-slate-400 mr-1">Sisipkan Cepat:</span>
-                            <button type="button" data-append-timeline="1. Instalasi, penyesuaian, sosialisasi (Bulan 4)&#10;2. Pendampingan dan penggunaan aplikasi (Bulan 5 – 9)" class="btn-timeline-chip px-2.5 py-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg text-[11px] font-semibold transition border border-amber-200/80 dark:border-amber-800/50">+ Format Matriks: Bulan 4 &amp; 5–9</button>
-                            <button type="button" data-append-timeline="1. Analisis Kebutuhan &amp; Perancangan Desain (Bulan 1)&#10;- Wawancara proses bisnis dan penyusunan prototipe wireframe UI/UX." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 1: Desain &amp; Analisis</button>
-                            <button type="button" data-append-timeline="2. Pengembangan Inti Sistem &amp; Integrasi Modul (Bulan 2 – 3)&#10;- Pengkodean modul utama, logika bisnis dan hak akses RBAC." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 2–3: Development</button>
-                            <button type="button" data-append-timeline="3. Pengujian Bersama, UAT &amp; Pelatihan Staf (Bulan 4)&#10;- User Acceptance Testing bersama klien dan pelatihan operasional." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 4: UAT &amp; Go-Live</button>
-                            <button type="button" data-append-timeline="4. Pendampingan, Garansi &amp; Pemeliharaan (Bulan 5 – 9)&#10;- Pendampingan teknis dan perbaikan kendala gratis selama garansi." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Bulan 5–9: Pendampingan</button>
+                            <button type="button" data-append-timeline="1. Instalasi, penyesuaian, sosialisasi (Minggu 1)&#10;2. Pendampingan dan penggunaan aplikasi (Minggu 2 – 4)" class="btn-timeline-chip px-2.5 py-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg text-[11px] font-semibold transition border border-amber-200/80 dark:border-amber-800/50">+ Format Matriks: Minggu 1 &amp; 2–4</button>
+                            <button type="button" data-append-timeline="1. Analisis Kebutuhan &amp; Perancangan Desain (Minggu 1)&#10;- Wawancara proses bisnis dan penyusunan prototipe wireframe UI/UX." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Minggu 1: Desain &amp; Analisis</button>
+                            <button type="button" data-append-timeline="2. Pengembangan Inti Sistem &amp; Integrasi Modul (Minggu 2 – 3)&#10;- Pengkodean modul utama, logika bisnis dan hak akses RBAC." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Minggu 2–3: Development</button>
+                            <button type="button" data-append-timeline="3. Pengujian Bersama, UAT &amp; Pelatihan Staf (Minggu 4)&#10;- User Acceptance Testing bersama klien dan pelatihan operasional." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Minggu 4: UAT &amp; Go-Live</button>
+                            <button type="button" data-append-timeline="4. Pendampingan, Garansi &amp; Pemeliharaan (Minggu 5 – 6)&#10;- Pendampingan teknis dan perbaikan kendala gratis selama garansi." class="btn-timeline-chip px-2.5 py-1 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-primary-700 rounded-lg text-[11px] font-semibold transition">+ Minggu 5–6: Pendampingan</button>
                         </div>
 
-                        <textarea id="form-quo-timeline" rows="7" placeholder="1. Instalasi, penyesuaian, sosialisasi (Bulan 4)&#10;2. Pendampingan dan penggunaan aplikasi (Bulan 5 – 9)"
+                        <textarea id="form-quo-timeline" rows="7" placeholder="1. Instalasi, penyesuaian, sosialisasi (Minggu 1)&#10;2. Pendampingan dan penggunaan aplikasi (Minggu 2 – 4)"
                                   class="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs leading-relaxed font-sans font-mono"></textarea>
                     </div>
 
@@ -1037,9 +1037,32 @@ window.sendQuotationWA = async (id) => {
 };
 
 window.sendQuotationEmail = async (id) => {
-    if (!await App.confirm('Kirim Penawaran via Email?', 'Surat penawaran dan tautan E-Sign akan dikirimkan ke email klien via SMTP.')) return;
-    App.toast('Mengirim email penawaran...', 'info');
-    const res = await App.api(`quotations/${id}/send-email`, { method: 'POST' });
+    if (!await App.confirm('Kirim Penawaran via Email?', 'Surat penawaran PDF beserta tautan E-Sign akan dikirimkan ke email klien via SMTP.')) return;
+    App.toast('Menyiapkan PDF & mengirim email penawaran...', 'info');
+
+    let payload = {};
+    try {
+        const detailRes = await App.api(`quotations/${id}`);
+        if (detailRes && detailRes.success && detailRes.data && typeof App.generateQuotationPdf === 'function') {
+            const pdfRes = await App.generateQuotationPdf(detailRes.data, 'bloburl');
+            if (pdfRes?.blob) {
+                const pdfBase64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+                    reader.onerror = () => reject(new Error('Gagal membaca blob PDF'));
+                    reader.readAsDataURL(pdfRes.blob);
+                });
+                if (pdfRes.blobUrl) URL.revokeObjectURL(pdfRes.blobUrl);
+                if (pdfBase64) {
+                    payload = { pdf_base64: pdfBase64, pdf_filename: pdfRes.filename };
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('Gagal menyiapkan lampiran PDF penawaran:', err);
+    }
+
+    const res = await App.api(`quotations/${id}/send-email`, { method: 'POST', body: payload });
     if (res && res.success) {
         App.toast(res.message, 'success');
         loadQuotations();

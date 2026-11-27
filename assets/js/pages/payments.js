@@ -219,6 +219,9 @@ export async function init(container) {
                         <button id="btn-receipt-download-pdf" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow">
                             <i class="ri-download-line"></i> Unduh PDF
                         </button>
+                        <button id="btn-receipt-send-email" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow">
+                            <i class="ri-mail-send-line"></i> Kirim Email
+                        </button>
                     </div>
                     <button onclick="document.getElementById('receipt-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
                         <i class="ri-close-line text-2xl"></i>
@@ -628,6 +631,7 @@ async function loadPayments() {
                 <button type="button" onclick="App.toggleTableActionMenu(this, event, [
                     { label: 'Cetak / Unduh Kuitansi', icon: 'ri-file-pdf-2-line', iconColor: 'text-rose-600', action: 'window.printPaymentReceiptPdf(${p.id})' },
                     { label: 'Rincian Kuitansi Resmi', icon: 'ri-file-list-3-line', iconColor: 'text-primary-600', action: 'window.viewReceipt(${p.id})' },
+                    { label: 'Kirim Kuitansi via Email', icon: 'ri-mail-send-line', iconColor: 'text-indigo-600', action: 'window.sendPaymentEmail(${p.id})' },
                     { divider: true },
                     { label: 'Batalkan Pembayaran', icon: 'ri-close-circle-line', danger: true, action: 'window.cancelPayment(${p.id}, \\'${p.nomor_pembayaran}\\')' }
                 ])" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition" title="Menu Aksi">
@@ -742,6 +746,21 @@ window.viewReceipt = async (id) => {
     if (downPdfBtn) {
         downPdfBtn.onclick = () => window.printPaymentReceiptPdf(id, 'download');
     }
+    const sendEmailBtn = document.getElementById('btn-receipt-send-email');
+    if (sendEmailBtn) {
+        sendEmailBtn.onclick = async () => {
+            sendEmailBtn.disabled = true;
+            sendEmailBtn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Menyiapkan PDF...`;
+            const payload = await buildPaymentReceiptEmailPayload(p);
+            sendEmailBtn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Mengirimkan...`;
+            const sRes = await App.api(`payments/${id}/send-email`, { method: 'POST', body: payload });
+            sendEmailBtn.disabled = false;
+            sendEmailBtn.innerHTML = `<i class="ri-mail-send-line"></i> Kirim Email`;
+            if (sRes && sRes.success) {
+                App.toast(sRes.message, 'success');
+            }
+        };
+    }
 
     cont.innerHTML = `
         <div class="space-y-6 text-slate-900 font-sans">
@@ -785,21 +804,47 @@ window.viewReceipt = async (id) => {
                 ${p.catatan ? `<div class="text-[11px] text-slate-500 italic">Catatan: ${p.catatan}</div>` : ''}
             </div>
 
-            <!-- Signatures -->
-            <div class="pt-8 flex justify-between text-xs text-center">
-                <div>
-                    <div class="text-slate-400 mb-12">Diserahkan oleh,</div>
-                    <div class="font-bold text-slate-800 border-t border-slate-300 pt-1 w-40">${p.client_pic}</div>
-                </div>
-                <div>
-                    <div class="text-slate-400 mb-12">Kasir / Verifikator,</div>
-                    <div class="font-bold text-slate-800 border-t border-slate-300 pt-1 w-40">${p.verifikator_nama}</div>
-                </div>
+            <!-- Electronic verification footer -->
+            <div class="pt-5 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Diverifikasi oleh <strong class="text-slate-700">${p.verifikator_nama || 'Bagian Keuangan'}</strong></span>
+                <span class="italic">Kuitansi sah secara komputerisasi tanpa paraf penyetor/penerima.</span>
             </div>
         </div>
     `;
 
     document.getElementById('receipt-modal').classList.remove('hidden');
+};
+
+async function buildPaymentReceiptEmailPayload(p) {
+    if (!p || typeof App.generatePaymentReceiptPdf !== 'function') return {};
+    try {
+        const pdfRes = await App.generatePaymentReceiptPdf(p, 'bloburl');
+        if (!pdfRes?.blob) return {};
+        const pdfBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+            reader.onerror = () => reject(new Error('Gagal membaca blob PDF'));
+            reader.readAsDataURL(pdfRes.blob);
+        });
+        if (pdfRes.blobUrl) URL.revokeObjectURL(pdfRes.blobUrl);
+        return pdfBase64 ? { pdf_base64: pdfBase64, pdf_filename: pdfRes.filename } : {};
+    } catch (err) {
+        console.warn('Gagal menyiapkan lampiran PDF kuitansi:', err);
+        return {};
+    }
+}
+
+window.sendPaymentEmail = async (id) => {
+    if (!await App.confirm('Kirim Kuitansi via Email?', 'Kuitansi pembayaran PDF akan dikirimkan ke email klien via SMTP.')) return;
+    App.toast('Menyiapkan PDF & mengirim email kuitansi...', 'info');
+    const detailRes = await App.api(`payments/${id}`);
+    const payload = (detailRes && detailRes.success && detailRes.data)
+        ? await buildPaymentReceiptEmailPayload(detailRes.data)
+        : {};
+    const res = await App.api(`payments/${id}/send-email`, { method: 'POST', body: payload });
+    if (res && res.success) {
+        App.toast(res.message, 'success');
+    }
 };
 
 window.printPaymentReceiptPdf = async (id, output = 'bloburl') => {

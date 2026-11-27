@@ -426,9 +426,10 @@ PASAL 3 — GARANSI SISTEM & DUKUNGAN PEMELIHARAAN
         renderProse(quo.catatan_klien);
     }
 
-    // 7. Pengesahan & Tanda Tangan Dua Belah Pihak
-    ensureQuoSpace(35);
-    const sigW = 62;
+    // 7. Pengesahan Pelanggan & Keterangan Terbit Resmi Komputerisasi
+    ensureQuoSpace(36);
+    y += 2;
+    const sigW = 64;
     // Left: Client approval
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.0);
@@ -439,31 +440,38 @@ PASAL 3 — GARANSI SISTEM & DUKUNGAN PEMELIHARAAN
             doc.addImage(quo.signature_data, 'PNG', margin + 4, y + 1, 40, 14);
         } catch (_) {}
     }
+    doc.setDrawColor(148, 163, 184);
+    doc.setLineWidth(0.25);
     doc.line(margin, y + 17, margin + sigW, y + 17);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.8);
     doc.setTextColor(15, 23, 42);
-    doc.text(String(quo.signed_by_name || quo.penanggung_jawab || 'Pelanggan / Klien'), margin, y + 21.5);
+    doc.text(String(quo.signed_by_name || quo.penanggung_jawab || 'Pelanggan / Klien'), margin, y + 21.5, { maxWidth: sigW });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.8);
     doc.setTextColor(100, 116, 139);
-    doc.text(String(quo.signed_by_position || quo.nama_perusahaan || 'Calon Klien'), margin, y + 25.5);
+    doc.text(String(quo.signed_by_position || quo.nama_perusahaan || 'Calon Klien'), margin, y + 25.5, { maxWidth: sigW });
 
-    // Right: Authorized Provider
-    const rSigX = pageWidth - margin - sigW;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.0);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Diterbitkan secara Sah oleh (Pihak Kedua),', rSigX, y);
-    doc.line(rSigX, y + 17, pageWidth - margin, y + 17);
+    // Right: Electronic issuance info box (tanpa tanda tangan pihak kedua)
+    const infoBoxW = contentWidth - sigW - 14;
+    const infoBoxX = pageWidth - margin - infoBoxW;
+    const infoBoxH = 22;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(infoBoxX, y + 2, infoBoxW, infoBoxH, 1.5, 1.5, 'FD');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.8);
-    doc.setTextColor(15, 23, 42);
-    doc.text(String(companyInfo.name), rSigX, y + 21.5);
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Diterbitkan Resmi oleh ${String(companyInfo.name)}`, infoBoxX + 4, y + 8, { maxWidth: infoBoxW - 8 });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.2);
     doc.setTextColor(100, 116, 139);
-    doc.text('Tim Operasional & Komersial', rSigX, y + 25.5);
+    const infoLines = doc.splitTextToSize(
+        'Dokumen penawaran ini diterbitkan secara resmi oleh sistem komputerisasi dan sah tanpa memerlukan tanda tangan basah Pihak Kedua.',
+        infoBoxW - 8
+    );
+    doc.text(infoLines, infoBoxX + 4, y + 12.8);
 
     // Apply Document Watermark across all pages (DISETUJUI / DITOLAK / DRAFT / DIBATALKAN / KADALUARSA)
     _applyDocumentWatermark(doc, quo.status, 'quotation');
@@ -794,12 +802,10 @@ ${quo.catatan_klien ? `
                 <span style="font-size:8.5pt; color:#64748b;">${escapeHtml(quo.signed_by_position || quo.nama_perusahaan || 'Calon Klien')}</span>
             </div>
         </td>
-        <td style="text-align:right;">
-            <div style="font-size:8.5pt; color:#64748b;">Diterbitkan secara Sah oleh (Pihak Kedua),</div>
-            <div style="height:60pt;"></div>
-            <div style="border-top:1pt solid #0f172a; width:75%; margin-left:auto; padding-top:4pt; text-align:right;">
-                <strong>${escapeHtml(companyInfo.name)}</strong><br>
-                <span style="font-size:8.5pt; color:#64748b;">Tim Operasional & Komersial</span>
+        <td style="vertical-align:bottom;">
+            <div style="background:#f8fafc; border:1pt solid #e2e8f0; border-radius:4pt; padding:10pt 12pt; text-align:left; font-size:8.5pt; color:#475569;">
+                <strong style="color:#0f172a; display:block; margin-bottom:4pt;">Diterbitkan Resmi oleh ${escapeHtml(companyInfo.name)}</strong>
+                Dokumen penawaran ini diterbitkan secara resmi oleh sistem komputerisasi dan sah tanpa memerlukan tanda tangan basah Pihak Kedua.
             </div>
         </td>
     </tr>

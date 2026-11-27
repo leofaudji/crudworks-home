@@ -137,10 +137,15 @@ export async function manageProjectMilestones(id) {
             </div>
 
             <div class="space-y-3">
-                <div class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Daftar Termin Proyek</div>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Daftar Termin Proyek</div>
+                    <button type="button" onclick="window.openMilestoneForm(${id}, null, ${Number(p.nilai_project || 0)})" class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 transition shadow-sm">
+                        <i class="ri-add-line"></i><span>Tambah Termin</span>
+                    </button>
+                </div>
                 <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                     ${ms.length === 0 ? `
-                        <div class="p-6 text-center text-slate-400">Belum ada termin milestone dibuat untuk proyek ini. Klik tombol pola di atas.</div>
+                        <div class="p-6 text-center text-slate-400">Belum ada termin milestone dibuat untuk proyek ini. Klik tombol pola di atas atau Tambah Termin.</div>
                     ` : ms.map((m, idx) => `
                         <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
                             <div class="min-w-0 flex-1">
@@ -149,7 +154,7 @@ export async function manageProjectMilestones(id) {
                                     <span class="leading-snug">${m.nama_milestone}</span>
                                 </div>
                                 <div class="text-xs text-slate-500 font-mono mt-1 pl-7">
-                                    Porsi: <b>${m.persentase}%</b> · Nominal: <b class="text-slate-800 dark:text-slate-200 whitespace-nowrap">${App.formatIDR(m.nominal)}</b>
+                                    Porsi: <b>${m.persentase}%</b> · Nominal: <b class="text-slate-800 dark:text-slate-200 whitespace-nowrap">${App.formatIDR(m.nominal)}</b>${m.tanggal_target ? ` · Target: <span>${App.formatDate(m.tanggal_target)}</span>` : ''}
                                 </div>
                                 ${m.nomor_invoice ? `
                                     <div class="mt-1 pl-7 text-[11px] text-emerald-600 font-mono">
@@ -157,7 +162,7 @@ export async function manageProjectMilestones(id) {
                                     </div>
                                 ` : ''}
                             </div>
-                            <div class="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap pl-7 sm:pl-0">
+                            <div class="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap pl-7 sm:pl-0">
                                 <button type="button" onclick="window.openProjectKanban(${id}, ${m.id})" class="whitespace-nowrap px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold inline-flex items-center gap-1 transition" title="Papan Tugas Termin Ini">
                                     <i class="ri-kanban-view text-primary-500"></i><span>Tugas</span>
                                 </button>
@@ -167,6 +172,12 @@ export async function manageProjectMilestones(id) {
                                 ${!m.invoice_id ? `
                                     <button type="button" onclick="window.createMilestoneInvoice(${id}, ${m.id}, '${App.escapeHtml(m.nama_milestone)}')" class="whitespace-nowrap px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition">
                                         <i class="ri-file-add-line"></i><span>Terbitkan Faktur</span>
+                                    </button>
+                                    <button type="button" onclick='window.openMilestoneForm(${id}, ${JSON.stringify({ id: m.id, nama_milestone: m.nama_milestone, persentase: m.persentase, nominal: m.nominal, tanggal_target: m.tanggal_target || '' }).replace(/'/g, "&#39;")}, ${Number(p.nilai_project || 0)})' class="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition" title="Edit Termin" aria-label="Edit Termin">
+                                        <i class="ri-edit-line text-sm"></i>
+                                    </button>
+                                    <button type="button" onclick="window.deleteMilestone(${id}, ${m.id}, '${App.escapeHtml(m.nama_milestone)}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl transition" title="Hapus Termin" aria-label="Hapus Termin">
+                                        <i class="ri-delete-bin-line text-sm"></i>
                                     </button>
                                 ` : `
                                     <a href="#/invoices" onclick="document.getElementById('project-milestone-modal').classList.add('hidden')" class="whitespace-nowrap px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold inline-flex items-center gap-1">
@@ -197,6 +208,115 @@ export async function applyMilestonePattern(projectId, pattern) {
     if (res && res.success) {
         App.toast(res.message, 'success');
         manageProjectMilestones(projectId);
+        window._reloadProjectsList?.();
+    }
+}
+
+export function openMilestoneForm(projectId, milestone = null, projectValue = 0) {
+    let modal = document.getElementById('project-milestone-form-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'project-milestone-form-modal';
+        modal.className = 'fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4';
+        document.body.appendChild(modal);
+    }
+
+    const isEdit = Boolean(milestone && milestone.id);
+    modal.innerHTML = `
+        <form id="milestone-edit-form" class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <h3 class="text-base font-black text-slate-900 dark:text-white">${isEdit ? 'Edit Termin Proyek' : 'Tambah Termin Proyek'}</h3>
+                <button type="button" onclick="document.getElementById('project-milestone-form-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Tutup">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Termin / Milestone *</label>
+                <input type="text" id="ms-nama" required value="${App.escapeHtml(milestone?.nama_milestone || '')}" placeholder="Contoh: Termin 1 (DP 30%)" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Persentase (%)</label>
+                    <input type="number" id="ms-persentase" step="0.01" min="0" max="100" value="${milestone?.persentase ?? ''}" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nominal (IDR) *</label>
+                    <input type="number" id="ms-nominal" step="0.01" min="0" required value="${milestone?.nominal ?? ''}" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Tanggal Target (Opsional)</label>
+                <input type="date" id="ms-target" value="${milestone?.tanggal_target || ''}" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('project-milestone-form-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold">Batal</button>
+                <button type="submit" id="btn-save-ms" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold">${isEdit ? 'Simpan Perubahan' : 'Tambah Termin'}</button>
+            </div>
+        </form>
+    `;
+
+    const pctEl = modal.querySelector('#ms-persentase');
+    const nomEl = modal.querySelector('#ms-nominal');
+    if (projectValue > 0) {
+        pctEl.addEventListener('input', () => {
+            const pVal = parseFloat(pctEl.value);
+            if (!Number.isNaN(pVal) && pVal >= 0) {
+                nomEl.value = Math.round((pVal / 100) * projectValue);
+            }
+        });
+        nomEl.addEventListener('input', () => {
+            const nVal = parseFloat(nomEl.value);
+            if (!Number.isNaN(nVal) && nVal >= 0) {
+                pctEl.value = ((nVal / projectValue) * 100).toFixed(2);
+            }
+        });
+    }
+
+    modal.querySelector('#milestone-edit-form').addEventListener('submit', (e) => {
+        saveMilestone(e, projectId, isEdit ? milestone.id : null);
+    });
+    modal.classList.remove('hidden');
+}
+
+export async function saveMilestone(e, projectId, milestoneId = null) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-save-ms');
+    const payload = {
+        milestone_id: milestoneId,
+        nama_milestone: document.getElementById('ms-nama').value.trim(),
+        persentase: parseFloat(document.getElementById('ms-persentase').value || '0'),
+        nominal: parseFloat(document.getElementById('ms-nominal').value || '0'),
+        tanggal_target: document.getElementById('ms-target').value || null
+    };
+
+    const done = App.btnLoading(btn, true, 'Menyimpan...');
+    try {
+        const res = await App.api(`projects/${projectId}/milestones`, {
+            method: milestoneId ? 'PUT' : 'POST',
+            body: payload
+        });
+        if (res && res.success) {
+            App.toast(res.message, 'success');
+            document.getElementById('project-milestone-form-modal')?.classList.add('hidden');
+            manageProjectMilestones(projectId);
+            window._reloadProjectsList?.();
+        }
+    } finally {
+        done();
+    }
+}
+
+export async function deleteMilestone(projectId, milestoneId, namaMilestone) {
+    const conf = await App.confirm('Hapus Termin Proyek', `Yakin ingin menghapus termin "${namaMilestone}"?`);
+    if (!conf) return;
+
+    const res = await App.api(`projects/${projectId}/milestones?milestone_id=${milestoneId}`, {
+        method: 'DELETE'
+    });
+    if (res && res.success) {
+        App.toast(res.message, 'success');
+        manageProjectMilestones(projectId);
+        window._reloadProjectsList?.();
     }
 }
 

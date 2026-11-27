@@ -103,7 +103,19 @@ export async function generateInvoicePdf(inv, output = 'bloburl') {
     const neededLeftH = 5.5 + 4.4 + (clientLines.length * 4.4) + 1.2 + (picLines.length * 3.8)
         + (addrLines.length ? 1.0 + (addrLines.length * 3.6) : 0) + 4.5;
 
-    const projTitle = inv.nama_project ? `Proyek: ${inv.nama_project}` : 'Layanan Sistem Informasi & Software';
+    const itemLabels = Array.from(new Set(
+        (inv.items || [])
+            .map((it) => String(it.nama_layanan || it.deskripsi || '').trim())
+            .filter(Boolean)
+    ));
+    let projTitle = 'Tagihan Layanan';
+    if (inv.nama_project) {
+        projTitle = `Proyek: ${inv.nama_project}`;
+    } else if (itemLabels.length === 1) {
+        projTitle = itemLabels[0];
+    } else if (itemLabels.length > 1) {
+        projTitle = `${itemLabels[0]} (+${itemLabels.length - 1} layanan lainnya)`;
+    }
     const totalTagihanStr = `Total Tagihan: ${_safeFormatIDR(inv.total_tagihan || 0)}`;
     const sisaTagihanStr = `Sisa Pembayaran: ${_safeFormatIDR(inv.sisa_tagihan ?? inv.total_tagihan)}`;
 
@@ -410,45 +422,25 @@ export async function generateInvoicePdf(inv, output = 'bloburl') {
 
     y = bankRowY + 6.0;
 
-    // Signature Block
-    if (y + 30 > pageHeight - 16) {
+    // Electronic Authorization Note (tanpa kolom paraf/tanda tangan basah)
+    if (y + 18 > pageHeight - 16) {
         doc.addPage();
         y = 16;
     }
 
-    const sigW = 62;
-    // Left Sig: Ditagihkan Kepada (Client PIC)
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Diterima oleh,', margin, y);
-    doc.setDrawColor(148, 163, 184);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.25);
-    doc.line(margin, y + 16, margin + sigW, y + 16);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.4);
-    doc.setTextColor(15, 23, 42);
-    doc.text(String(inv.penanggung_jawab || inv.client_pic || 'Pelanggan'), margin, y + 20.5, { maxWidth: sigW });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.4);
-    doc.setTextColor(100, 116, 139);
-    doc.text(String(inv.nama_perusahaan || 'Klien'), margin, y + 24.5, { maxWidth: sigW });
+    doc.roundedRect(margin, y, contentWidth, 14, 1.5, 1.5, 'FD');
 
-    // Right Sig: Authorized Finance
-    const rSigX = pageWidth - margin - sigW;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Bagian Keuangan & Billing,', rSigX, y);
-    doc.line(rSigX, y + 16, pageWidth - margin, y + 16);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.4);
+    doc.setFontSize(7.8);
     doc.setTextColor(15, 23, 42);
-    doc.text(String(companyInfo.name), rSigX, y + 20.5, { maxWidth: sigW });
+    doc.text(`Diterbitkan secara elektronik oleh ${String(companyInfo.name)} — Bagian Keuangan & Billing`, margin + 4, y + 5.5);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.4);
+    doc.setFontSize(7.3);
     doc.setTextColor(100, 116, 139);
-    doc.text('Dokumen Resmi Sah Komputerisasi', rSigX, y + 24.5, { maxWidth: sigW });
+    doc.text('Dokumen tagihan ini sah secara komputerisasi tanpa memerlukan tanda tangan basah atau paraf.', margin + 4, y + 10.2);
 
     // Apply Document Watermark across all pages (LUNAS / SEBAGIAN / DIBATALKAN / DRAFT)
     _applyDocumentWatermark(doc, inv.status, 'invoice');
@@ -821,43 +813,25 @@ export async function generatePaymentReceiptPdf(p, output = 'bloburl') {
 
     y = dCurY + 8.0;
 
-    // 6. Signature Block (Seragam dengan Faktur Tagihan & SPK)
-    if (y + 28 > pageHeight - 16) {
+    // 6. Electronic Verification Note (tanpa kolom paraf penyetor/penerima)
+    if (y + 18 > pageHeight - 16) {
         doc.addPage();
         y = 16;
     }
 
-    const sigW = 62;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Penyetor / Pembayar,', margin, y);
-    doc.setDrawColor(148, 163, 184);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.25);
-    doc.line(margin, y + 16, margin + sigW, y + 16);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.4);
-    doc.setTextColor(15, 23, 42);
-    doc.text(String(p.client_pic || p.client_nama || 'Klien'), margin, y + 20.5, { maxWidth: sigW });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.4);
-    doc.setTextColor(100, 116, 139);
-    doc.text(String(p.client_nama || 'Klien'), margin, y + 24.5, { maxWidth: sigW });
+    doc.roundedRect(margin, y, contentWidth, 14, 1.5, 1.5, 'FD');
 
-    const rSigX = pageWidth - margin - sigW;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Diterima & Diverifikasi oleh,', rSigX, y);
-    doc.line(rSigX, y + 16, pageWidth - margin, y + 16);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.4);
+    doc.setFontSize(7.8);
     doc.setTextColor(15, 23, 42);
-    doc.text(String(companyInfo.name), rSigX, y + 20.5, { maxWidth: sigW });
+    doc.text(`Diverifikasi & diterbitkan secara elektronik oleh ${String(companyInfo.name)} — Bagian Keuangan & Billing`, margin + 4, y + 5.5);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.4);
+    doc.setFontSize(7.3);
     doc.setTextColor(100, 116, 139);
-    doc.text('Bagian Keuangan & Billing', rSigX, y + 24.5, { maxWidth: sigW });
+    doc.text('Kuitansi pembayaran ini sah secara komputerisasi tanpa memerlukan paraf penyetor maupun tanda tangan basah.', margin + 4, y + 10.2);
 
     // Apply Subtle Watermark LUNAS
     _applyDocumentWatermark(doc, 'lunas', 'invoice');

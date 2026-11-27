@@ -55,9 +55,11 @@ if ($id && is_numeric($id)) {
         $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
         $portalUrl = "{$scheme}://{$host}{$base}/#/public-invoice?token=" . urlencode($token);
 
+        $attachments = extractPdfAttachmentFromParams($params, "faktur_{$inv['nomor_invoice']}.pdf");
+        $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
         $subject = "Faktur Tagihan {$inv['nomor_invoice']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
-        $html = buildInvoiceEmailHtml($inv, $cfg, $portalUrl);
-        $mailRes = sendErpEmail((string)$inv['client_email'], (string)($inv['penanggung_jawab'] ?: $inv['nama_perusahaan']), $subject, $html, 'invoice', $invoiceId);
+        $html = buildInvoiceEmailHtml($inv, $cfg, $portalUrl, $hasLogo, !empty($attachments));
+        $mailRes = sendErpEmail((string)$inv['client_email'], (string)($inv['penanggung_jawab'] ?: $inv['nama_perusahaan']), $subject, $html, 'invoice', $invoiceId, $attachments);
         if (empty($mailRes['success'])) {
             errorResponse($mailRes['message'] ?? 'Gagal mengirim email faktur', 500);
         }

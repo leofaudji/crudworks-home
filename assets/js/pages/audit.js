@@ -15,10 +15,15 @@ export async function init(container) {
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Jejak Audit & Log Sistem</h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Rekam mutasi data kritis dan riwayat seluruh aktivitas operator aplikasi.</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Rekam mutasi data kritis, aktivitas operator, dan riwayat pengiriman email.</p>
+                </div>
+                <div class="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold self-start">
+                    <button type="button" data-audit-tab="audit" class="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition">Log Aktivitas</button>
+                    <button type="button" data-audit-tab="email" class="px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition">Riwayat Email</button>
                 </div>
             </div>
 
+            <div id="audit-tab-panel" class="space-y-6">
             <!-- Filters -->
             <div class="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
                 <div class="relative flex-1 w-full">
@@ -67,6 +72,9 @@ export async function init(container) {
 
                 <div id="audit-pagination" class="px-7 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500"></div>
             </div>
+            </div>
+
+            <div id="audit-email-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-6"></div>
         </div>
 
         <!-- Detail Payload Modal -->
@@ -111,6 +119,27 @@ export async function init(container) {
         state.tabel = e.target.value;
         state.page = 1;
         loadAuditLogs();
+    });
+
+    let emailLogsMounted = false;
+    container.querySelectorAll('[data-audit-tab]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const tab = btn.dataset.auditTab;
+            container.querySelectorAll('[data-audit-tab]').forEach(b => {
+                const active = b.dataset.auditTab === tab;
+                b.className = active
+                    ? 'px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition'
+                    : 'px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition';
+            });
+            document.getElementById('audit-tab-panel')?.classList.toggle('hidden', tab !== 'audit');
+            const emailPanel = document.getElementById('audit-email-panel');
+            emailPanel?.classList.toggle('hidden', tab !== 'email');
+            if (tab === 'email' && !emailLogsMounted && emailPanel) {
+                emailLogsMounted = true;
+                const { mountEmailLogsPanel } = await import('../core/email-logs-panel.js');
+                mountEmailLogsPanel(emailPanel, { perPage: 15 });
+            }
+        });
     });
 
     loadAuditLogs();

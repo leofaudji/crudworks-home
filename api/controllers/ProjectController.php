@@ -171,8 +171,53 @@ if ($id && is_numeric($id)) {
                     "INSERT INTO project_milestones (project_id, nama_milestone, persentase, nominal, tanggal_target, status) VALUES (?, ?, ?, ?, ?, 'rencana')",
                     [$projectId, $nama, $pct, $nom, $tgl]
                 );
+                clearCache(['projects', 'dashboard']);
+                logActivity('create', 'project_milestone', $newId, "Menambah termin: {$nama}");
                 successResponse(['id' => $newId], 'Termin milestone baru berhasil ditambahkan');
             }
+        }
+
+        if ($method === 'PUT') {
+            checkPermission('project.edit');
+            $milestoneId = (int)($params['milestone_id'] ?? 0);
+            $m = $db->fetch("SELECT * FROM project_milestones WHERE id = ? AND project_id = ?", [$milestoneId, $projectId]);
+            if (!$m) errorResponse('Termin milestone tidak ditemukan', 404);
+            if (!empty($m['invoice_id'])) errorResponse('Termin yang sudah diterbitkan faktur tidak dapat diubah', 400);
+
+            $nama = trim($params['nama_milestone'] ?? '');
+            if (empty($nama)) errorResponse('Nama termin / milestone wajib diisi', 422);
+
+            $project = $db->fetch("SELECT nilai_project FROM projects WHERE id = ?", [$projectId]);
+            $nilaiTotal = (float)($project['nilai_project'] ?? 0);
+
+            $pct = round((float)($params['persentase'] ?? 0), 2);
+            $nom = round((float)($params['nominal'] ?? 0), 2);
+            if ($nom <= 0 && $pct > 0 && $nilaiTotal > 0) {
+                $nom = round(($pct / 100) * $nilaiTotal, 2);
+            }
+            if ($nom < 0 || $pct < 0) errorResponse('Persentase dan nominal termin tidak boleh negatif', 422);
+            $tgl = !empty($params['tanggal_target']) ? $params['tanggal_target'] : null;
+
+            $db->execute(
+                "UPDATE project_milestones SET nama_milestone = ?, persentase = ?, nominal = ?, tanggal_target = ? WHERE id = ? AND project_id = ?",
+                [$nama, $pct, $nom, $tgl, $milestoneId, $projectId]
+            );
+            clearCache(['projects', 'dashboard']);
+            logActivity('update', 'project_milestone', $milestoneId, "Mengubah termin: {$nama}");
+            successResponse(null, 'Termin milestone berhasil diperbarui');
+        }
+
+        if ($method === 'DELETE') {
+            checkPermission('project.edit');
+            $milestoneId = (int)($params['milestone_id'] ?? $_GET['milestone_id'] ?? 0);
+            $m = $db->fetch("SELECT * FROM project_milestones WHERE id = ? AND project_id = ?", [$milestoneId, $projectId]);
+            if (!$m) errorResponse('Termin milestone tidak ditemukan', 404);
+            if (!empty($m['invoice_id'])) errorResponse('Termin yang sudah memiliki faktur tidak dapat dihapus', 400);
+
+            $db->execute("DELETE FROM project_milestones WHERE id = ? AND project_id = ?", [$milestoneId, $projectId]);
+            clearCache(['projects', 'dashboard']);
+            logActivity('delete', 'project_milestone', $milestoneId, "Menghapus termin: {$m['nama_milestone']}");
+            successResponse(null, 'Termin milestone berhasil dihapus');
         }
     }
 

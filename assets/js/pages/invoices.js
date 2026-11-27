@@ -489,6 +489,7 @@ async function loadInvoices() {
                                 { label: 'Salin Tautan Portal', icon: 'ri-share-line', iconColor: 'text-sky-600', action: 'window.copyPublicPortalLink(\\'${inv.public_token || inv.nomor_invoice}\\')' }
                             ]
                         },
+                        { label: 'Kirim via Email', icon: 'ri-mail-send-line', iconColor: 'text-indigo-600', action: 'window.sendInvoiceEmail(${inv.id})' },
                         { label: 'Kirim Pengingat WA', icon: 'ri-whatsapp-line', iconColor: 'text-emerald-500', action: 'window.sendInvoiceWA(${inv.id})' },
                         { divider: true },
                         { label: 'Hapus Faktur', icon: 'ri-delete-bin-line', danger: true, action: 'window.deleteInvoice(${inv.id}, \\'${inv.nomor_invoice}\\')' }
@@ -698,8 +699,10 @@ window.viewInvoiceSheet = async (id) => {
     if (sendBtn) {
         sendBtn.onclick = async () => {
             sendBtn.disabled = true;
+            sendBtn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Menyiapkan PDF...`;
+            const payload = await buildInvoiceEmailPayload(inv);
             sendBtn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Mengirimkan...`;
-            const sRes = await App.api(`invoices/${id}/send-email`, { method: 'POST' });
+            const sRes = await App.api(`invoices/${id}/send-email`, { method: 'POST', body: payload });
             sendBtn.disabled = false;
             sendBtn.innerHTML = `<i class="ri-mail-send-line text-sm"></i><span>Kirim ke Email Klien</span>`;
             if (sRes && sRes.success) {
@@ -842,16 +845,10 @@ window.viewInvoiceSheet = async (id) => {
                 </div>
             </div>
 
-            <!-- Signature footer -->
-            <div class="pt-12 flex justify-between text-xs text-center">
-                <div>
-                    <div class="text-slate-400 mb-16">Diterima oleh,</div>
-                    <div class="font-bold text-slate-800 border-t border-slate-300 pt-1 w-48">${inv.penanggung_jawab}</div>
-                </div>
-                <div>
-                    <div class="text-slate-400 mb-16">Bagian Finansial CRUDWorks,</div>
-                    <div class="font-bold text-slate-800 border-t border-slate-300 pt-1 w-48">${c.company_name || 'CRUDWorks Media Tama'}</div>
-                </div>
+            <!-- Electronic document footer -->
+            <div class="pt-6 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Diterbitkan secara elektronik oleh <strong class="text-slate-700">${c.company_name || 'CRUDWorks Media Tama'}</strong></span>
+                <span class="italic">Sah secara komputerisasi tanpa tanda tangan basah / paraf.</span>
             </div>
         </div>
     `;
@@ -900,6 +897,39 @@ window.printInvoicePdf = async (id, output = 'bloburl') => {
 window.changeInvoicePage = (p) => {
     state.page = p;
     loadInvoices();
+};
+
+async function buildInvoiceEmailPayload(inv) {
+    if (!inv || typeof App.generateInvoicePdf !== 'function') return {};
+    try {
+        const pdfRes = await App.generateInvoicePdf(inv, 'bloburl');
+        if (!pdfRes?.blob) return {};
+        const pdfBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+            reader.onerror = () => reject(new Error('Gagal membaca blob PDF'));
+            reader.readAsDataURL(pdfRes.blob);
+        });
+        if (pdfRes.blobUrl) URL.revokeObjectURL(pdfRes.blobUrl);
+        return pdfBase64 ? { pdf_base64: pdfBase64, pdf_filename: pdfRes.filename } : {};
+    } catch (err) {
+        console.warn('Gagal menyiapkan lampiran PDF faktur:', err);
+        return {};
+    }
+}
+
+window.sendInvoiceEmail = async (id) => {
+    if (!await App.confirm('Kirim Faktur via Email?', 'Faktur tagihan PDF beserta tautan pembayaran online akan dikirimkan ke email klien via SMTP.')) return;
+    App.toast('Menyiapkan PDF & mengirim email faktur...', 'info');
+    const detailRes = await App.api(`invoices/${id}`);
+    const payload = (detailRes && detailRes.success && detailRes.data)
+        ? await buildInvoiceEmailPayload(detailRes.data)
+        : {};
+    const res = await App.api(`invoices/${id}/send-email`, { method: 'POST', body: payload });
+    if (res && res.success) {
+        App.toast(res.message, 'success');
+        loadInvoices();
+    }
 };
 
 window.sendInvoiceWA = async (id) => {

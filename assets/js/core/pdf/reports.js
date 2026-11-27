@@ -11,7 +11,7 @@ export async function exportPdf({
     subtitle = '',
     orientation = 'portrait',
     output = 'download',
-    showSignature = true,
+    showSignature = false,
     summaryCards = [],
     sections = []
 } = {}) {

@@ -58,6 +58,9 @@ if ($id === 'system-health' && $method === 'GET') {
 
     successResponse([
         'redis_connected' => $redis->isConnected(),
+        'redis_mode' => $redis->getMode(),
+        'redis_error' => $redis->getLastError(),
+        'redis_target' => REDIS_HOST . (strpos(REDIS_HOST, '/') === 0 ? '' : ':' . REDIS_PORT),
         'php_version' => PHP_VERSION,
         'mysql_version' => $dbRow['mysql_version'] ?? '-',
         'db_name' => $dbRow['db_name'] ?? '-',

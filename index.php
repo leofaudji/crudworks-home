@@ -1,6 +1,13 @@
 <?php
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
+
+// Jalankan migrasi SQL pending di folder /scratch (1x per file, dicatat di schema_migrations)
+if (file_exists(__DIR__ . '/api/config/migration_runner.php')) {
+    require_once __DIR__ . '/api/config/migration_runner.php';
+    runScratchMigrations();
+}
+
 // Ambil versi terbaru dari CHANGELOG.md
 $version = '1.0.0';
 $changelogPath = __DIR__ . '/CHANGELOG.md';

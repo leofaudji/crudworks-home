@@ -146,7 +146,7 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
 
 ### Aturan Tata Kelola, Rilis & Definition of Done (Wajib 6 Poin)
 
-1. **Migrasi Database Aman**: Kolom/tabel baru wajib _backward-compatible_ (`NULL` atau `DEFAULT` aman) dan dicek sebelum `ALTER TABLE`.
+1. **Migrasi Database Aman & Folder `scratch/`**: Kolom/tabel baru wajib _backward-compatible_ (`NULL` atau `DEFAULT` aman). Setiap perubahan database wajib dibuatkan file migrasi `.sql` bernomor urut di folder `scratch/` (mis. `scratch/20261127_01_nama.sql`) serta disinkronkan ke `database.sql` & `docs/prd/03-desain-database.md`. Saat aplikasi di-refresh di produksi (`index.php`), `migration_runner.php` akan menjalankan file di `scratch/` **1x saja** dan mencatatnya di tabel `schema_migrations` agar tidak dijalankan ulang pada refresh berikutnya.
 2. **Standar Permission RBAC**: Gunakan pola `<domain>.view|create|edit|delete|manage` di `api/config/menus.json`, `permissions`, dan `role_permissions`.
 3. **Transaksi & Urutan Cache**: Panggil `clearCache()` dan `logActivity()` **hanya setelah `$pdo->commit()` berhasil**, jangan di dalam transaksi sebelum commit.
 4. **UI Responsif, Dark Mode & Aksesibel**: Komponen baru wajib mendukung `dark:*`, rapi di mobile-desktop, dan tombol ikon wajib punya `title`/`aria-label`.

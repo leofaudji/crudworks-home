@@ -694,12 +694,16 @@ async function renderSection() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div class="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
                         <div class="text-[11px] font-bold uppercase text-slate-400">Status Redis Cache</div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${redisOk ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'}">
                                 ${redisOk ? 'Aktif & Terhubung' : 'Fallback MySQL'}
                             </span>
+                            ${h.redis_mode ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${App.escapeHtml(h.redis_mode)}</span>` : ''}
                         </div>
-                        <div class="text-[11px] text-slate-500">${redisOk ? 'Laporan & statistik memakai cache Redis' : 'Redis tidak aktif; query berjalan langsung ke MySQL'}</div>
+                        <div class="text-[11px] text-slate-500">${redisOk
+                            ? `Terhubung ke <span class="font-mono">${App.escapeHtml(h.redis_target || '127.0.0.1:6379')}</span>`
+                            : `Redis tidak aktif (${App.escapeHtml(h.redis_error || h.redis_target || 'koneksi gagal')}); query berjalan ke MySQL`
+                        }</div>
                     </div>
 
                     <div class="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">

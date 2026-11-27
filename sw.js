@@ -1,5 +1,5 @@
 // CRUDWorks ERP — Service Worker
-const CACHE_NAME = 'crudworks-erp-v1.8.61';
+const CACHE_NAME = 'crudworks-erp-v1.8.62';
 const STATIC_ASSETS = [
     './',
     './index.html',

@@ -335,3 +335,13 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 #### Tabel `client_tickets` & `client_ticket_logs`
 - `client_tickets` menyimpan tiket gangguan & permintaan klien (`nomor_tiket`, `client_id`, `project_id`, `maintenance_id`, `kategori`, `prioritas`, `sumber_laporan`, `cakupan_biaya` [`sla_gratis`, `garansi`, `berbayar`], `total_durasi_menit`, `quotation_id`, `invoice_id`, `status`).
 - `client_ticket_logs` mencatat log aktivitas support internal per tiket (`ticket_id`, `actor_name`, `tipe_aktivitas`, `durasi_menit`, `is_billable`, `ringkasan`).
+
+---
+
+### 2.7 Aturan Migrasi Database Produksi (`scratch/` & `schema_migrations`)
+
+Setiap kali ada perubahan skema atau data awal database (tambah tabel, tambah kolom, ubah tipe kolom, seed permission):
+1. **Wajib** simpan file migrasi `.sql` di folder `scratch/` dengan penamaan berurutan, misalnya `scratch/YYYYMMDD_NN_deskripsi_singkat.sql` (contoh: `scratch/20261127_01_email_cc_and_portal_view_tracking.sql`), selain tetap menyinkronkan skema penuh di `database.sql`.
+2. **Eksekusi Otomatis 1x Saat Refresh**: Ketika aplikasi di-refresh pada server produksi ([index.php](file:///d:/laragon/www/crudworks-home/index.php)), runner [migration_runner.php](file:///d:/laragon/www/crudworks-home/api/config/migration_runner.php) otomatis membaca seluruh file `scratch/*.sql` secara berurutan.
+3. **Pelacakan Anti-Duplikat (`schema_migrations`)**: Setiap file yang berhasil dijalankan langsung dicatat ke tabel `schema_migrations` (`filename`, `checksum`, `executed_at`). Pada refresh berikutnya, file yang sudah tercatat **tidak akan dijalankan ulang**.
+4. **Backward-Compatible & Idempotent**: Kolom baru wajib `NULL` atau memiliki `DEFAULT` yang aman, dan runner tetap toleran terhadap error duplikat kolom/indeks (`1060`, `1061`, `1050`).

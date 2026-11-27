@@ -6,6 +6,8 @@ class RedisManager
     private $redis = null;
     private $socket = null;
     private $connected = false;
+    private $mode = 'fallback';
+    private $lastError = '';
 
     private function __construct()
     {
@@ -21,15 +23,22 @@ class RedisManager
                 }
 
                 if ($this->connected) {
-                    if ($pass !== null) {
-                        $this->redis->auth($pass);
+                    if ($pass !== null && !$this->redis->auth($pass)) {
+                        $this->connected = false;
+                        $this->lastError = 'Autentikasi password Redis (REDIS_PASS) ditolak';
+                        $this->redis = null;
+                        return;
                     }
                     $this->redis->select((int)REDIS_DB);
                     $this->redis->setOption(Redis::OPT_PREFIX, REDIS_PREFIX);
                     $this->redis->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP);
+                    $this->mode = 'phpredis';
+                } else {
+                    $this->lastError = 'phpredis gagal terhubung ke ' . REDIS_HOST . ':' . REDIS_PORT;
                 }
             } catch (\Throwable $e) {
                 $this->connected = false;
+                $this->lastError = $e->getMessage();
                 $this->redis = null;
             }
             return;
@@ -52,9 +61,17 @@ class RedisManager
                 }
                 $pong = $this->respCmd(['PING']);
                 $this->connected = ($pong === 'PONG');
+                if ($this->connected) {
+                    $this->mode = 'tcp-resp2';
+                } else {
+                    $this->lastError = 'Respons PING Redis tidak valid';
+                }
+            } else {
+                $this->lastError = trim(($errstr ?: 'Koneksi ditolak') . " ({$dsn})");
             }
         } catch (\Throwable $e) {
             $this->connected = false;
+            $this->lastError = $e->getMessage();
             if (is_resource($this->socket)) {
                 @fclose($this->socket);
             }
@@ -133,6 +150,16 @@ class RedisManager
     public function isConnected()
     {
         return $this->connected;
+    }
+
+    public function getMode(): string
+    {
+        return $this->mode;
+    }
+
+    public function getLastError(): string
+    {
+        return $this->lastError;
     }
 
     public function get($key)

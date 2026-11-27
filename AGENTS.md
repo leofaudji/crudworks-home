@@ -62,12 +62,15 @@ crudworks-home/
 Jika Anda diminta membuat modul baru (misal: `expenses` / pengeluaran):
 
 ### Langkah 1: Tambahkan Entitas Database di `database.sql`
+
 Buat tabel dengan engine `InnoDB`, charset `utf8mb4_unicode_ci`, foreign key yang sesuai, dan indeks pada kolom filter/pencarian.
 
 ### Langkah 2: Daftarkan Permission & Menu di `api/config/menus.json`
+
 Tambahkan entri ke `menus.json` dengan menyertakan `perm` (misal: `expense.view`). Tambahkan pula permission terkait ke tabel `permissions` dan hubungkan ke role di `role_permissions`.
 
 ### Langkah 3: Buat Controller Backend di `api/controllers/ExpenseController.php`
+
 - Lakukan pengecekan autentikasi: `authCheck();`
 - Lakukan verifikasi izin akses: `checkPermission('expense.view');` (atau `expense.create` untuk aksi penambahan).
 - Tangani parameter `$method`, `$id`, dan `$action` yang dipersiapkan oleh `api/index.php`.
@@ -75,13 +78,16 @@ Tambahkan entri ke `menus.json` dengan menyertakan `perm` (misal: `expense.view`
 - Jika ada penambahan/perubahan/penghapusan, panggil `logActivity()` dan invalidasi cache terkait via `clearCache(['expenses'])`.
 
 ### Langkah 4: Daftarkan Route di `api/index.php`
+
 Tambahkan klausa `case 'expenses':` ke blok switch di `api/index.php`.
 
 ### Langkah 5: Buat Page Module Frontend di `assets/js/pages/expenses.js`
+
 Ekspor fungsi inisialisasi:
+
 ```javascript
 export async function init(container) {
-    container.innerHTML = `
+  container.innerHTML = `
         <div class="space-y-6">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Pengeluaran Operasional</h1>
@@ -90,18 +96,20 @@ export async function init(container) {
             <div id="expense-table-container"></div>
         </div>
     `;
-    // Bind event handlers & load data via App.api()
+  // Bind event handlers & load data via App.api()
 }
 ```
 
 ### Langkah 6: Daftarkan Rute di Hash Router `assets/js/app.js`
+
 Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dinamis saat navigasi beralih ke `#/expenses`.
 
 ---
 
 ## 4. Panduan Penulisan Kode (Conventions)
 
-### Wajib Fungsi Terpadu (*Unified Helpers First*)
+### Wajib Fungsi Terpadu (_Unified Helpers First_)
+
 - **Setiap kali membuat fungsi baru yang berpotensi dipakai di lebih dari satu tempat, wajib buat dalam bentuk fungsi terpadu (reusable helper)** — jangan menyalin-tempel blok logika yang sama di banyak controller atau halaman.
 - Sebelum menulis fungsi utilitas baru, periksa dan gunakan helper terpadu yang sudah tersedia:
   - **PHP Backend**:
@@ -118,6 +126,7 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
     - Format mata uang & tanggal: `App.formatIDR(value)` dan `App.formatDate(dateString)`.
 
 ### Aturan Kebersihan Kode & Anti-Duplikasi (Wajib 7 Poin)
+
 1. **Satu Sumber Kebenaran Status**: Gunakan `App.renderStatusBadge()`, jangan mendefinisikan ulang objek warna/ikon badge di tiap halaman.
 2. **Wajib `paginatedResponse()`**: Jangan menulis ulang `LIMIT`/`OFFSET` dan struktur JSON `pagination` secara manual.
 3. **Validasi Terpadu**: Gunakan `requireParams()` dan `validateEnum()` untuk field wajib dan pengecekan `ENUM`.
@@ -127,23 +136,26 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
 7. **Satu Pintu Dialog**: Dilarang memakai `alert()`, `confirm()`, `prompt()` bawaan browser; gunakan `SweetAlert2`, `App.confirm()`, atau `App.modal()`.
 
 ### Aturan Keamanan & Integritas Keuangan (Wajib 6 Poin)
+
 1. **Upload Terpusat**: Gunakan `saveUploadedFile()` untuk unggahan file (validasi MIME `finfo`, batas ukuran, nama acak).
 2. **Anti Double-Submit**: Gunakan `App.btnLoading()` di tombol mutasi frontend dan cek idempotency di backend agar konversi/transaksi tidak dobel.
 3. **Presisi Keuangan**: Gunakan `DECIMAL(15,2)` dan `round($val, 2)` dengan toleransi lunas `<= 0.01`.
-4. **Isolasi Data Publik**: Endpoint publik & Portal Klien wajib *explicit `SELECT`* tanpa `catatan_internal` atau data klien lain.
+4. **Isolasi Data Publik**: Endpoint publik & Portal Klien wajib _explicit `SELECT`_ tanpa `catatan_internal` atau data klien lain.
 5. **Proteksi Hapus Transaksi**: Tolak `DELETE` permanen pada faktur `lunas`/berbayar, kontrak sah, atau jurnal tutup buku; gunakan status `batal`/`nonaktif`.
 6. **Error Ramah Pengguna**: Kembalikan pesan bahasa Indonesia yang aman via `errorResponse()` tanpa membocorkan detail SQL/stack trace.
 
 ### Aturan Tata Kelola, Rilis & Definition of Done (Wajib 6 Poin)
-1. **Migrasi Database Aman**: Kolom/tabel baru wajib *backward-compatible* (`NULL` atau `DEFAULT` aman) dan dicek sebelum `ALTER TABLE`.
+
+1. **Migrasi Database Aman**: Kolom/tabel baru wajib _backward-compatible_ (`NULL` atau `DEFAULT` aman) dan dicek sebelum `ALTER TABLE`.
 2. **Standar Permission RBAC**: Gunakan pola `<domain>.view|create|edit|delete|manage` di `api/config/menus.json`, `permissions`, dan `role_permissions`.
 3. **Transaksi & Urutan Cache**: Panggil `clearCache()` dan `logActivity()` **hanya setelah `$pdo->commit()` berhasil**, jangan di dalam transaksi sebelum commit.
 4. **UI Responsif, Dark Mode & Aksesibel**: Komponen baru wajib mendukung `dark:*`, rapi di mobile-desktop, dan tombol ikon wajib punya `title`/`aria-label`.
-5. **Proporsi Tabel, Taskbar Safe-Area & Modal**: Kontainer `#app-content` wajib menjaga `pb-24` (aman dari taskbar bawah), dropdown/popover mengambang wajib menghormati `safeBottom`, sel tabel status/angka/aksi wajib `whitespace-nowrap` (teks panjang pakai `truncate` + `title`), dan modal panjang wajib memakai header/footer *sticky* (`flex flex-col` + `overflow-y-auto` di body).
+5. **Proporsi Tabel, Taskbar Safe-Area & Modal**: Kontainer `#app-content` wajib menjaga `pb-24` (aman dari taskbar bawah), dropdown/popover mengambang wajib menghormati `safeBottom`, sel tabel status/angka/aksi wajib `whitespace-nowrap` (teks panjang pakai `truncate` + `title`), dan modal panjang wajib memakai header/footer _sticky_ (`flex flex-col` + `overflow-y-auto` di body).
 6. **Gerbang Verifikasi (DoD)**: Wajib lulus `php -l` (PHP), `node -c` (JS), validasi JSON (`menus.json`), serta cek endpoint/halaman live (dapat dijalankan terpadu melalui `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`).
 7. **Changelog Bahasa Pelanggan**: Catat rilis fitur baru di `CHANGELOG.md` dengan bahasa bisnis untuk pelanggan, bukan jargon teknis internal.
 
 ### PHP Backend
+
 - Selalu gunakan strict typing bila memungkinkan (`declare(strict_types=1);`).
 - Hindari `die()` atau `echo` mentah di dalam controller; gunakan `jsonResponse()`, `successResponse()`, atau `errorResponse()`.
 - Setiap transaksi multi-tabel (misal: membuat invoice + menyisipkan item invoice) wajib dibungkus dalam blok transaksi PDO:
@@ -162,6 +174,7 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
   ```
 
 ### JavaScript Frontend
+
 - Gunakan sintaks modern: `const`/`let`, arrow functions, `async`/`await`, template literals, dan destructuring.
 - Jangan gunakan `alert()`, `confirm()`, atau `prompt()` bawaan peramban; selalu gunakan `SweetAlert2` atau `App.modal()`.
 - Format nilai mata uang menggunakan helper: `App.formatIDR(value)`.
@@ -174,6 +187,7 @@ Daftarkan path modul ke pemetaan rute di `app.js` agar modul di-load secara dina
 Proyek `app-git` yang terletak di `d:/laragon/www/app-git` berfungsi sebagai pengelola deployment Git lokal. CRUDWorks ERP terhubung dengan menyimpan path repositori klien di tabel `projects` (`git_repo_url`, `git_branch`, `deploy_path`, `app_url`).
 
 Ketika memeriksa status aplikasi pelanggan:
+
 - Periksa keberadaan folder `deploy_path`.
 - Baca file konfigurasi `.env` pada folder target jika diperlukan untuk sinkronisasi kredensial.
 - Tampilkan indikator status deployment ("idle", "success", "failed") secara visual di dashboard project klien.

@@ -50,10 +50,7 @@ if ($id && is_numeric($id)) {
         if (empty($inv['public_token'])) {
             $db->execute("UPDATE invoices SET public_token = ? WHERE id = ?", [$token, $invoiceId]);
         }
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
-        $portalUrl = "{$scheme}://{$host}{$base}/#/public-invoice?token=" . urlencode($token);
+        $portalUrl = buildPublicAppUrl('#/public-invoice?token=' . urlencode($token));
 
         $attachments = extractPdfAttachmentFromParams($params, "faktur_{$inv['nomor_invoice']}.pdf");
         $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;

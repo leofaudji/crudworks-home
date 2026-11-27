@@ -27,13 +27,9 @@ if ($id && is_numeric($id)) {
         if (empty($p['client_email'])) errorResponse('Email klien belum diatur pada data pelanggan', 422);
 
         $cfg = getAppSettingsMap();
-        $portalUrl = '';
-        if (!empty($p['public_token'])) {
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
-            $portalUrl = "{$scheme}://{$host}{$base}/#/public-invoice?token=" . urlencode((string)$p['public_token']);
-        }
+        $portalUrl = !empty($p['public_token'])
+            ? buildPublicAppUrl('#/public-invoice?token=' . urlencode((string)$p['public_token']))
+            : '';
 
         $attachments = extractPdfAttachmentFromParams($params, "kuitansi_{$p['nomor_pembayaran']}.pdf");
         $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;

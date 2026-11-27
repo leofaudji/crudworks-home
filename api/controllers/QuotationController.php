@@ -26,10 +26,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
     if (empty($quo['public_token'])) {
         $db->execute("UPDATE quotations SET public_token = ? WHERE id = ?", [$token, (int)$id]);
     }
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/\\');
-    $portalUrl = "{$scheme}://{$host}{$base}/#/public-quotation?token=" . urlencode($token);
+    $portalUrl = buildPublicAppUrl('#/public-quotation?token=' . urlencode($token));
 
     $attachments = extractPdfAttachmentFromParams($params, "penawaran_{$quo['nomor_penawaran']}.pdf");
     $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;

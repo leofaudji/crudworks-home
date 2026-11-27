@@ -12,14 +12,18 @@ class RedisManager
     private function __construct()
     {
         $pass = (REDIS_PASS === 'null' || REDIS_PASS === '' || REDIS_PASS === false) ? null : REDIS_PASS;
+        $rawHost = trim((string)REDIS_HOST);
+        $forceSocket = filter_var((string)(getenv('REDIS_FORCE_SOCKET') ?: 'false'), FILTER_VALIDATE_BOOLEAN);
+        $isSocket = $forceSocket || strpos($rawHost, '/') === 0 || stripos($rawHost, 'unix://') === 0;
+        $sockPath = preg_replace('#^unix://#i', '', $rawHost);
 
-        if (class_exists('Redis')) {
+        if (class_exists('Redis') && !$forceSocket) {
             try {
                 $this->redis = new Redis();
-                if (strpos(REDIS_HOST, '/') === 0) {
-                    $this->connected = @$this->redis->connect(REDIS_HOST);
+                if ($isSocket) {
+                    $this->connected = @$this->redis->connect($sockPath);
                 } else {
-                    $this->connected = @$this->redis->connect(REDIS_HOST, (int)REDIS_PORT, 1.5);
+                    $this->connected = @$this->redis->connect($rawHost, (int)REDIS_PORT, 1.5);
                 }
 
                 if ($this->connected) {
@@ -33,22 +37,22 @@ class RedisManager
                     $this->redis->setOption(Redis::OPT_PREFIX, REDIS_PREFIX);
                     $this->redis->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP);
                     $this->mode = 'phpredis';
-                } else {
-                    $this->lastError = 'phpredis gagal terhubung ke ' . REDIS_HOST . ':' . REDIS_PORT;
+                    return;
                 }
+                $this->lastError = 'phpredis gagal terhubung ke ' . ($isSocket ? $sockPath : "{$rawHost}:" . REDIS_PORT);
+                $this->redis = null;
             } catch (\Throwable $e) {
                 $this->connected = false;
                 $this->lastError = $e->getMessage();
                 $this->redis = null;
             }
-            return;
         }
 
-        // Fallback pure-PHP TCP RESP2 client when phpredis extension is not enabled
+        // Pure-PHP socket/TCP RESP2 client (dipakai saat phpredis tidak ada, gagal, atau REDIS_FORCE_SOCKET=true)
         try {
-            $dsn = (strpos(REDIS_HOST, '/') === 0)
-                ? 'unix://' . REDIS_HOST
-                : 'tcp://' . REDIS_HOST . ':' . (int)REDIS_PORT;
+            $dsn = $isSocket
+                ? 'unix://' . $sockPath
+                : 'tcp://' . $rawHost . ':' . (int)REDIS_PORT;
             $fp = @stream_socket_client($dsn, $errno, $errstr, 1.5);
             if ($fp) {
                 stream_set_timeout($fp, 2);
@@ -62,12 +66,14 @@ class RedisManager
                 $pong = $this->respCmd(['PING']);
                 $this->connected = ($pong === 'PONG');
                 if ($this->connected) {
-                    $this->mode = 'tcp-resp2';
+                    $this->mode = $isSocket ? 'unix-socket-resp2' : 'tcp-resp2';
+                    $this->lastError = '';
                 } else {
                     $this->lastError = 'Respons PING Redis tidak valid';
                 }
             } else {
-                $this->lastError = trim(($errstr ?: 'Koneksi ditolak') . " ({$dsn})");
+                $sockErr = trim(($errstr ?: 'Koneksi ditolak') . " ({$dsn})");
+                $this->lastError = $this->lastError !== '' ? ($this->lastError . ' | ' . $sockErr) : $sockErr;
             }
         } catch (\Throwable $e) {
             $this->connected = false;

@@ -13,6 +13,31 @@ switch ($method) {
                 errorResponse('Username dan kata sandi wajib diisi');
             }
 
+            $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+
+            // Rate limiting: maks 5 percobaan gagal per username+IP atau 15 per IP dalam 15 menit
+            try {
+                $failUserIp = (int)$db->count(
+                    "SELECT COUNT(*) FROM login_attempts WHERE username = ? AND ip_address = ? AND attempted_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+                    [$username, $ip]
+                );
+                $failIp = (int)$db->count(
+                    "SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND attempted_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+                    [$ip]
+                );
+                if ($failUserIp >= 5 || $failIp >= 15) {
+                    errorResponse('Terlalu banyak percobaan login gagal. Silakan coba lagi dalam 15 menit.', 429);
+                }
+            } catch (\Throwable $e) {
+                // Abaikan jika tabel login_attempts belum dimigrasi
+            }
+
+            $recordFailedAttempt = static function () use ($db, $username, $ip) {
+                try {
+                    $db->execute("INSERT INTO login_attempts (username, ip_address) VALUES (?, ?)", [$username, $ip]);
+                } catch (\Throwable $e) {}
+            };
+
             $user = $db->fetch(
                 "SELECT u.*, r.name as role_name, r.label as role_label 
                  FROM users u 
@@ -22,7 +47,8 @@ switch ($method) {
             );
 
             if (!$user) {
-                errorResponse('Pengguna tidak ditemukan atau kredensial salah', 401);
+                $recordFailedAttempt();
+                errorResponse('Username atau kata sandi salah', 401);
             }
 
             if ($user['status'] !== 'aktif') {
@@ -30,7 +56,9 @@ switch ($method) {
             }
 
             if (!password_verify($password, $user['password'])) {
-                errorResponse('Kata sandi salah', 401);
+                $recordFailedAttempt();
+                logActivity('login_failed', 'users', (int)$user['id'], null, ['username' => $username, 'ip' => $ip]);
+                errorResponse('Username atau kata sandi salah', 401);
             }
 
             // Verifikasi 2FA (TOTP) jika aktif pada akun ini
@@ -44,9 +72,19 @@ switch ($method) {
                     ], 200);
                 }
                 if (!totpVerify((string)$user['totp_secret'], $totpCode)) {
+                    $recordFailedAttempt();
                     errorResponse('Kode Authenticator (2FA) tidak valid atau kedaluwarsa', 401);
                 }
             }
+
+            // Bersihkan catatan gagal login & deteksi IP baru untuk notifikasi keamanan
+            $isNewIp = false;
+            try {
+                $db->execute("DELETE FROM login_attempts WHERE username = ? AND ip_address = ?", [$username, $ip]);
+                $hasHistory = (int)$db->count("SELECT COUNT(*) FROM user_sessions WHERE user_id = ?", [(int)$user['id']]) > 0;
+                $seenIp = (int)$db->count("SELECT COUNT(*) FROM user_sessions WHERE user_id = ? AND ip_address = ?", [(int)$user['id'], $ip]) > 0;
+                $isNewIp = $hasHistory && !$seenIp;
+            } catch (\Throwable $e) {}
 
             // Setup session
             if (session_status() === PHP_SESSION_ACTIVE) {
@@ -62,7 +100,6 @@ switch ($method) {
             // Catat sesi aktif ke user_sessions
             try {
                 $sid = session_id();
-                $ip = $_SERVER['REMOTE_ADDR'] ?? '';
                 $ua = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'), 0, 250);
                 $db->execute(
                     "INSERT INTO user_sessions (user_id, session_id, ip_address, user_agent, is_revoked, last_activity, created_at)
@@ -72,6 +109,22 @@ switch ($method) {
                 );
             } catch (\Throwable $e) {
                 // Abaikan jika tabel belum tersedia
+            }
+
+            // Kirim peringatan email jika login dari IP baru (non-blocking)
+            if ($isNewIp && !empty($user['email']) && function_exists('sendErpEmail')) {
+                try {
+                    $cfg = function_exists('getAppSettingsMap') ? getAppSettingsMap() : [];
+                    if (!empty($cfg['smtp_host'])) {
+                        $uaSafe = htmlspecialchars(substr((string)($_SERVER['HTTP_USER_AGENT'] ?? 'Browser'), 0, 120));
+                        $timeStr = date('d/m/Y H:i:s');
+                        $alertHtml = "<p>Halo <b>" . htmlspecialchars((string)$user['nama_lengkap']) . "</b>,</p>"
+                            . "<p>Terdeteksi login baru ke akun <b>" . htmlspecialchars((string)$user['username']) . "</b> dari alamat IP baru:</p>"
+                            . "<ul><li>IP Address: <b>" . htmlspecialchars($ip) . "</b></li><li>Waktu: <b>{$timeStr} WIB</b></li><li>Perangkat: {$uaSafe}</li></ul>"
+                            . "<p>Jika ini bukan Anda, segera cabut sesi aktif dari menu <b>Keamanan Akun</b> dan ganti kata sandi Anda.</p>";
+                        @sendErpEmail((string)$user['email'], (string)$user['nama_lengkap'], 'Peringatan Keamanan: Login dari IP Baru', $alertHtml, 'security', (int)$user['id']);
+                    }
+                } catch (\Throwable $e) {}
             }
 
             // Update last login
@@ -120,6 +173,82 @@ switch ($method) {
             }
             session_destroy();
             successResponse(null, 'Berhasil logout');
+        } elseif ($id === 'forgot-password') {
+            $identifier = trim((string)($params['identifier'] ?? ''));
+            if ($identifier === '') {
+                errorResponse('Masukkan username atau email akun Anda', 422);
+            }
+
+            $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+            try {
+                $ipReqs = (int)$db->count(
+                    "SELECT COUNT(*) FROM login_attempts WHERE username = '__forgot__' AND ip_address = ? AND attempted_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+                    [$ip]
+                );
+                if ($ipReqs >= 5) {
+                    errorResponse('Terlalu banyak permintaan reset. Coba lagi dalam 15 menit.', 429);
+                }
+                $db->execute("INSERT INTO login_attempts (username, ip_address) VALUES ('__forgot__', ?)", [$ip]);
+            } catch (\Throwable $e) {}
+
+            $user = $db->fetch(
+                "SELECT id, username, nama_lengkap, email, status FROM users WHERE (username = ? OR email = ?) LIMIT 1",
+                [$identifier, $identifier]
+            );
+            if ($user && $user['status'] === 'aktif' && !empty($user['email']) && filter_var($user['email'], FILTER_VALIDATE_EMAIL)) {
+                $rawToken = bin2hex(random_bytes(24));
+                $tokenHash = hash('sha256', $rawToken);
+                $db->execute(
+                    "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))",
+                    [(int)$user['id'], $tokenHash]
+                );
+                $resetUrl = buildPublicAppUrl('#/reset-password?token=' . urlencode($rawToken));
+                $cfg = function_exists('getAppSettingsMap') ? getAppSettingsMap() : [];
+                $compName = htmlspecialchars((string)($cfg['company_name'] ?? 'CRUDWorks ERP'));
+                $hasLogo = function_exists('resolveCompanyEmailLogoPath') && resolveCompanyEmailLogoPath($cfg) !== null;
+                $logoHtml = $hasLogo
+                    ? "<div style='margin-bottom:12px'><img src='cid:company-logo' alt='{$compName}' style='max-height:36px;width:auto;display:inline-block;background:#ffffff;padding:6px 10px;border-radius:8px'></div>"
+                    : '';
+                $html = "<div style='font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;color:#1e293b;background:#ffffff'>
+                    <div style='background:#0f172a;color:#fff;padding:24px'>{$logoHtml}<h2 style='margin:0;font-size:18px'>Permintaan Reset Kata Sandi</h2></div>
+                    <div style='padding:24px;line-height:1.6;font-size:14px'>
+                        <p>Halo <b>" . htmlspecialchars((string)$user['nama_lengkap']) . "</b>,</p>
+                        <p>Kami menerima permintaan reset kata sandi untuk akun <b>" . htmlspecialchars((string)$user['username']) . "</b>. Tautan di bawah berlaku selama <b>30 menit</b>:</p>
+                        <p style='text-align:center;margin:24px 0'><a href='" . htmlspecialchars($resetUrl) . "' style='display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:bold'>Atur Ulang Kata Sandi</a></p>
+                        <p style='font-size:12px;color:#64748b'>Abaikan email ini jika Anda tidak meminta reset kata sandi.</p>
+                    </div></div>";
+                if (function_exists('sendErpEmail')) {
+                    @sendErpEmail((string)$user['email'], (string)$user['nama_lengkap'], "Reset Kata Sandi - {$compName}", $html, 'security', (int)$user['id']);
+                }
+                logActivity('forgot_password_request', 'users', (int)$user['id'], null, ['ip' => $ip]);
+            }
+
+            successResponse(null, 'Jika akun ditemukan dan memiliki email terdaftar, tautan reset kata sandi telah dikirim.');
+        } elseif ($id === 'reset-password') {
+            $token = trim((string)($params['token'] ?? ''));
+            $newPass = (string)($params['new_password'] ?? '');
+            if ($token === '' || strlen($newPass) < 6) {
+                errorResponse('Token tidak valid atau kata sandi baru minimal 6 karakter', 422);
+            }
+
+            $tokenHash = hash('sha256', $token);
+            $row = $db->fetch(
+                "SELECT * FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at >= NOW() LIMIT 1",
+                [$tokenHash]
+            );
+            if (!$row) {
+                errorResponse('Tautan reset kata sandi tidak valid atau sudah kedaluwarsa', 400);
+            }
+
+            $userId = (int)$row['user_id'];
+            $db->execute("UPDATE users SET password = ? WHERE id = ?", [password_hash($newPass, PASSWORD_DEFAULT), $userId]);
+            $db->execute("UPDATE password_resets SET used_at = NOW() WHERE id = ?", [(int)$row['id']]);
+            try {
+                $db->execute("UPDATE user_sessions SET is_revoked = 1 WHERE user_id = ?", [$userId]);
+                $db->execute("DELETE FROM login_attempts WHERE username = (SELECT username FROM users WHERE id = ? LIMIT 1)", [$userId]);
+            } catch (\Throwable $e) {}
+            logActivity('password_reset_success', 'users', $userId);
+            successResponse(null, 'Kata sandi berhasil diperbarui. Silakan masuk dengan kata sandi baru.');
         } elseif ($id === '2fa') {
             authCheck();
             $userId = (int)$_SESSION['user_id'];

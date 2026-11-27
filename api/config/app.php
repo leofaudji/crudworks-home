@@ -4,7 +4,7 @@ date_default_timezone_set("Asia/Jakarta");
 
 // Application Configuration
 define('APP_NAME', getenv('APP_NAME') ?: 'CRUDWorks ERP');
-define('APP_VERSION', '1.8.15');
+define('APP_VERSION', '1.8.16');
 define('APP_URL', getenv('APP_URL') ?: 'http://crudworks-home.test');
 
 // Session
@@ -81,5 +81,27 @@ function buildPublicAppUrl(string $hashPath = ''): string
     }
 
     return "{$scheme}://{$host}{$base}/" . ltrim($hashPath, '/');
+}
+
+/**
+ * Kirim HTTP Security Headers standar produksi untuk mencegah clickjacking, MIME sniffing, dan kebocoran referrer.
+ */
+function emitSecurityHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+
+    $xfProto = trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    $isHttps = ($xfProto !== '' && strtolower(explode(',', $xfProto)[0]) === 'https')
+        || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((string)($_SERVER['SERVER_PORT'] ?? '') === '443');
+    if ($isHttps) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
 }
 define('APP_GIT_URL', getenv('APP_GIT_URL') ?: 'http://app-git.test');

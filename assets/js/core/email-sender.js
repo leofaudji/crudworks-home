@@ -19,29 +19,19 @@ export async function promptSendEmail({
     buildPdf = null,
     onSuccess = null
 } = {}) {
-    let ccValue = defaultCc || '';
-    if (typeof Swal !== 'undefined') {
-        const result = await Swal.fire({
-            title,
-            html: `
-                <p class="text-xs text-slate-500 mb-3">${App.escapeHtml(text)}</p>
-                <div class="text-left">
-                    <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">CC Email (Opsional, pisahkan dengan koma)</label>
-                    <input id="swal-cc-email" type="text" value="${App.escapeHtml(defaultCc || '')}" placeholder="finance@klien.com, pic@klien.com"
-                           class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
-                </div>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Kirim Email',
-            cancelButtonText: 'Batal',
-            preConfirm: () => document.getElementById('swal-cc-email')?.value.trim() || ''
-        });
-        if (!result.isConfirmed) return false;
-        ccValue = result.value || '';
-    } else if (!await App.confirm(title, text)) {
-        return false;
-    }
+    const ccResult = await App.prompt({
+        title,
+        text,
+        icon: 'question',
+        label: 'CC Email (Opsional, pisahkan dengan koma)',
+        placeholder: 'finance@klien.com, pic@klien.com',
+        value: defaultCc || '',
+        required: false,
+        confirmBtnText: 'Kirim Email',
+        cancelBtnText: 'Batal'
+    });
+    if (ccResult === null) return false;
+    const ccValue = ccResult;
 
     App.toast('Menyiapkan PDF & mengirim email...', 'info');
     let payload = {};

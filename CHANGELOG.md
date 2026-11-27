@@ -4,6 +4,16 @@ Daftar pembaruan fitur, peningkatan kenyamanan, dan perbaikan sistem **CRUDWorks
 
 ---
 
+## [1.8.16] - 2026-11-27
+
+### Disempurnakan (Improved)
+
+- **Identitas Logo & Ikon Aplikasi Baru**: Pembaruan desain logo dan ikon aplikasi (`icon-192` & `icon-512`) dengan nuansa warna yang lebih segar dan modern.
+- **Tampilan Halaman Login Lebih Rapi & Informatif**: Penataan ulang indikator status layanan dan keterangan versi, serta tambahan deteksi tombol Caps Lock saat mengetik kata sandi agar proses masuk lebih nyaman.
+- **Keamanan Login & Perlindungan Akses API**: Pesan kesalahan saat gagal masuk kini diseragamkan untuk melindungi privasi akun pengguna, disertai pembatasan akses lintas domain agar hanya origin resmi aplikasi yang diizinkan.
+
+---
+
 ## [1.8.15] - 2026-11-27
 
 ### Ditambahkan (Added)

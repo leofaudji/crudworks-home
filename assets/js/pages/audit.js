@@ -20,6 +20,7 @@ export async function init(container) {
                 <div class="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold self-start">
                     <button type="button" data-audit-tab="audit" class="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition">Log Aktivitas</button>
                     <button type="button" data-audit-tab="email" class="px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition">Riwayat Email</button>
+                    <button type="button" data-audit-tab="rate-limit" class="px-3.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition">Rate Limit Login</button>
                 </div>
             </div>
 
@@ -75,6 +76,7 @@ export async function init(container) {
             </div>
 
             <div id="audit-email-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-6"></div>
+            <div id="audit-rate-limit-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-6"></div>
         </div>
 
         <!-- Detail Payload Modal -->
@@ -122,6 +124,7 @@ export async function init(container) {
     });
 
     let emailLogsMounted = false;
+    let rateLimitMounted = false;
     container.querySelectorAll('[data-audit-tab]').forEach(btn => {
         btn.addEventListener('click', async () => {
             const tab = btn.dataset.auditTab;
@@ -133,11 +136,18 @@ export async function init(container) {
             });
             document.getElementById('audit-tab-panel')?.classList.toggle('hidden', tab !== 'audit');
             const emailPanel = document.getElementById('audit-email-panel');
+            const rlPanel = document.getElementById('audit-rate-limit-panel');
             emailPanel?.classList.toggle('hidden', tab !== 'email');
+            rlPanel?.classList.toggle('hidden', tab !== 'rate-limit');
             if (tab === 'email' && !emailLogsMounted && emailPanel) {
                 emailLogsMounted = true;
                 const { mountEmailLogsPanel } = await import('../core/email-logs-panel.js');
                 mountEmailLogsPanel(emailPanel, { perPage: 15 });
+            }
+            if (tab === 'rate-limit' && !rateLimitMounted && rlPanel) {
+                rateLimitMounted = true;
+                const { mountRateLimitPanel } = await import('../core/rate-limit-panel.js');
+                mountRateLimitPanel(rlPanel);
             }
         });
     });

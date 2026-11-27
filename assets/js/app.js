@@ -18,6 +18,7 @@ import {
     closeTableActionMenu,
     compressImageFile,
     confirmAction,
+    promptAction,
     debounce,
     escapeHtml,
     exportCsv,
@@ -136,6 +137,8 @@ const App = {
     closeAllAutocompletes,
     confirm: confirmAction,
     confirmAction,
+    prompt: promptAction,
+    promptAction,
     terbilang,
     btnLoading,
     exportCsv,
@@ -252,6 +255,7 @@ const App = {
                 e.preventDefault();
                 this.login();
             });
+            import('./core/login-enhancements.js').then(({ initLoginEnhancements }) => initLoginEnhancements());
         }
 
         // Bind navigation, observers, and prefetching
@@ -274,8 +278,9 @@ const App = {
 
         // Check active session
         const currentHash = window.location.hash || '';
+        const isResetPass = currentHash.startsWith('#/reset-password');
         const isPublicPortal = currentHash.startsWith('#/public-invoice') || currentHash.startsWith('#/public-quotation') || currentHash.startsWith('#/client-portal') || currentHash.startsWith('#/status');
-        const session = await checkSession();
+        const session = isResetPass ? { authenticated: false } : await checkSession();
         if (session.authenticated || isPublicPortal) {
             if (session.authenticated) await this.refreshBranding();
             this.showApp(isPublicPortal && !session.authenticated);
@@ -286,8 +291,12 @@ const App = {
         window.addEventListener('hashchange', () => {
             closeAllAutocompletes();
             const ch = window.location.hash || '';
+            const isReset = ch.startsWith('#/reset-password');
             const isPublic = ch.startsWith('#/public-invoice') || ch.startsWith('#/public-quotation') || ch.startsWith('#/client-portal') || ch.startsWith('#/status');
-            if (AuthState.user) {
+            if (isReset) {
+                this.showLogin();
+                import('./core/login-enhancements.js').then(({ checkResetPasswordHash }) => checkResetPasswordHash());
+            } else if (AuthState.user) {
                 this._setPublicLayoutMode(false);
                 router.handleRoute();
             } else if (isPublic) {

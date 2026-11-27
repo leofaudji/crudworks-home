@@ -323,7 +323,8 @@ function _showAppDialog({
     icon = 'warning',
     confirmBtnText = 'Ya, Lanjutkan',
     cancelBtnText = 'Batal',
-    showCancel = true
+    showCancel = true,
+    input = null
 }) {
     return new Promise((resolve) => {
         const existing = document.getElementById('app-dialog-overlay');
@@ -375,6 +376,17 @@ function _showAppDialog({
                     </div>
                     <h3 class="app-dialog-title">${escapeHtml(title)}</h3>
                     ${text ? `<p class="app-dialog-text">${escapeHtml(text)}</p>` : ''}
+                    ${input ? `
+                        <div class="mt-4 text-left">
+                            ${input.label ? `<label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">${escapeHtml(input.label)}</label>` : ''}
+                            <input type="${escapeHtml(input.type || 'text')}" data-dialog-input
+                                   value="${escapeHtml(input.value || '')}"
+                                   placeholder="${escapeHtml(input.placeholder || '')}"
+                                   ${input.autocomplete ? `autocomplete="${escapeHtml(input.autocomplete)}"` : ''}
+                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition">
+                            <p data-dialog-input-err class="hidden mt-1.5 text-[11px] font-semibold text-rose-600"></p>
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="app-dialog-actions">
                     ${showCancel ? `<button type="button" data-dialog-cancel class="app-dialog-btn app-dialog-btn-cancel">${escapeHtml(cancelBtnText)}</button>` : ''}
@@ -398,20 +410,60 @@ function _showAppDialog({
         const onKeyDown = (e) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                close(false);
+                close(input ? null : false);
             }
         };
 
+        const handleConfirm = () => {
+            if (!input) {
+                close(true);
+                return;
+            }
+            const inputEl = overlay.querySelector('[data-dialog-input]');
+            const errEl = overlay.querySelector('[data-dialog-input-err]');
+            const val = inputEl ? inputEl.value : '';
+            const trimmed = input.trim === false ? val : val.trim();
+            let errMsg = '';
+            if (input.required && !trimmed) {
+                errMsg = input.requiredMessage || 'Kolom ini wajib diisi';
+            } else if (input.minLength && trimmed.length < input.minLength) {
+                errMsg = `Minimal ${input.minLength} karakter`;
+            } else if (typeof input.validator === 'function') {
+                errMsg = input.validator(trimmed) || '';
+            }
+            if (errMsg) {
+                if (errEl) {
+                    errEl.textContent = errMsg;
+                    errEl.classList.remove('hidden');
+                }
+                inputEl?.focus();
+                return;
+            }
+            close(trimmed);
+        };
+
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) close(false);
+            if (e.target === overlay) close(input ? null : false);
         });
-        overlay.querySelector('[data-dialog-confirm]')?.addEventListener('click', () => close(true));
-        overlay.querySelector('[data-dialog-cancel]')?.addEventListener('click', () => close(false));
+        overlay.querySelector('[data-dialog-confirm]')?.addEventListener('click', handleConfirm);
+        overlay.querySelector('[data-dialog-cancel]')?.addEventListener('click', () => close(input ? null : false));
+        overlay.querySelector('[data-dialog-input]')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleConfirm();
+            }
+        });
         document.addEventListener('keydown', onKeyDown);
 
         document.body.appendChild(overlay);
         requestAnimationFrame(() => {
             overlay.classList.add('is-open');
+            const inputEl = overlay.querySelector('[data-dialog-input]');
+            if (inputEl) {
+                inputEl.focus();
+                inputEl.select?.();
+                return;
+            }
             const focusTarget = isDanger && showCancel
                 ? overlay.querySelector('[data-dialog-cancel]')
                 : overlay.querySelector('[data-dialog-confirm]');
@@ -438,6 +490,36 @@ export async function confirmAction(
     cancelBtnText = 'Batal'
 ) {
     return _showAppDialog({ title, text, icon, confirmBtnText, cancelBtnText, showCancel: true });
+}
+
+/**
+ * Custom Input Prompt Modal (replaces generic SweetAlert2 / window.prompt)
+ */
+export async function promptAction({
+    title,
+    text = '',
+    icon = 'question',
+    confirmBtnText = 'Simpan',
+    cancelBtnText = 'Batal',
+    type = 'text',
+    label = '',
+    placeholder = '',
+    value = '',
+    required = true,
+    minLength = 0,
+    trim = true,
+    autocomplete = '',
+    validator = null
+} = {}) {
+    return _showAppDialog({
+        title,
+        text,
+        icon,
+        confirmBtnText,
+        cancelBtnText,
+        showCancel: true,
+        input: { type, label, placeholder, value, required, minLength, trim, autocomplete, validator }
+    });
 }
 
 /**

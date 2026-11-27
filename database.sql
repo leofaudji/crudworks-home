@@ -1049,3 +1049,24 @@ CREATE TABLE IF NOT EXISTS `accounting_periods` (
     `closed_at` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pencatatan Percobaan Login Gagal (Rate Limiting & Lockout)
+CREATE TABLE IF NOT EXISTS `login_attempts` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(100) NOT NULL,
+    `ip_address` VARCHAR(45) NOT NULL,
+    `attempted_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_la_user_ip` (`username`, `ip_address`, `attempted_at`),
+    INDEX `idx_la_ip_time` (`ip_address`, `attempted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Token Reset Kata Sandi via Email SMTP
+CREATE TABLE IF NOT EXISTS `password_resets` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT UNSIGNED NOT NULL,
+    `token_hash` CHAR(64) NOT NULL UNIQUE,
+    `expires_at` DATETIME NOT NULL,
+    `used_at` DATETIME NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_pr_user` (`user_id`, `expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

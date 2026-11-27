@@ -59,5 +59,10 @@ if (file_exists(__DIR__ . '/minify_html.php')) {
 }
 
 header('Content-Type: text/html; charset=UTF-8');
-header('X-Content-Type-Options: nosniff');
+if (file_exists(__DIR__ . '/api/config/app.php')) {
+    require_once __DIR__ . '/api/config/app.php';
+    emitSecurityHeaders();
+} else {
+    header('X-Content-Type-Options: nosniff');
+}
 echo $html;

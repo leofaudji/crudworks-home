@@ -3,11 +3,24 @@
 // CRUDWorks ERP — API FRONT CONTROLLER & DISPATCHER
 // ============================================================
 
+require_once __DIR__ . '/config/env.php';
+require_once __DIR__ . '/config/app.php';
+
 header('Content-Type: application/json; charset=utf-8');
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (!empty($origin)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header('Access-Control-Allow-Credentials: true');
+    $originHost = strtolower((string)parse_url($origin, PHP_URL_HOST));
+    $forwardedHost = explode(',', (string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ''))[0];
+    $allowedHosts = array_filter([
+        strtolower(trim(explode(':', (string)($_SERVER['HTTP_HOST'] ?? ''))[0])),
+        strtolower(trim(explode(':', $forwardedHost)[0])),
+        strtolower((string)parse_url(defined('APP_URL') ? APP_URL : '', PHP_URL_HOST)),
+    ]);
+    if ($originHost !== '' && in_array($originHost, $allowedHosts, true)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header('Access-Control-Allow-Credentials: true');
+        header('Vary: Origin');
+    }
 }
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
@@ -20,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Load env, config & dependencies
 require_once __DIR__ . '/config/env.php';
 require_once __DIR__ . '/config/app.php';
+emitSecurityHeaders();
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/redis.php';
 require_once __DIR__ . '/config/invoice_helpers.php';

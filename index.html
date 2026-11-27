@@ -144,67 +144,90 @@
 
 
 
-    <!-- Login Page -->
-    <div id="login-page" class="hidden min-h-screen bg-white flex overflow-hidden font-sans">
+    <!-- Login Page (White to Light Silver Gradient + Architectural Dot Grid) -->
+    <div id="login-page" class="hidden min-h-screen flex overflow-hidden font-sans relative"
+         style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 45%, #e2e8f0 100%);">
+        <div class="absolute inset-0 pointer-events-none opacity-45"
+             style="background-image: radial-gradient(#94a3b8 1px, transparent 1px); background-size: 24px 24px;"></div>
+
         <!-- Left Panel: ERP Showcase -->
-        <div class="hidden lg:flex lg:w-[45%] bg-slate-900 relative overflow-hidden flex-col justify-between p-14 text-white">
-            <div class="absolute top-0 right-0 w-[640px] h-[640px] bg-primary-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-            <div class="absolute bottom-0 left-0 w-[480px] h-[480px] bg-emerald-500/10 rounded-full blur-[110px] translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
+        <div class="hidden lg:flex lg:w-[48%] relative z-10 flex-col justify-between p-14 text-slate-900">
 
             <!-- Brand Header -->
             <div class="relative z-10 flex items-center gap-3">
-                <img src="assets/icons/icon.svg" class="w-10 h-10 rounded-xl app-brand-logo" alt="Logo">
+                <img src="assets/icons/icon.svg" class="w-10 h-10 rounded-xl shadow-xs app-brand-logo" alt="Logo">
                 <div>
-                    <span class="text-lg font-extrabold tracking-tight block leading-tight" id="login-app-name">CRUDWorks ERP</span>
-                    <span class="text-[11px] text-slate-400 font-medium">Billing &amp; Project Management</span>
+                    <span class="text-lg font-extrabold tracking-tight block leading-tight text-slate-900" id="login-app-name">CRUDWorks ERP</span>
+                    <span class="text-[11px] text-slate-500 font-medium">Billing &amp; Project Management</span>
                 </div>
             </div>
 
             <!-- Main Message -->
             <div class="relative z-10 my-auto">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-primary-400 mb-5">
-                    <i class="ri-git-branch-line"></i> Terintegrasi dengan www/app-git
-                </span>
-                <h1 class="text-4xl xl:text-5xl font-extrabold tracking-tight leading-[1.12] mb-5">
-                    Kelola Tagihan Klien,<br>
-                    <span class="text-primary-400">Pantau Pembayaran Nyata.</span>
+                <h1 class="text-4xl xl:text-[42px] font-extrabold tracking-tight leading-[1.14] mb-4 text-slate-900">
+                    Satu Sistem Terpadu,<br>
+                    <span class="text-primary-600">Kendali Penuh Bisnis Anda.</span>
                 </h1>
-                <p class="text-slate-400 text-base leading-relaxed max-w-md mb-8">
-                    Cetak invoice resmi A4 untuk pelanggan, lacak status bayar lunas atau jatuh tempo, sinkronisasi repositori git klien, dan kelola tagihan berulang secara otomatis.
+                <p class="text-slate-600 text-[15px] leading-relaxed max-w-lg mb-7">
+                    Dari surat penawaran, kontrak kerja digital, progres proyek, hingga penagihan otomatis dan laporan keuangan standar PSAK — seluruh alur bisnis terhubung rapi dalam satu tempat.
                 </p>
 
-                <div class="grid grid-cols-2 gap-3.5 max-w-md">
-                    <div class="p-3.5 bg-white/5 border border-white/10 rounded-2xl">
-                        <div class="flex items-center gap-2 text-primary-400 text-xs font-bold mb-1">
-                            <i class="ri-printer-line text-base"></i> Cetak Faktur Siap Pakai
+                <div class="grid grid-cols-2 gap-3.5 max-w-lg">
+                    <div class="p-4 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-2xl shadow-2xs hover:bg-white hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300/80 transition-all duration-200">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-2.5">
+                            <i class="ri-file-shield-2-line text-base"></i>
                         </div>
-                        <p class="text-[11px] text-slate-400 leading-snug">Layout cetak standar A4 dilengkapi QR Code verifikasi dan rincian item tagihan.</p>
+                        <div class="text-slate-900 text-xs font-bold mb-1">Penawaran, SPK &amp; BAST</div>
+                        <p class="text-[11px] text-slate-600 leading-snug">Terbitkan proposal, kontrak, hingga serah terima dengan tanda tangan digital klien.</p>
                     </div>
-                    <div class="p-3.5 bg-white/5 border border-white/10 rounded-2xl">
-                        <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold mb-1">
-                            <i class="ri-shield-keyhole-line text-base"></i> Redis &amp; RBAC Guard
+                    <div class="p-4 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-2xl shadow-2xs hover:bg-white hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300/80 transition-all duration-200">
+                        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center mb-2.5">
+                            <i class="ri-mail-send-line text-base"></i>
                         </div>
-                        <p class="text-[11px] text-slate-400 leading-snug">Sesi aman berbasis Redis, validasi CSRF otomatis, dan proteksi hak akses ketat.</p>
+                        <div class="text-slate-900 text-xs font-bold mb-1">Faktur &amp; Kuitansi Otomatis</div>
+                        <p class="text-[11px] text-slate-600 leading-snug">Kirim tagihan &amp; kuitansi PDF resmi via email serta pantau kapan klien membukanya.</p>
+                    </div>
+                    <div class="p-4 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-2xl shadow-2xs hover:bg-white hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300/80 transition-all duration-200">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5">
+                            <i class="ri-funds-line text-base"></i>
+                        </div>
+                        <div class="text-slate-900 text-xs font-bold mb-1">Laporan Keuangan PSAK</div>
+                        <p class="text-[11px] text-slate-600 leading-snug">Jurnal umum, buku besar, laba rugi, neraca, dan arus kas tercatat otomatis.</p>
+                    </div>
+                    <div class="p-4 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-2xl shadow-2xs hover:bg-white hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300/80 transition-all duration-200">
+                        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-2.5">
+                            <i class="ri-shield-check-line text-base"></i>
+                        </div>
+                        <div class="text-slate-900 text-xs font-bold mb-1">Portal Klien &amp; Keamanan 2FA</div>
+                        <p class="text-[11px] text-slate-600 leading-snug">Portal mandiri pelanggan, proteksi 2FA Authenticator, dan kontrol sesi aktif.</p>
                     </div>
                 </div>
             </div>
 
             <div class="relative z-10 text-xs text-slate-500 font-medium flex items-center justify-between gap-3">
                 <span>&copy; <span class="copyright-year">2026</span> <a href="https://crudworks.com/" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline font-semibold">CRUDWorks.com</a> - All rights reserved.</span>
-                <span class="font-mono text-[11px] text-slate-400">v{{APP_VERSION}}</span>
+                <div class="flex items-center gap-2.5 shrink-0">
+                    <a href="#/status" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/85 border border-slate-200/90 text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-2xs transition">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Layanan Normal</span>
+                    </a>
+                    <span class="font-mono text-[11px] text-slate-500">v{{APP_VERSION}}</span>
+                </div>
             </div>
         </div>
 
-        <!-- Right Panel: Login Form -->
-        <div class="w-full lg:w-[55%] flex flex-col items-center justify-center p-6 sm:p-10 relative">
-            <div class="w-full max-w-sm animate-fadeIn">
-                <div class="mb-8 text-center lg:text-left">
-                    <img src="assets/icons/icon.svg" class="w-14 h-14 mx-auto lg:mx-0 mb-5 rounded-2xl shadow-sm app-brand-logo" alt="Logo">
+        <!-- Right Panel: Floating Login Card -->
+        <div class="w-full lg:w-[52%] flex flex-col items-center justify-center p-6 sm:p-10 relative z-10">
+            <div class="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-900/5 overflow-hidden animate-fadeIn">
+                <div class="h-1 w-full bg-primary-600"></div>
+                <div class="p-7 sm:p-9">
+                <div class="mb-7 text-center lg:text-left">
+                    <img src="assets/icons/icon.svg" class="w-12 h-12 mx-auto lg:hidden mb-4 rounded-2xl shadow-sm app-brand-logo" alt="Logo">
                     <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-1.5">Masuk ke Sistem</h2>
                     <p class="text-sm text-slate-500">Gunakan akun pengelola atau staf untuk mengakses tagihan dan proyek.</p>
                 </div>
 
-                <form id="login-form" class="space-y-5">
+                <form id="login-form" class="space-y-4">
                     <div>
                         <label for="login-username" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Username</label>
                         <div class="relative">
@@ -216,17 +239,28 @@
                     </div>
 
                     <div>
-                        <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Password</label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-slate-600">Password</label>
+                            <button type="button" id="btn-forgot-password" class="text-[11px] font-semibold text-primary-600 hover:text-primary-700 hover:underline">Lupa password?</button>
+                        </div>
                         <div class="relative">
                             <input type="password" id="login-password" autocomplete="current-password" required
                                 class="w-full pl-4 pr-11 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 outline-none transition text-slate-900 text-sm font-medium"
                                 placeholder="••••••••">
                             <button type="button" onclick="const i=document.getElementById('login-password'); i.type=i.type==='password'?'text':'password'; this.querySelector('i').className=i.type==='password'?'ri-eye-line':'ri-eye-off-line';"
-                                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1" title="Tampilkan Password">
+                                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1" title="Tampilkan Password" aria-label="Tampilkan Password">
                                 <i class="ri-eye-line"></i>
                             </button>
                         </div>
+                        <div id="login-capslock-warn" class="hidden mt-1.5 text-[11px] font-semibold text-amber-600 flex items-center gap-1">
+                            <i class="ri-alert-line"></i><span>Caps Lock sedang aktif</span>
+                        </div>
                     </div>
+
+                    <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
+                        <input type="checkbox" id="login-remember-username" class="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                        <span>Ingat username saya di perangkat ini</span>
+                    </label>
 
                     <div id="login-2fa-group" class="hidden space-y-2 p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200">
                         <div class="flex items-center justify-between">
@@ -242,7 +276,7 @@
                     </div>
 
                     <button id="login-btn" type="submit"
-                        class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-slate-900/15 transition flex items-center justify-center gap-2">
+                        class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-primary-600/20 transition flex items-center justify-center gap-2">
                         <span>Masuk Dashboard</span>
                         <i class="ri-arrow-right-line"></i>
                     </button>
@@ -252,6 +286,14 @@
                         <span></span>
                     </div>
                 </form>
+
+                <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                    <span>Pelanggan?</span>
+                    <a href="#/client-portal" class="font-semibold text-primary-600 hover:underline inline-flex items-center gap-1"><i class="ri-user-shared-line"></i>Portal Klien</a>
+                    <span class="text-slate-300">·</span>
+                    <a href="#/status" class="font-semibold text-slate-600 hover:text-slate-900 hover:underline inline-flex items-center gap-1"><i class="ri-pulse-line"></i>Status Layanan</a>
+                </div>
+                </div>
             </div>
         </div>
     </div>

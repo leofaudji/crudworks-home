@@ -3,10 +3,11 @@ DirectoryIndex index.php index.html
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block direct web access to internal documentation and sensitive files
-    RewriteRule ^docs(/.*)?$ - [F,L]
+    # Block direct web access to internal documentation, migrations, backups, and sensitive files
+    RewriteRule ^(docs|scratch|backups|storage|scripts|\.git)(/.*)?$ - [F,L]
     RewriteRule ^\.env - [F,L]
-    RewriteRule ^database\.sql$ - [F,L]
+    RewriteRule ^(database\.sql|AGENTS\.md|composer\.(json|lock))$ - [F,L]
+    RewriteRule \.(sql|log|ini|bak|sh|ps1)$ - [F,L]
 
     # Force trailing slash for the main directory
     RewriteCond %{REQUEST_URI} !/$
@@ -28,10 +29,12 @@ DirectoryIndex index.php index.html
 
 # Security Headers
 <IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
 </IfModule>
 
 # Compression

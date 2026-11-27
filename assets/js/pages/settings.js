@@ -135,12 +135,42 @@ async function renderSection() {
     const s = (res && res.success) ? res.data : {};
 
     if (activeSection === 'company') {
+        const currentLogo = (s.company_logo || '').trim();
+        const previewLogoSrc = currentLogo || 'assets/images/logo.png';
         cont.innerHTML = `
-            <form id="company-form" class="space-y-5">
+            <div class="space-y-6">
                 <div class="pb-4 border-b border-slate-100 dark:border-slate-800">
                     <h2 class="text-base font-bold text-slate-900 dark:text-white">Profil Instansi &amp; Kontak Resmi</h2>
-                    <p class="text-xs text-slate-500">Informasi ini tampil pada kop faktur PDF, penawaran (SPH), kuitansi, dan portal klien.</p>
+                    <p class="text-xs text-slate-500">Informasi ini tampil pada kop faktur PDF, penawaran (SPH), kuitansi, laporan keuangan, dan email.</p>
                 </div>
+
+                <!-- Logo Perusahaan untuk PDF & Email -->
+                <div class="p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="w-36 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                            <img id="company-logo-preview" src="${App.escapeHtml(previewLogoSrc)}" alt="Logo Perusahaan" class="max-h-full max-w-full object-contain">
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-slate-900 dark:text-white">Logo Kop Laporan PDF &amp; Email</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                ${currentLogo ? 'Menggunakan logo kustom perusahaan.' : 'Menggunakan logo default (assets/images/logo.png).'} Format PNG/JPG/WEBP, maks. 2 MB.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <input type="file" id="company-logo-input" accept="image/png,image/jpeg,image/webp" class="hidden">
+                        <button type="button" id="btn-upload-logo" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition">
+                            <i class="ri-upload-2-line"></i><span>Ganti Logo</span>
+                        </button>
+                        ${currentLogo ? `
+                            <button type="button" id="btn-reset-logo" class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold inline-flex items-center gap-1 transition" title="Kembalikan ke logo default">
+                                <i class="ri-refresh-line"></i><span>Reset Default</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <form id="company-form" class="space-y-5">
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2">
@@ -184,8 +214,10 @@ async function renderSection() {
                     </button>
                 </div>
             </form>
+            </div>
         `;
         document.getElementById('company-form')?.addEventListener('submit', (e) => saveGenericSettings(e, 'company-form'));
+        bindCompanyLogoHandlers();
     }
 
     if (activeSection === 'invoice') {
@@ -775,6 +807,64 @@ async function saveGenericSettings(e, formId) {
             window.App.settings = Object.assign(window.App.settings || {}, settings);
         }
     }
+}
+
+function bindCompanyLogoHandlers() {
+    const inputEl = document.getElementById('company-logo-input');
+    const uploadBtn = document.getElementById('btn-upload-logo');
+    const resetBtn = document.getElementById('btn-reset-logo');
+
+    uploadBtn?.addEventListener('click', () => inputEl?.click());
+
+    inputEl?.addEventListener('change', async () => {
+        const file = inputEl.files?.[0];
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('logo', file);
+
+        App.btnLoading(uploadBtn, true, 'Mengunggah...');
+        try {
+            const resp = await fetch('api/settings/upload-logo', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': App.csrfToken },
+                body: fd
+            });
+            const json = await resp.json();
+            if (!resp.ok || !json.success) {
+                App.toast(json.message || 'Gagal mengunggah logo', 'error');
+                return;
+            }
+            const newLogo = json.data?.company_logo || '';
+            if (window.App) {
+                window.App.settings = Object.assign(window.App.settings || {}, { company_logo: newLogo });
+            }
+            const { _invalidateCompanyLogoCache } = await import('../core/pdf/shared.js');
+            _invalidateCompanyLogoCache();
+            App.toast(json.message || 'Logo perusahaan diperbarui', 'success');
+            renderSection();
+        } catch (err) {
+            App.toast('Gagal menghubungi server saat mengunggah logo', 'error');
+        } finally {
+            App.btnLoading(uploadBtn, false);
+        }
+    });
+
+    resetBtn?.addEventListener('click', async () => {
+        const ok = await App.confirm('Kembalikan logo perusahaan ke default (assets/images/logo.png)?', 'Reset Logo');
+        if (!ok) return;
+        App.btnLoading(resetBtn, true, 'Mereset...');
+        const res = await App.api('settings/reset-logo', { method: 'POST' });
+        App.btnLoading(resetBtn, false);
+        if (res && res.success) {
+            if (window.App) {
+                window.App.settings = Object.assign(window.App.settings || {}, { company_logo: '' });
+            }
+            const { _invalidateCompanyLogoCache } = await import('../core/pdf/shared.js');
+            _invalidateCompanyLogoCache();
+            App.toast(res.message || 'Logo dikembalikan ke default', 'success');
+            renderSection();
+        }
+    });
 }
 
 window.openPaymentMethodModal = (pmId = null) => {

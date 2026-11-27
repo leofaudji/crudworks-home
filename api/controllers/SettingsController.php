@@ -87,6 +87,66 @@ if ($id === 'clear-cache' && $method === 'POST') {
     successResponse(null, 'Seluruh cache laporan & sistem berhasil dibersihkan');
 }
 
+if ($id === 'upload-logo' && $method === 'POST') {
+    authCheck();
+    checkPermission('settings.edit');
+    if (empty($_FILES['logo'])) {
+        errorResponse('Pilih file gambar logo terlebih dahulu', 422);
+    }
+
+    $savedPath = saveUploadedFile(
+        $_FILES['logo'],
+        'uploads/logos',
+        ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'],
+        2097152
+    );
+
+    $oldRow = $db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'company_logo' LIMIT 1");
+    $oldPath = trim((string)($oldRow['nilai'] ?? ''));
+    if ($oldPath !== '' && str_starts_with($oldPath, 'uploads/logos/')) {
+        $baseDir = realpath(__DIR__ . '/../../uploads/logos');
+        $oldFull = realpath(__DIR__ . '/../../' . $oldPath);
+        if ($baseDir && $oldFull && str_starts_with($oldFull, $baseDir . DIRECTORY_SEPARATOR) && is_file($oldFull)) {
+            @unlink($oldFull);
+        }
+    }
+
+    $db->execute(
+        "INSERT INTO app_settings (kunci, nilai, grup, keterangan)
+         VALUES ('company_logo', ?, 'company', 'Logo kustom perusahaan untuk PDF dan email')
+         ON DUPLICATE KEY UPDATE nilai = VALUES(nilai)",
+        [$savedPath]
+    );
+    clearCache(['settings']);
+    logActivity('settings.upload_logo', 'app_settings', 0, null, ['company_logo' => $savedPath]);
+    successResponse(['company_logo' => $savedPath], 'Logo perusahaan berhasil diperbarui');
+}
+
+if ($id === 'reset-logo' && $method === 'POST') {
+    authCheck();
+    checkPermission('settings.edit');
+
+    $oldRow = $db->fetch("SELECT nilai FROM app_settings WHERE kunci = 'company_logo' LIMIT 1");
+    $oldPath = trim((string)($oldRow['nilai'] ?? ''));
+    if ($oldPath !== '' && str_starts_with($oldPath, 'uploads/logos/')) {
+        $baseDir = realpath(__DIR__ . '/../../uploads/logos');
+        $oldFull = realpath(__DIR__ . '/../../' . $oldPath);
+        if ($baseDir && $oldFull && str_starts_with($oldFull, $baseDir . DIRECTORY_SEPARATOR) && is_file($oldFull)) {
+            @unlink($oldFull);
+        }
+    }
+
+    $db->execute(
+        "INSERT INTO app_settings (kunci, nilai, grup, keterangan)
+         VALUES ('company_logo', '', 'company', 'Logo kustom perusahaan untuk PDF dan email')
+         ON DUPLICATE KEY UPDATE nilai = ''",
+        []
+    );
+    clearCache(['settings']);
+    logActivity('settings.reset_logo', 'app_settings', 0, null, ['company_logo' => '']);
+    successResponse(['company_logo' => ''], 'Logo dikembalikan ke default');
+}
+
 if ($id === 'test-email' && $method === 'POST') {
     authCheck();
     checkPermission('settings.edit');

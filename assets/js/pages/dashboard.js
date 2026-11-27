@@ -59,8 +59,55 @@ export async function init(container) {
                 </div>
             </div>
 
-            <!-- Widget Perlu Tindakan Hari Ini -->
-            <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+            <!-- 1. KPI Cards Grid (Prioritas Utama: Kesehatan Finansial & Operasional) -->
+            <div id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div id="kpi-card-piutang" class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Piutang Berjalan</span>
+                        <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-xl">
+                            <i class="ri-hand-coin-line"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-piutang" class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">Rp 0</div>
+                    <div class="text-xs text-slate-400 mt-2">Seluruh tagihan belum lunas</div>
+                </div>
+
+                <div id="kpi-card-bayar" class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Penerimaan Bulan Ini</span>
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl">
+                            <i class="ri-funds-box-line"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-bayar" class="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">Rp 0</div>
+                    <div id="kpi-cashflow-sub" class="text-xs text-slate-400 mt-2">Total kas masuk bulan berjalan</div>
+                </div>
+
+                <div id="kpi-card-overdue" class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Jatuh Tempo (Overdue)</span>
+                        <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-xl">
+                            <i class="ri-alarm-warning-line"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-overdue" class="text-2xl font-extrabold font-mono text-rose-600 dark:text-rose-400">Rp 0</div>
+                    <div id="kpi-overdue-count" class="text-xs text-rose-500 font-semibold mt-2">0 tagihan lewat tempo</div>
+                </div>
+
+                <div id="kpi-card-clients" class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Klien & Proyek</span>
+                        <div class="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-600 flex items-center justify-center text-xl">
+                            <i class="ri-building-line"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-clients" class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">0 Klien</div>
+                    <div id="kpi-projects" class="text-xs text-slate-400 mt-2">0 Proyek aktif</div>
+                </div>
+            </div>
+
+            <!-- 2. Widget Perlu Tindakan Hari Ini -->
+            <div id="action-queue-section" class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                         <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -76,101 +123,9 @@ export async function init(container) {
                 </div>
             </div>
 
-            <!-- KPI Cards Grid -->
-            <div id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Piutang Berjalan</span>
-                        <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-xl">
-                            <i class="ri-hand-coin-line"></i>
-                        </div>
-                    </div>
-                    <div id="kpi-piutang" class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">Rp 0</div>
-                    <div class="text-xs text-slate-400 mt-2">Seluruh tagihan belum lunas</div>
-                </div>
-
-                <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Penerimaan Bulan Ini</span>
-                        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl">
-                            <i class="ri-funds-box-line"></i>
-                        </div>
-                    </div>
-                    <div id="kpi-bayar" class="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">Rp 0</div>
-                    <div id="kpi-cashflow-sub" class="text-xs text-slate-400 mt-2">Total kas masuk bulan berjalan</div>
-                </div>
-
-                <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Jatuh Tempo (Overdue)</span>
-                        <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-xl">
-                            <i class="ri-alarm-warning-line"></i>
-                        </div>
-                    </div>
-                    <div id="kpi-overdue" class="text-2xl font-extrabold font-mono text-rose-600 dark:text-rose-400">Rp 0</div>
-                    <div id="kpi-overdue-count" class="text-xs text-rose-500 font-semibold mt-2">0 tagihan lewat tempo</div>
-                </div>
-
-                <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Klien & Proyek</span>
-                        <div class="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-600 flex items-center justify-center text-xl">
-                            <i class="ri-building-line"></i>
-                        </div>
-                    </div>
-                    <div id="kpi-clients" class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">0 Klien</div>
-                    <div id="kpi-projects" class="text-xs text-slate-400 mt-2">0 Proyek aktif</div>
-                </div>
-            </div>
-
-            <!-- Pipeline Siklus Proyek & Top 5 Klien -->
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div class="lg:col-span-3 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
-                    <div class="flex items-center justify-between gap-2">
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Pipeline Siklus Proyek</h2>
-                            <p class="text-xs text-slate-400">Sebaran proyek aktif berdasarkan fase pengerjaan & penagihan</p>
-                        </div>
-                        <a href="#/projects" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Kelola Proyek &rarr;</a>
-                    </div>
-                    <div id="project-pipeline-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div class="col-span-full py-6 text-center text-xs text-slate-400">Memuat pipeline proyek…</div>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-2 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
-                    <div class="flex items-center justify-between gap-2">
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Top 5 Klien Kontributor</h2>
-                            <p class="text-xs text-slate-400">Berdasarkan total pembayaran terverifikasi</p>
-                        </div>
-                        <a href="#/clients" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Semua Klien &rarr;</a>
-                    </div>
-                    <div id="top-clients-list" class="divide-y divide-slate-100 dark:divide-slate-800">
-                        <div class="py-6 text-center text-xs text-slate-400">Memuat data klien…</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Two-Column Section: Chart & Urgent Invoices -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- 6-Month Chart Visualization -->
-                <div class="lg:col-span-2 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Arus Penagihan vs Penerimaan (6 Bulan)</h2>
-                            <p class="text-xs text-slate-400">Komparasi nilai faktur terbit dibanding realisasi kas diterima</p>
-                        </div>
-                        <div class="flex items-center gap-4 text-xs font-semibold">
-                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-primary-500"></span> Tagihan</span>
-                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500"></span> Realisasi</span>
-                        </div>
-                    </div>
-                    <div id="chart-container" class="h-64 flex items-end justify-between gap-4 pt-8"></div>
-                </div>
-
-                <!-- Urgent Overdue List -->
-                <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex flex-col justify-between">
+            <!-- 3. Tindak Lanjut Prioritas: Tagihan Mendesak & Penawaran Menunggu Keputusan -->
+            <div id="dash-row-followup" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div id="urgent-card" class="lg:col-span-2 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex flex-col justify-between">
                     <div>
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-base font-bold text-slate-900 dark:text-white">Tagihan Mendesak</h2>
@@ -187,10 +142,89 @@ export async function init(container) {
                         </a>
                     </div>
                 </div>
+
+                <div id="pending-sph-card" class="lg:col-span-3 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-base font-bold text-slate-900 dark:text-white">Penawaran Menunggu Keputusan</h2>
+                                <span id="dash-pending-sph-badge" class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-[11px] font-mono font-bold">0 SPH</span>
+                            </div>
+                            <p id="dash-pending-sph-sub" class="text-xs text-slate-400">Total potensi nilai penawaran berstatus terkirim</p>
+                        </div>
+                        <a href="#/quotations" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Semua SPH &rarr;</a>
+                    </div>
+                    <div id="pending-quotations-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <div class="py-5 text-center text-xs text-slate-400">Memuat data penawaran...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Arus Kas & Likuiditas: Grafik 6 Bulan & Saldo Kas/Rekening Bank -->
+            <div id="dash-row-cashflow" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div id="chart-card" class="lg:col-span-3 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Arus Penagihan vs Penerimaan (6 Bulan)</h2>
+                            <p class="text-xs text-slate-400">Komparasi nilai faktur terbit dibanding realisasi kas diterima</p>
+                        </div>
+                        <div class="flex items-center gap-4 text-xs font-semibold">
+                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-primary-500"></span> Tagihan</span>
+                            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500"></span> Realisasi</span>
+                        </div>
+                    </div>
+                    <div id="chart-container" class="h-64 flex items-end justify-between gap-4 pt-8"></div>
+                </div>
+
+                <div id="bank-balances-card" class="lg:col-span-2 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Saldo Kas & Rekening Bank</h2>
+                            <p class="text-xs text-slate-400">Likuiditas tercatat di buku besar per rekening aktif</p>
+                        </div>
+                        <a href="#/bank-accounts" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Rekening &rarr;</a>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 flex items-center justify-between gap-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Total Saldo Kas/Bank</span>
+                        <span id="dash-total-cash" class="text-xl font-black font-mono text-emerald-700 dark:text-emerald-300 whitespace-nowrap">Rp 0</span>
+                    </div>
+                    <div id="bank-balances-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <div class="py-5 text-center text-xs text-slate-400">Memuat saldo rekening...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Pipeline Siklus Proyek & Top 5 Klien -->
+            <div id="dash-row-pipeline" class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div id="pipeline-card" class="lg:col-span-3 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Pipeline Siklus Proyek</h2>
+                            <p class="text-xs text-slate-400">Sebaran proyek aktif berdasarkan fase pengerjaan & penagihan</p>
+                        </div>
+                        <a href="#/projects" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Kelola Proyek &rarr;</a>
+                    </div>
+                    <div id="project-pipeline-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="col-span-full py-6 text-center text-xs text-slate-400">Memuat pipeline proyek…</div>
+                    </div>
+                </div>
+
+                <div id="top-clients-card" class="lg:col-span-2 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 dark:text-white">Top 5 Klien Kontributor</h2>
+                            <p class="text-xs text-slate-400">Berdasarkan total pembayaran terverifikasi</p>
+                        </div>
+                        <a href="#/clients" class="text-xs font-semibold text-primary-600 hover:text-primary-700 shrink-0">Semua Klien &rarr;</a>
+                    </div>
+                    <div id="top-clients-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <div class="py-6 text-center text-xs text-slate-400">Memuat data klien…</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Recent Activity Section -->
-            <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+            <div id="recent-activity-card" class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-slate-900 dark:text-white">Aktivitas Sistem Terkini</h2>
                     <a href="#/audit" class="text-xs font-semibold text-primary-600 hover:text-primary-700">Lihat Audit Trail &rarr;</a>
@@ -243,6 +277,25 @@ export async function init(container) {
         document.getElementById('kpi-overdue-count').textContent = `${d.count_overdue} tagihan melewati jatuh tempo`;
         document.getElementById('kpi-clients').textContent = `${d.total_klien_aktif} Klien`;
         document.getElementById('kpi-projects').textContent = `${d.total_proyek_aktif} Proyek Aktif`;
+
+        const kpiVisibility = [
+            ['kpi-card-piutang', Number(d.total_piutang || 0) > 0],
+            ['kpi-card-bayar', Number(d.total_bayar_bulan_ini || 0) > 0 || Number(d.total_pengeluaran_bulan_ini || 0) > 0],
+            ['kpi-card-overdue', Number(d.total_overdue || 0) > 0 || Number(d.count_overdue || 0) > 0],
+            ['kpi-card-clients', Number(d.total_klien_aktif || 0) > 0 || Number(d.total_proyek_aktif || 0) > 0]
+        ];
+        let visibleKpis = 0;
+        kpiVisibility.forEach(([cardId, show]) => {
+            const cardEl = document.getElementById(cardId);
+            if (cardEl) cardEl.classList.toggle('hidden', !show);
+            if (show) visibleKpis++;
+        });
+        const kpiGridEl = document.getElementById('kpi-grid');
+        if (kpiGridEl) {
+            kpiGridEl.classList.toggle('hidden', visibleKpis === 0);
+            kpiGridEl.classList.remove('lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4');
+            if (visibleKpis > 0) kpiGridEl.classList.add(`lg:grid-cols-${visibleKpis}`);
+        }
     }
 
     // Fetch chart data
@@ -269,15 +322,40 @@ export async function init(container) {
         renderActionQueue(queueRes.data);
     }
 
-    // Fetch Project Pipeline & Top Clients
+    // Fetch Project Pipeline, Top Clients, Bank Balances & Pending Quotations
     const extraRes = await App.api('dashboard/overview_extra');
     if (extraRes && extraRes.success && extraRes.data) {
         renderProjectPipeline(extraRes.data.pipeline || {});
         renderTopClients(extraRes.data.top_clients || []);
+        renderBankBalances(extraRes.data.bank_balances || {});
+        renderPendingQuotations(extraRes.data.pending_quotations || {});
+    }
+}
+
+function syncTwoColRow(rowId, leftId, rightId, leftSpan, rightSpan) {
+    const rowEl = document.getElementById(rowId);
+    const leftEl = document.getElementById(leftId);
+    const rightEl = document.getElementById(rightId);
+    if (!rowEl || !leftEl || !rightEl) return;
+
+    const showLeft = !leftEl.classList.contains('hidden');
+    const showRight = !rightEl.classList.contains('hidden');
+    rowEl.classList.toggle('hidden', !showLeft && !showRight);
+
+    leftEl.classList.remove(leftSpan, 'lg:col-span-5');
+    rightEl.classList.remove(rightSpan, 'lg:col-span-5');
+    if (showLeft && showRight) {
+        leftEl.classList.add(leftSpan);
+        rightEl.classList.add(rightSpan);
+    } else if (showLeft) {
+        leftEl.classList.add('lg:col-span-5');
+    } else if (showRight) {
+        rightEl.classList.add('lg:col-span-5');
     }
 }
 
 function renderProjectPipeline(p) {
+    const card = document.getElementById('pipeline-card');
     const grid = document.getElementById('project-pipeline-grid');
     if (!grid) return;
 
@@ -289,7 +367,11 @@ function renderProjectPipeline(p) {
         { key: 'termin_bayar', href: '#/projects?fase=termin_bayar', label: 'Termin Bayar', icon: 'ri-bill-line', cls: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900' },
         { key: 'belum_dibayar', href: '#/projects?fase=belum_dibayar', label: 'Belum Dibayar', icon: 'ri-alarm-warning-line', cls: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900' },
         { key: 'selesai', href: '#/projects?status=selesai', label: 'Lunas & Selesai', icon: 'ri-checkbox-circle-line', cls: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900' }
-    ];
+    ].filter((st) => Number(p[st.key] || 0) > 0);
+
+    if (card) card.classList.toggle('hidden', stages.length === 0);
+    syncTwoColRow('dash-row-pipeline', 'pipeline-card', 'top-clients-card', 'lg:col-span-3', 'lg:col-span-2');
+    if (stages.length === 0) return;
 
     grid.innerHTML = stages.map((st) => `
         <a href="${st.href}" class="p-3 rounded-2xl border ${st.cls} hover:shadow-xs transition flex flex-col justify-between gap-1.5">
@@ -303,13 +385,14 @@ function renderProjectPipeline(p) {
 }
 
 function renderTopClients(clients) {
+    const card = document.getElementById('top-clients-card');
     const el = document.getElementById('top-clients-list');
     if (!el) return;
 
-    if (!clients.length) {
-        el.innerHTML = `<div class="py-6 text-center text-xs text-slate-400">Belum ada data klien aktif.</div>`;
-        return;
-    }
+    const hasData = Array.isArray(clients) && clients.length > 0;
+    if (card) card.classList.toggle('hidden', !hasData);
+    syncTwoColRow('dash-row-pipeline', 'pipeline-card', 'top-clients-card', 'lg:col-span-3', 'lg:col-span-2');
+    if (!hasData) return;
 
     el.innerHTML = clients.map((c, idx) => `
         <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
@@ -325,7 +408,90 @@ function renderTopClients(clients) {
     `).join('');
 }
 
+function renderBankBalances(data) {
+    const card = document.getElementById('bank-balances-card');
+    const totalEl = document.getElementById('dash-total-cash');
+    const listEl = document.getElementById('bank-balances-list');
+    const accounts = data.accounts || [];
+    const hasData = accounts.length > 0 || Number(data.total_cash || 0) !== 0;
+    if (card) card.classList.toggle('hidden', !hasData);
+    syncTwoColRow('dash-row-cashflow', 'chart-card', 'bank-balances-card', 'lg:col-span-3', 'lg:col-span-2');
+    if (!hasData) return;
+
+    if (totalEl) totalEl.textContent = App.formatIDR(data.total_cash || 0);
+    if (!listEl) return;
+    if (!accounts.length) {
+        listEl.innerHTML = `<div class="py-5 text-center text-xs text-slate-400">Belum ada rekening bank aktif.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = accounts.slice(0, 5).map((acc) => {
+        const label = acc.nama_bank ? `${acc.nama_bank} · ${acc.nama_metode}` : acc.nama_metode;
+        const coaLabel = acc.kode_akun ? `${acc.kode_akun} ${acc.nama_akun || ''}` : 'Belum terhubung ke COA';
+        return `
+            <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
+                <div class="min-w-0">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                        <span class="truncate">${App.escapeHtml(label)}</span>
+                        ${Number(acc.is_default) === 1 ? '<span class="px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 text-[10px] font-bold shrink-0">Utama</span>' : ''}
+                    </div>
+                    <div class="text-[11px] text-slate-400 font-mono truncate">${App.escapeHtml(acc.nomor_rekening || '-')} · ${App.escapeHtml(coaLabel)}</div>
+                </div>
+                <div class="font-mono font-bold whitespace-nowrap ${Number(acc.saldo_coa || 0) >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400'} shrink-0">${acc.coa_id ? App.formatIDR(acc.saldo_coa || 0) : '-'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPendingQuotations(data) {
+    const card = document.getElementById('pending-sph-card');
+    const badgeEl = document.getElementById('dash-pending-sph-badge');
+    const subEl = document.getElementById('dash-pending-sph-sub');
+    const listEl = document.getElementById('pending-quotations-list');
+    const items = data.items || [];
+    const totalCount = Number(data.total_count || 0);
+    const totalNilai = Number(data.total_nilai || 0);
+
+    if (card) card.classList.toggle('hidden', items.length === 0);
+    syncTwoColRow('dash-row-followup', 'urgent-card', 'pending-sph-card', 'lg:col-span-2', 'lg:col-span-3');
+    if (items.length === 0) return;
+
+    if (badgeEl) badgeEl.textContent = `${totalCount} SPH`;
+    if (subEl) subEl.innerHTML = `Total potensi nilai: <span class="font-mono font-bold text-slate-700 dark:text-slate-200">${App.formatIDR(totalNilai)}</span>`;
+    if (!listEl) return;
+
+    listEl.innerHTML = items.map((q) => {
+        const days = Math.max(0, Number(q.days_waiting || 0));
+        const waitCls = days >= 7 ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300';
+        const pic = q.penanggung_jawab ? ` (${q.penanggung_jawab})` : '';
+        const waMsg = `Halo ${q.penanggung_jawab || q.nama_perusahaan}, kami ingin menindaklanjuti Surat Penawaran ${q.nomor_penawaran} senilai ${App.formatIDR(q.total_penawaran)}. Apakah ada hal yang perlu kami diskusikan lebih lanjut?`;
+        const hasPhone = Boolean(q.telepon && String(q.telepon).trim());
+        return `
+            <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a href="#/quotations" class="font-mono font-bold text-primary-600 hover:underline">${App.escapeHtml(q.nomor_penawaran)}</a>
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold whitespace-nowrap ${waitCls}">${days} hari menunggu</span>
+                    </div>
+                    <div class="font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5">${App.escapeHtml(q.nama_perusahaan + pic)}</div>
+                </div>
+                <div class="flex items-center gap-2.5 shrink-0">
+                    <span class="font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">${App.formatIDR(q.total_penawaran || 0)}</span>
+                    ${hasPhone ? `<button type="button" class="btn-followup-sph px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] flex items-center gap-1 whitespace-nowrap transition" data-phone="${App.escapeHtml(q.telepon)}" data-msg="${App.escapeHtml(waMsg)}" title="Follow-up via WhatsApp" aria-label="Follow-up WhatsApp ${App.escapeHtml(q.nomor_penawaran)}"><i class="ri-whatsapp-line text-sm"></i><span>Follow-up</span></button>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    listEl.querySelectorAll('.btn-followup-sph').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            App.openWhatsApp(btn.dataset.phone || '', btn.dataset.msg || '');
+        });
+    });
+}
+
 function renderActionQueue(q) {
+    const section = document.getElementById('action-queue-section');
     const grid = document.getElementById('action-queue-grid');
     const badgeEl = document.getElementById('action-queue-total-badge');
     if (!grid) return;
@@ -336,11 +502,12 @@ function renderActionQueue(q) {
     const domains = q.expiring_domains || [];
     const total = proofs.length + tickets.length + projects.length + domains.length;
 
+    if (section) section.classList.toggle('hidden', total === 0);
+    if (total === 0) return;
+
     if (badgeEl) {
-        badgeEl.textContent = total > 0 ? `${total} Perlu Tindakan` : 'Semua Aman';
-        badgeEl.className = total > 0
-            ? 'self-start sm:self-center px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-mono font-bold'
-            : 'self-start sm:self-center px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-mono font-bold';
+        badgeEl.textContent = `${total} Perlu Tindakan`;
+        badgeEl.className = 'self-start sm:self-center px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-mono font-bold';
     }
 
     const renderBucket = (title, icon, toneCls, count, itemsHtml, emptyMsg, linkUrl, linkLabel) => `
@@ -401,22 +568,26 @@ function renderActionQueue(q) {
         `;
     }).join('');
 
-    grid.innerHTML = [
-        renderBucket('Bukti Transfer', 'ri-bank-card-line', 'text-amber-600', proofs.length, proofsHtml, 'Tidak ada bukti transfer pending.', '#/invoices', 'Verifikasi di Faktur'),
-        renderBucket('Tiket Gangguan', 'ri-customer-service-2-line', 'text-rose-600', tickets.length, ticketsHtml, 'Tidak ada tiket terbuka.', '#/tickets', 'Buka Tiket'),
-        renderBucket('Proyek Siap BAST/Termin', 'ri-git-branch-line', 'text-indigo-600', projects.length, projectsHtml, 'Belum ada proyek siap BAST/termin.', '#/projects', 'Kelola Proyek'),
-        renderBucket('Domain & SLA (≤14 Hr)', 'ri-shield-flash-line', 'text-emerald-600', domains.length, domainsHtml, 'Semua domain & SSL aman.', '#/maintenance', 'Pantau SLA')
-    ].join('');
+    const buckets = [
+        proofs.length > 0 ? renderBucket('Bukti Transfer', 'ri-bank-card-line', 'text-amber-600', proofs.length, proofsHtml, '', '#/invoices', 'Verifikasi di Faktur') : '',
+        tickets.length > 0 ? renderBucket('Tiket Gangguan', 'ri-customer-service-2-line', 'text-rose-600', tickets.length, ticketsHtml, '', '#/tickets', 'Buka Tiket') : '',
+        projects.length > 0 ? renderBucket('Proyek Siap BAST/Termin', 'ri-git-branch-line', 'text-indigo-600', projects.length, projectsHtml, '', '#/projects', 'Kelola Proyek') : '',
+        domains.length > 0 ? renderBucket('Domain & SLA (≤14 Hr)', 'ri-shield-flash-line', 'text-emerald-600', domains.length, domainsHtml, '', '#/maintenance', 'Pantau SLA') : ''
+    ].filter(Boolean);
+    grid.classList.remove('lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4');
+    grid.classList.add(`lg:grid-cols-${buckets.length}`);
+    grid.innerHTML = buckets.join('');
 }
 
 function renderBarChart(data) {
+    const card = document.getElementById('chart-card');
     const cont = document.getElementById('chart-container');
     if (!cont) return;
 
-    if (!data || data.length === 0) {
-        cont.innerHTML = `<div class="text-xs text-slate-400 m-auto">Belum ada data riwayat transaksi</div>`;
-        return;
-    }
+    const hasValues = Array.isArray(data) && data.some((d) => Number(d.billed || 0) > 0 || Number(d.paid || 0) > 0);
+    if (card) card.classList.toggle('hidden', !hasValues);
+    syncTwoColRow('dash-row-cashflow', 'chart-card', 'bank-balances-card', 'lg:col-span-3', 'lg:col-span-2');
+    if (!hasValues) return;
 
     let maxVal = 1;
     data.forEach(d => {
@@ -454,19 +625,14 @@ function renderBarChart(data) {
 }
 
 function renderUrgentList(items) {
+    const card = document.getElementById('urgent-card');
     const cont = document.getElementById('urgent-list');
     if (!cont) return;
 
-    if (!items || items.length === 0) {
-        cont.innerHTML = `
-            <div class="text-center py-8">
-                <i class="ri-checkbox-circle-line text-emerald-500 text-3xl mb-1"></i>
-                <div class="text-xs font-semibold text-slate-600 dark:text-slate-300">Semua Tagihan Tertib</div>
-                <div class="text-[11px] text-slate-400">Tidak ada tagihan yang melewati jatuh tempo</div>
-            </div>
-        `;
-        return;
-    }
+    const hasData = Array.isArray(items) && items.length > 0;
+    if (card) card.classList.toggle('hidden', !hasData);
+    syncTwoColRow('dash-row-followup', 'urgent-card', 'pending-sph-card', 'lg:col-span-2', 'lg:col-span-3');
+    if (!hasData) return;
 
     cont.innerHTML = items.map(it => `
         <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -484,13 +650,13 @@ function renderUrgentList(items) {
 }
 
 function renderRecentActivity(items) {
+    const card = document.getElementById('recent-activity-card');
     const cont = document.getElementById('recent-activity-list');
     if (!cont) return;
 
-    if (!items || items.length === 0) {
-        cont.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">Belum ada aktivitas tercatat</div>`;
-        return;
-    }
+    const hasData = Array.isArray(items) && items.length > 0;
+    if (card) card.classList.toggle('hidden', !hasData);
+    if (!hasData) return;
 
     cont.innerHTML = items.map(it => `
         <div class="py-3 flex items-center justify-between text-xs">

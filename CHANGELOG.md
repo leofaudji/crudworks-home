@@ -4,6 +4,19 @@ Daftar pembaruan fitur, peningkatan kenyamanan, dan perbaikan sistem **CRUDWorks
 
 ---
 
+## [1.8.17] - 2026-11-27
+
+### Ditambahkan (Added)
+
+- **Logo Kustom Perusahaan untuk Seluruh Laporan PDF & Email**: Pengguna kini dapat mengunggah logo perusahaan sendiri (atau mengembalikan ke logo default) melalui **Pengaturan → Profil Instansi**, yang otomatis diterapkan pada kop PDF Faktur, Kuitansi, Surat Penawaran (SPH), Kontrak/SPK, BAST, serta Laporan Keuangan.
+- **Widget Saldo Kas/Rekening & Penawaran Menunggu Keputusan di Dashboard**: Menambahkan ringkasan saldo kas dan rekening bank aktif beserta daftar Surat Penawaran berstatus terkirim lengkap dengan lama hari menunggu dan tombol cepat **Follow-up WhatsApp**.
+
+### Disempurnakan (Improved)
+
+- **Tata Letak Dashboard Berbasis Prioritas & Data Aktif**: Seksi pada Dashboard diurutkan ulang berdasarkan prioritas pemantauan harian, dan kartu maupun widget yang belum memiliki data otomatis disembunyikan agar halaman tetap bersih dan fokus.
+
+---
+
 ## [1.8.16] - 2026-11-27
 
 ### Disempurnakan (Improved)

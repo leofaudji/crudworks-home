@@ -1,6 +1,6 @@
 // assets/js/core/pdf/reports.js — Ekspor PDF Laporan Finansial
 import { formatDateTime } from "../utils.js";
-import { _ensurePdfLibs, _PDF_TONES, _CRUDWORKS_OFFICIAL_LOGO_BASE64, _safeFormatDate } from "./shared.js";
+import { _ensurePdfLibs, _PDF_TONES, _drawCompanyLogo, _safeFormatDate } from "./shared.js";
 
 /**
  * Generate structured accounting PDF report using jsPDF + AutoTable (download or inline bloburl)
@@ -41,18 +41,7 @@ export async function exportPdf({
     doc.rect(0, 4, pageWidth, 1.5, 'F');
 
     let y = 11.5;
-    const logoW = 46;
-    const logoH = 46 / 5.04; // 9.12mm (Rasio aspek resmi logo.png)
-
-    // Left: Official CRUDWorks Brand Logo
-    try {
-        doc.addImage(_CRUDWORKS_OFFICIAL_LOGO_BASE64, 'PNG', margin, y, logoW, logoH);
-    } catch (e) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(15, 23, 42);
-        doc.text(String(companyName).toUpperCase(), margin, y + 6);
-    }
+    const logoH = _drawCompanyLogo(doc, margin, y, 46, 13, String(companyName).toUpperCase());
 
     // Right: Document Badge & Meta Info
     let rY = 11;

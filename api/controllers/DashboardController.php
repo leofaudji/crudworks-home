@@ -445,10 +445,66 @@ switch ($id) {
              LIMIT 5"
         );
 
+        $bankAccounts = $db->fetchAll(
+            "SELECT pm.id, pm.nama_metode, pm.nama_bank, pm.nomor_rekening, pm.tipe, pm.is_default, pm.coa_id,
+                    coa.kode_akun, coa.nama_akun,
+                    COALESCE((SELECT SUM(ji.debit - ji.kredit) FROM journal_items ji WHERE ji.coa_id = pm.coa_id), 0) AS saldo_coa
+             FROM payment_methods pm
+             LEFT JOIN chart_of_accounts coa ON pm.coa_id = coa.id
+             WHERE pm.status = 'aktif'
+             ORDER BY pm.is_default DESC, pm.id ASC"
+        );
+        $seenCoaIds = [];
+        $totalCashBalance = 0.0;
+        foreach ($bankAccounts as &$ba) {
+            $ba['saldo_coa'] = round((float)$ba['saldo_coa'], 2);
+            $cid = (int)($ba['coa_id'] ?? 0);
+            if ($cid > 0 && !isset($seenCoaIds[$cid])) {
+                $seenCoaIds[$cid] = true;
+                $totalCashBalance += $ba['saldo_coa'];
+            }
+        }
+        unset($ba);
+        if (empty($seenCoaIds)) {
+            $fallbackRow = $db->fetch(
+                "SELECT COALESCE(SUM(ji.debit - ji.kredit), 0) AS saldo
+                 FROM chart_of_accounts coa
+                 LEFT JOIN journal_items ji ON ji.coa_id = coa.id
+                 WHERE coa.kode_akun = '1101'"
+            );
+            $totalCashBalance = round((float)($fallbackRow['saldo'] ?? 0), 2);
+        }
+
+        $pendingQuotations = $db->fetchAll(
+            "SELECT q.id, q.nomor_penawaran, q.tanggal_penawaran, q.berlaku_hingga, q.total_penawaran,
+                    q.last_sent_at, q.view_count,
+                    DATEDIFF(CURDATE(), COALESCE(DATE(q.last_sent_at), q.tanggal_penawaran)) AS days_waiting,
+                    c.nama_perusahaan, c.penanggung_jawab, c.telepon
+             FROM quotations q
+             JOIN clients c ON q.client_id = c.id
+             WHERE q.status = 'terkirim'
+             ORDER BY days_waiting DESC, q.total_penawaran DESC
+             LIMIT 5"
+        );
+        $pendingQuotationSummary = $db->fetch(
+            "SELECT COUNT(*) AS total_count, COALESCE(SUM(total_penawaran), 0) AS total_nilai
+             FROM quotations
+             WHERE status = 'terkirim'"
+        );
+
         successResponse([
             'pipeline' => $pipeline,
             'total_projects' => count($projRows),
-            'top_clients' => $topClients
+            'top_clients' => $topClients,
+            'bank_balances' => [
+                'total_cash' => round($totalCashBalance, 2),
+                'accounts' => $bankAccounts
+            ],
+            'pending_quotations' => [
+                'total_count' => (int)($pendingQuotationSummary['total_count'] ?? 0),
+                'total_nilai' => round((float)($pendingQuotationSummary['total_nilai'] ?? 0), 2),
+                'items' => $pendingQuotations
+            ]
         ]);
         break;
 

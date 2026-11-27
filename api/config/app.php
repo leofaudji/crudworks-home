@@ -4,7 +4,7 @@ date_default_timezone_set("Asia/Jakarta");
 
 // Application Configuration
 define('APP_NAME', getenv('APP_NAME') ?: 'CRUDWorks ERP');
-define('APP_VERSION', '1.8.16');
+define('APP_VERSION', '1.8.17');
 define('APP_URL', getenv('APP_URL') ?: 'http://crudworks-home.test');
 
 // Session

@@ -14,7 +14,7 @@ if ($id && is_numeric($id)) {
         $p = $db->fetch(
             "SELECT py.*,
                     i.nomor_invoice, i.public_token, i.sisa_tagihan as current_sisa,
-                    c.nama_perusahaan as client_nama, c.penanggung_jawab as client_pic, c.email as client_email,
+                    c.nama_perusahaan as client_nama, c.penanggung_jawab as client_pic, c.email as client_email, c.cc_email as client_cc_email,
                     pm.nama_metode, pm.nama_bank
              FROM payments py
              JOIN invoices i ON py.invoice_id = i.id
@@ -33,9 +33,10 @@ if ($id && is_numeric($id)) {
 
         $attachments = extractPdfAttachmentFromParams($params, "kuitansi_{$p['nomor_pembayaran']}.pdf");
         $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
+        $ccEmails = trim((string)($params['cc_email'] ?? $p['client_cc_email'] ?? ''));
         $subject = "Kuitansi Pembayaran {$p['nomor_pembayaran']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
         $html = buildPaymentReceiptEmailHtml($p, $cfg, $portalUrl, $hasLogo, !empty($attachments));
-        $mailRes = sendErpEmail((string)$p['client_email'], (string)($p['client_pic'] ?: $p['client_nama']), $subject, $html, 'payment', $paymentId, $attachments);
+        $mailRes = sendErpEmail((string)$p['client_email'], (string)($p['client_pic'] ?: $p['client_nama']), $subject, $html, 'payment', $paymentId, $attachments, $ccEmails);
         if (empty($mailRes['success'])) {
             errorResponse($mailRes['message'] ?? 'Gagal mengirim email kuitansi pembayaran', 500);
         }

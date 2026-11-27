@@ -60,6 +60,7 @@ if (empty($inv['public_token'])) {
 
 // GET: Return public invoice details
 if ($method === 'GET') {
+    $db->execute("UPDATE invoices SET view_count = view_count + 1, last_viewed_at = NOW() WHERE id = ?", [(int)$inv['id']]);
     $items = $db->fetchAll(
         "SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY id ASC",
         [$inv['id']]

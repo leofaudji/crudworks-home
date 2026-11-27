@@ -671,6 +671,7 @@ window.saveBast = async (e, projectId, bastId = null) => (await import('./projec
 window.signBast = async (projectId, bastId) => (await import('./projects/bast.js')).signBast(projectId, bastId);
 window.deleteBast = async (projectId, bastId) => (await import('./projects/bast.js')).deleteBast(projectId, bastId);
 window.downloadBastPdf = async (bastId, output = 'bloburl') => (await import('./projects/bast.js')).downloadBastPdf(bastId, output);
+window.sendBastEmail = async (bastId) => (await import('./projects/bast.js')).sendBastEmail(bastId);
 
 window.openProjectChangeRequests = async (projectId) => (await import('./projects/handover.js')).openProjectChangeRequests(projectId);
 window.updateCrStatus = async (projectId, crId, status) => (await import('./projects/handover.js')).updateCrStatus(projectId, crId, status);

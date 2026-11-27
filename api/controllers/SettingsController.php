@@ -28,6 +28,34 @@ if ($id === 'system-health' && $method === 'GET') {
             }
         }
     }
+    $cfgMap = getAppSettingsMap();
+    $fromEmail = trim((string)($cfgMap['smtp_from_email'] ?? $cfgMap['smtp_user'] ?? $cfgMap['company_email'] ?? ''));
+    $fromDomain = str_contains($fromEmail, '@') ? substr(strrchr($fromEmail, '@'), 1) : '';
+    $spfOk = null;
+    $dmarcOk = null;
+    if ($fromDomain !== '' && function_exists('dns_get_record')) {
+        $txtRecs = @dns_get_record($fromDomain, DNS_TXT) ?: [];
+        $spfOk = false;
+        foreach ($txtRecs as $rec) {
+            if (stripos((string)($rec['txt'] ?? ''), 'v=spf1') !== false) {
+                $spfOk = true;
+                break;
+            }
+        }
+        $dmarcRecs = @dns_get_record('_dmarc.' . $fromDomain, DNS_TXT) ?: [];
+        $dmarcOk = false;
+        foreach ($dmarcRecs as $rec) {
+            if (stripos((string)($rec['txt'] ?? ''), 'v=DMARC1') !== false) {
+                $dmarcOk = true;
+                break;
+            }
+        }
+    }
+
+    $detectedUrl = buildPublicAppUrl('');
+    $isHttps = str_starts_with($detectedUrl, 'https://');
+    $isLocalUrl = (bool)preg_match('#^https?://(localhost|127\.0\.0\.1|[^/]+\.test)(:\d+)?(/|$)#i', $detectedUrl);
+
     successResponse([
         'redis_connected' => $redis->isConnected(),
         'php_version' => PHP_VERSION,
@@ -35,7 +63,16 @@ if ($id === 'system-health' && $method === 'GET') {
         'db_name' => $dbRow['db_name'] ?? '-',
         'table_count' => (int)($dbRow['table_count'] ?? 0),
         'db_size_mb' => (float)($dbRow['db_size_mb'] ?? 0),
-        'last_backup' => $lastBackup
+        'last_backup' => $lastBackup,
+        'prod_diag' => [
+            'app_url' => APP_URL,
+            'detected_url' => $detectedUrl,
+            'is_https' => $isHttps,
+            'is_local_url' => $isLocalUrl,
+            'smtp_domain' => $fromDomain,
+            'dns_spf' => $spfOk,
+            'dns_dmarc' => $dmarcOk,
+        ]
     ]);
 }
 
@@ -86,7 +123,7 @@ if ($id === 'email-logs' && $method === 'GET') {
     }
     if ($search !== '') {
         $like = "%{$search}%";
-        $where[] = "(el.recipient_email LIKE ? OR el.subject LIKE ? OR el.error_message LIKE ? OR COALESCE(inv.nomor_invoice, q.nomor_penawaran, py.nomor_pembayaran, '') LIKE ? OR COALESCE(u.nama_lengkap, '') LIKE ?)";
+        $where[] = "(el.recipient_email LIKE ? OR el.subject LIKE ? OR el.error_message LIKE ? OR COALESCE(inv.nomor_invoice, q.nomor_penawaran, py.nomor_pembayaran, k.nomor_kontrak, b.nomor_bast, '') LIKE ? OR COALESCE(u.nama_lengkap, '') LIKE ?)";
         array_push($bind, $like, $like, $like, $like, $like);
     }
 
@@ -94,12 +131,14 @@ if ($id === 'email-logs' && $method === 'GET') {
     $joins = "LEFT JOIN users u ON el.sent_by = u.id
               LEFT JOIN invoices inv ON el.entity_type = 'invoice' AND el.entity_id = inv.id
               LEFT JOIN quotations q ON el.entity_type = 'quotation' AND el.entity_id = q.id
-              LEFT JOIN payments py ON el.entity_type = 'payment' AND el.entity_id = py.id";
+              LEFT JOIN payments py ON el.entity_type = 'payment' AND el.entity_id = py.id
+              LEFT JOIN contracts k ON el.entity_type = 'contract' AND el.entity_id = k.id
+              LEFT JOIN project_basts b ON el.entity_type = 'bast' AND el.entity_id = b.id";
 
     $total = (int)$db->count("SELECT COUNT(*) FROM email_logs el {$joins} {$whereSql}", $bind);
     $rows = $db->fetchAll(
         "SELECT el.*, u.nama_lengkap as sent_by_name,
-                COALESCE(inv.nomor_invoice, q.nomor_penawaran, py.nomor_pembayaran, '') as doc_number
+                COALESCE(inv.nomor_invoice, q.nomor_penawaran, py.nomor_pembayaran, k.nomor_kontrak, b.nomor_bast, '') as doc_number
          FROM email_logs el
          {$joins}
          {$whereSql}
@@ -109,6 +148,16 @@ if ($id === 'email-logs' && $method === 'GET') {
     );
 
     paginatedResponse($rows, $total, $page, $perPage);
+}
+
+if ($id === 'run-reminders' && $method === 'POST') {
+    authCheck();
+    checkPermission(['settings.edit', 'invoice.send']);
+    require_once __DIR__ . '/../config/reminder_helpers.php';
+    $dryRun = !empty($params['dry_run']);
+    $res = runScheduledEmailReminders($dryRun);
+    logActivity('settings.run_reminders', 'email_logs', 0, null, $res);
+    successResponse($res, "Pengingat diproses: {$res['invoices_sent']} faktur, {$res['maintenance_sent']} SLA/domain" . ($res['failed'] > 0 ? " ({$res['failed']} gagal)" : ''));
 }
 
 if ($id === 'payment-methods') {

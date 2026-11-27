@@ -12,7 +12,7 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
     checkPermission('quotation.view');
 
     $quo = $db->fetch(
-        "SELECT q.*, c.nama_perusahaan, c.penanggung_jawab, c.email as client_email
+        "SELECT q.*, c.nama_perusahaan, c.penanggung_jawab, c.email as client_email, c.cc_email as client_cc_email
          FROM quotations q
          JOIN clients c ON q.client_id = c.id
          WHERE q.id = ?",
@@ -30,9 +30,10 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
 
     $attachments = extractPdfAttachmentFromParams($params, "penawaran_{$quo['nomor_penawaran']}.pdf");
     $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
+    $ccEmails = trim((string)($params['cc_email'] ?? $quo['client_cc_email'] ?? ''));
     $subject = "Surat Penawaran {$quo['nomor_penawaran']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
     $html = buildQuotationEmailHtml($quo, $cfg, $portalUrl, $hasLogo, !empty($attachments));
-    $mailRes = sendErpEmail((string)$quo['client_email'], (string)($quo['penanggung_jawab'] ?: $quo['nama_perusahaan']), $subject, $html, 'quotation', (int)$id, $attachments);
+    $mailRes = sendErpEmail((string)$quo['client_email'], (string)($quo['penanggung_jawab'] ?: $quo['nama_perusahaan']), $subject, $html, 'quotation', (int)$id, $attachments, $ccEmails);
     if (empty($mailRes['success'])) {
         errorResponse($mailRes['message'] ?? 'Gagal mengirim email penawaran', 500);
     }

@@ -835,16 +835,16 @@ async function buildPaymentReceiptEmailPayload(p) {
 }
 
 window.sendPaymentEmail = async (id) => {
-    if (!await App.confirm('Kirim Kuitansi via Email?', 'Kuitansi pembayaran PDF akan dikirimkan ke email klien via SMTP.')) return;
-    App.toast('Menyiapkan PDF & mengirim email kuitansi...', 'info');
     const detailRes = await App.api(`payments/${id}`);
-    const payload = (detailRes && detailRes.success && detailRes.data)
-        ? await buildPaymentReceiptEmailPayload(detailRes.data)
-        : {};
-    const res = await App.api(`payments/${id}/send-email`, { method: 'POST', body: payload });
-    if (res && res.success) {
-        App.toast(res.message, 'success');
-    }
+    const pData = detailRes?.success ? detailRes.data : null;
+    const { promptSendEmail } = await import('../core/email-sender.js');
+    await promptSendEmail({
+        title: `Kirim Kuitansi ${pData?.nomor_pembayaran || ''} via Email?`,
+        text: 'Kuitansi pembayaran PDF akan dikirimkan ke email klien via SMTP.',
+        defaultCc: pData?.client_cc_email || '',
+        endpoint: `payments/${id}/send-email`,
+        buildPdf: () => (pData && typeof App.generatePaymentReceiptPdf === 'function') ? App.generatePaymentReceiptPdf(pData, 'bloburl') : null
+    });
 };
 
 window.printPaymentReceiptPdf = async (id, output = 'bloburl') => {

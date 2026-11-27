@@ -466,6 +466,39 @@ async function renderSection() {
                     </div>
                 </form>
 
+                <!-- 0b. Editor Template Isi Email -->
+                <form id="email-tpl-settings-form" class="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                    <div class="pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="ri-file-text-line text-primary-600"></i> Template Teks Pembuka Email
+                        </h3>
+                        <p class="text-xs text-slate-400">Variabel tersedia: <code class="font-mono">{nama_klien}</code>, <code class="font-mono">{nomor_dokumen}</code>, <code class="font-mono">{judul}</code>, <code class="font-mono">{jatuh_tempo}</code>, <code class="font-mono">{nama_perusahaan}</code>.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Faktur Tagihan</label>
+                            <textarea name="email_tpl_invoice_intro" rows="2" placeholder="Berikut kami kirimkan rincian tagihan untuk {nama_klien}:" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">${App.escapeHtml(s.email_tpl_invoice_intro || '')}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Surat Penawaran (SPH)</label>
+                            <textarea name="email_tpl_quotation_intro" rows="2" placeholder="Bersama ini kami kirimkan Surat Penawaran Harga (SPH) untuk {judul}." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">${App.escapeHtml(s.email_tpl_quotation_intro || '')}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Kontrak / SPK Digital</label>
+                            <textarea name="email_tpl_contract_intro" rows="2" placeholder="Bersama ini kami sampaikan Surat Perjanjian Kerja (SPK) {nomor_dokumen} untuk {judul}." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">${App.escapeHtml(s.email_tpl_contract_intro || '')}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Berita Acara (BAST)</label>
+                            <textarea name="email_tpl_bast_intro" rows="2" placeholder="Bersama ini kami sampaikan Berita Acara Serah Terima (BAST) {nomor_dokumen} untuk proyek {judul}." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs">${App.escapeHtml(s.email_tpl_bast_intro || '')}</textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5">
+                            <i class="ri-save-3-line"></i><span>Simpan Template Email</span>
+                        </button>
+                    </div>
+                </form>
+
                 <!-- 1. Payment Gateway -->
                 <form id="pg-settings-form" class="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
                     <div class="pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
@@ -589,6 +622,7 @@ async function renderSection() {
         `;
 
         document.getElementById('smtp-settings-form')?.addEventListener('submit', (e) => saveGenericSettings(e, 'smtp-settings-form'));
+        document.getElementById('email-tpl-settings-form')?.addEventListener('submit', (e) => saveGenericSettings(e, 'email-tpl-settings-form'));
         document.getElementById('btn-test-smtp')?.addEventListener('click', async () => {
             const to_email = document.getElementById('smtp-test-to')?.value.trim();
             const btn = document.getElementById('btn-test-smtp');
@@ -680,6 +714,32 @@ async function renderSection() {
                         <div class="text-[11px] text-slate-500">${h.last_backup ? `Backup terakhir: ${App.formatDateTime(h.last_backup.date)}` : 'Belum ada file backup lokal'}</div>
                     </div>
                 </div>
+
+                ${h.prod_diag ? `
+                    <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-3">
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                            <i class="ri-shield-check-line text-indigo-600"></i> Diagnostik Produksi &amp; DNS Email
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                                <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">URL Publik Terdeteksi</div>
+                                <div class="font-mono font-bold truncate ${h.prod_diag.is_local_url ? 'text-amber-600' : 'text-emerald-600'}" title="${App.escapeHtml(h.prod_diag.detected_url || '-')}">${App.escapeHtml(h.prod_diag.detected_url || '-')}</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                                <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Protokol HTTPS</div>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${h.prod_diag.is_https ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${h.prod_diag.is_https ? 'HTTPS Aktif' : 'HTTP (Non-TLS)'}</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                                <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">DNS SPF (${App.escapeHtml(h.prod_diag.smtp_domain || '-')})</div>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${h.prod_diag.dns_spf === true ? 'bg-emerald-100 text-emerald-700' : (h.prod_diag.dns_spf === false ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600')}">${h.prod_diag.dns_spf === true ? 'SPF Valid' : (h.prod_diag.dns_spf === false ? 'SPF Tidak Ada' : 'Belum Dicek')}</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800">
+                                <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">DNS DMARC</div>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${h.prod_diag.dns_dmarc === true ? 'bg-emerald-100 text-emerald-700' : (h.prod_diag.dns_dmarc === false ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600')}">${h.prod_diag.dns_dmarc === true ? 'DMARC Valid' : (h.prod_diag.dns_dmarc === false ? 'DMARC Belum Ada' : 'Belum Dicek')}</span>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
         document.getElementById('btn-clear-system-cache')?.addEventListener('click', async () => {

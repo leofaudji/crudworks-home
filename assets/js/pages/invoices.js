@@ -474,6 +474,12 @@ async function loadInvoices() {
                             <span>${String(inv.last_sent_via || 'wa').toUpperCase()} · ${App.formatDate(inv.last_sent_at)}</span>
                         </div>
                     ` : ''}
+                    ${Number(inv.view_count || 0) > 0 ? `
+                        <div class="mt-0.5 text-[10px] text-sky-600 dark:text-sky-400 font-mono flex items-center gap-1" title="Terakhir dibuka klien di Portal: ${inv.last_viewed_at ? App.formatDateTime(inv.last_viewed_at) : '-'}">
+                            <i class="ri-eye-line"></i>
+                            <span>Dilihat ${inv.view_count}x</span>
+                        </div>
+                    ` : ''}
                 </td>
                 <td class="py-4 px-6 text-right">
                     <button type="button" onclick="App.toggleTableActionMenu(this, event, [
@@ -919,17 +925,17 @@ async function buildInvoiceEmailPayload(inv) {
 }
 
 window.sendInvoiceEmail = async (id) => {
-    if (!await App.confirm('Kirim Faktur via Email?', 'Faktur tagihan PDF beserta tautan pembayaran online akan dikirimkan ke email klien via SMTP.')) return;
-    App.toast('Menyiapkan PDF & mengirim email faktur...', 'info');
     const detailRes = await App.api(`invoices/${id}`);
-    const payload = (detailRes && detailRes.success && detailRes.data)
-        ? await buildInvoiceEmailPayload(detailRes.data)
-        : {};
-    const res = await App.api(`invoices/${id}/send-email`, { method: 'POST', body: payload });
-    if (res && res.success) {
-        App.toast(res.message, 'success');
-        loadInvoices();
-    }
+    const invData = detailRes?.success ? detailRes.data : null;
+    const { promptSendEmail } = await import('../core/email-sender.js');
+    await promptSendEmail({
+        title: `Kirim Faktur ${invData?.nomor_invoice || ''} via Email?`,
+        text: 'Faktur tagihan PDF beserta tautan pembayaran online akan dikirimkan ke email klien via SMTP.',
+        defaultCc: invData?.client_cc_email || '',
+        endpoint: `invoices/${id}/send-email`,
+        buildPdf: () => (invData && typeof App.generateInvoicePdf === 'function') ? App.generateInvoicePdf(invData, 'bloburl') : null,
+        onSuccess: () => loadInvoices()
+    });
 };
 
 window.sendInvoiceWA = async (id) => {

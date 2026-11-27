@@ -31,6 +31,7 @@ if (!$quo) {
 $quoId = (int)$quo['id'];
 
 if ($method === 'GET') {
+    $db->execute("UPDATE quotations SET view_count = view_count + 1, last_viewed_at = NOW() WHERE id = ?", [$quoId]);
     $items = $db->fetchAll(
         "SELECT * FROM quotation_items WHERE quotation_id = ? ORDER BY urutan ASC, id ASC",
         [$quoId]

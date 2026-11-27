@@ -33,7 +33,7 @@ if ($id && is_numeric($id)) {
         checkPermission('invoice.send');
 
         $inv = $db->fetch(
-            "SELECT i.*, c.nama_perusahaan, c.email as client_email, c.penanggung_jawab 
+            "SELECT i.*, c.nama_perusahaan, c.email as client_email, c.cc_email as client_cc_email, c.penanggung_jawab 
              FROM invoices i 
              JOIN clients c ON i.client_id = c.id 
              WHERE i.id = ?",
@@ -54,9 +54,10 @@ if ($id && is_numeric($id)) {
 
         $attachments = extractPdfAttachmentFromParams($params, "faktur_{$inv['nomor_invoice']}.pdf");
         $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
+        $ccEmails = trim((string)($params['cc_email'] ?? $inv['client_cc_email'] ?? ''));
         $subject = "Faktur Tagihan {$inv['nomor_invoice']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
         $html = buildInvoiceEmailHtml($inv, $cfg, $portalUrl, $hasLogo, !empty($attachments));
-        $mailRes = sendErpEmail((string)$inv['client_email'], (string)($inv['penanggung_jawab'] ?: $inv['nama_perusahaan']), $subject, $html, 'invoice', $invoiceId, $attachments);
+        $mailRes = sendErpEmail((string)$inv['client_email'], (string)($inv['penanggung_jawab'] ?: $inv['nama_perusahaan']), $subject, $html, 'invoice', $invoiceId, $attachments, $ccEmails);
         if (empty($mailRes['success'])) {
             errorResponse($mailRes['message'] ?? 'Gagal mengirim email faktur', 500);
         }

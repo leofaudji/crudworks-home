@@ -153,6 +153,43 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'send') {
     successResponse(null, 'Kontrak berhasil dikirim ke Portal Klien');
 }
 
+// 4b. Kirim SPK via Email SMTP + Lampiran PDF
+if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
+    checkPermission('quotation.create');
+    $k = $db->fetch(
+        "SELECT k.*, c.id as client_id, c.nama_perusahaan, c.penanggung_jawab, c.email as client_email, c.cc_email as client_cc_email, c.portal_token
+         FROM contracts k
+         JOIN clients c ON k.client_id = c.id
+         WHERE k.id = ?",
+        [(int)$id]
+    );
+    if (!$k) errorResponse('Kontrak tidak ditemukan', 404);
+    if (empty($k['client_email'])) errorResponse('Email klien belum diatur pada data pelanggan', 422);
+
+    $cfg = getAppSettingsMap();
+    $portalToken = trim((string)($k['portal_token'] ?? ''));
+    if ($portalToken === '') {
+        $portalToken = bin2hex(random_bytes(24));
+        $db->execute("UPDATE clients SET portal_token = ? WHERE id = ?", [$portalToken, (int)$k['client_id']]);
+    }
+    $portalUrl = buildPublicAppUrl('#/client-portal?token=' . urlencode($portalToken));
+    $attachments = extractPdfAttachmentFromParams($params, "SPK-{$k['nomor_kontrak']}.pdf");
+    $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
+    $ccEmails = trim((string)($params['cc_email'] ?? $k['client_cc_email'] ?? ''));
+    $subject = "Kontrak / SPK Digital {$k['nomor_kontrak']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
+    $html = buildContractEmailHtml($k, $cfg, $portalUrl, $hasLogo, !empty($attachments));
+    $mailRes = sendErpEmail((string)$k['client_email'], (string)($k['penanggung_jawab'] ?: $k['nama_perusahaan']), $subject, $html, 'contract', (int)$id, $attachments, $ccEmails);
+    if (empty($mailRes['success'])) {
+        errorResponse($mailRes['message'] ?? 'Gagal mengirim email kontrak', 500);
+    }
+
+    if ($k['status'] === 'draft') {
+        $db->execute("UPDATE contracts SET status = 'terkirim', updated_at = NOW() WHERE id = ?", [(int)$id]);
+    }
+    logActivity('contract.send_email', 'contracts', (int)$id, null, ['sent_to' => $k['client_email']]);
+    successResponse(['sent_to' => $k['client_email']], 'Kontrak / SPK berhasil dikirim via SMTP ke ' . $k['client_email']);
+}
+
 // 5. Create / Update Kontrak
 if ($method === 'POST') {
     checkPermission('quotation.create');

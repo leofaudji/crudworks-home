@@ -446,12 +446,13 @@ if ($id && is_numeric($id)) {
             ? $params['prospect_stage']
             : ($client['prospect_stage'] ?? 'leads_baru');
         $dealValue = isset($params['deal_value']) ? (float)$params['deal_value'] : (float)($client['deal_value'] ?? 0);
+        $ccEmail = array_key_exists('cc_email', $params) ? trim((string)$params['cc_email']) : ($client['cc_email'] ?? '');
 
         $db->execute(
-            "UPDATE clients SET nama_perusahaan = ?, penanggung_jawab = ?, email = ?, telepon = ?, 
+            "UPDATE clients SET nama_perusahaan = ?, penanggung_jawab = ?, email = ?, cc_email = ?, telepon = ?, 
                     alamat = ?, kota = ?, npwp = ?, catatan = ?, status = ?, prospect_stage = ?, deal_value = ? 
              WHERE id = ?",
-            [$namaPerusahaan, $penanggungJawab, $email, $telepon, $alamat, $kota, $npwp, $catatan, $status, $prospectStage, $dealValue, $clientId]
+            [$namaPerusahaan, $penanggungJawab, $email, $ccEmail ?: null, $telepon, $alamat, $kota, $npwp, $catatan, $status, $prospectStage, $dealValue, $clientId]
         );
 
         clearCache(['clients']);
@@ -712,11 +713,12 @@ if ($method === 'POST') {
         ? $params['prospect_stage']
         : 'leads_baru';
     $dealValue = (float)($params['deal_value'] ?? 0);
+    $ccEmail = trim((string)($params['cc_email'] ?? '')) ?: null;
 
     $newId = $db->insert(
-        "INSERT INTO clients (kode_klien, nama_perusahaan, penanggung_jawab, email, telepon, alamat, kota, npwp, catatan, status, prospect_stage, deal_value, portal_token) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [$kodeKlien, $namaPerusahaan, $penanggungJawab, $email, $telepon, $alamat, $kota, $npwp, $catatan, $status, $prospectStage, $dealValue, $portalToken]
+        "INSERT INTO clients (kode_klien, nama_perusahaan, penanggung_jawab, email, cc_email, telepon, alamat, kota, npwp, catatan, status, prospect_stage, deal_value, portal_token) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [$kodeKlien, $namaPerusahaan, $penanggungJawab, $email, $ccEmail, $telepon, $alamat, $kota, $npwp, $catatan, $status, $prospectStage, $dealValue, $portalToken]
     );
 
     clearCache(['clients']);

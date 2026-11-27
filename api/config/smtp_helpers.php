@@ -60,9 +60,45 @@ function resolveCompanyEmailLogoPath(array $cfg = []): ?string
 }
 
 /**
- * Kirim email HTML melalui SMTP (TLS/SSL/STARTTLS) dengan dukungan lampiran & inline CID, lalu catat ke tabel email_logs.
+ * Parse daftar alamat email dipisah koma/titik koma menjadi array email valid yang unik.
  */
-function sendErpEmail(string $toEmail, string $toName, string $subject, string $htmlBody, string $entityType = 'general', ?int $entityId = null, array $attachments = []): array
+function parseEmailList($raw): array
+{
+    if (is_array($raw)) {
+        $items = $raw;
+    } else {
+        $items = preg_split('/[,;\s]+/', (string)$raw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+    $valid = [];
+    foreach ($items as $em) {
+        $em = trim((string)$em);
+        if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL)) {
+            $valid[strtolower($em)] = $em;
+        }
+    }
+    return array_values($valid);
+}
+
+/**
+ * Render template teks email dari app_settings dengan substitusi variabel aman.
+ */
+function renderEmailTemplateText(string $settingKey, string $defaultTemplate, array $vars, array $cfg = []): string
+{
+    $tpl = trim((string)($cfg[$settingKey] ?? ''));
+    if ($tpl === '') {
+        $tpl = $defaultTemplate;
+    }
+    $safe = htmlspecialchars($tpl);
+    foreach ($vars as $k => $v) {
+        $safe = str_replace('{' . $k . '}', '<b>' . htmlspecialchars((string)$v) . '</b>', $safe);
+    }
+    return nl2br($safe);
+}
+
+/**
+ * Kirim email HTML melalui SMTP (TLS/SSL/STARTTLS) dengan dukungan lampiran, CC & inline CID, lalu catat ke tabel email_logs.
+ */
+function sendErpEmail(string $toEmail, string $toName, string $subject, string $htmlBody, string $entityType = 'general', ?int $entityId = null, array $attachments = [], $ccEmails = []): array
 {
     $db = Database::getInstance();
     $cfg = getAppSettingsMap();
@@ -212,6 +248,17 @@ function sendErpEmail(string $toEmail, string $toName, string $subject, string $
         return ['success' => false, 'message' => $err];
     }
 
+    $ccList = array_values(array_filter(parseEmailList($ccEmails), fn($c) => strcasecmp($c, $toEmail) !== 0));
+    foreach ($ccList as $ccAddr) {
+        [$okCc, $cCc, $rCc] = _smtpCmd($fp, "RCPT TO:<{$ccAddr}>", [250, 251]);
+        if (!$okCc) {
+            fclose($fp);
+            $err = "RCPT TO CC ({$ccAddr}) ditolak ({$cCc}): {$rCc}";
+            $db->insert("INSERT INTO email_logs (entity_type, entity_id, recipient_email, subject, status, error_message, sent_by) VALUES (?, ?, ?, ?, 'failed', ?, ?)", [$entityType, $entityId, $toEmail, $subject, $err, $userId]);
+            return ['success' => false, 'message' => $err];
+        }
+    }
+
     [$okData, $cData, $rData] = _smtpCmd($fp, 'DATA', [354]);
     if (!$okData) {
         fclose($fp);
@@ -232,6 +279,7 @@ function sendErpEmail(string $toEmail, string $toName, string $subject, string $
         "From: {$encFrom} <{$fromEmail}>",
         "Reply-To: {$encFrom} <{$fromEmail}>",
         "To: {$toHeader}",
+        ...(!empty($ccList) ? ["Cc: " . implode(', ', $ccList)] : []),
         "Subject: {$encSubj}",
         "MIME-Version: 1.0",
         "X-Mailer: CRUDWorks-ERP",
@@ -390,6 +438,18 @@ function buildInvoiceEmailHtml(array $inv, array $cfg, string $portalUrl, bool $
         ? "<p style='margin:0 0 16px;color:#334155'>Faktur tagihan resmi (<b>{$no}</b>) juga telah kami lampirkan dalam format <b>PDF</b> pada email ini.</p>"
         : '';
 
+    $introHtml = renderEmailTemplateText(
+        'email_tpl_invoice_intro',
+        'Berikut kami kirimkan rincian tagihan untuk {nama_klien}:',
+        [
+            'nama_klien' => (string)($inv['nama_perusahaan'] ?? ''),
+            'nomor_dokumen' => (string)($inv['nomor_invoice'] ?? ''),
+            'jatuh_tempo' => (string)($inv['tanggal_jatuh_tempo'] ?? '-'),
+            'nama_perusahaan' => (string)($cfg['company_name'] ?? 'CRUDWorks ERP'),
+        ],
+        $cfg
+    );
+
     return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;color:#1e293b;background:#ffffff'>
         <div style='background:#0f172a;color:#fff;padding:24px'>
             {$logoHtml}
@@ -397,7 +457,7 @@ function buildInvoiceEmailHtml(array $inv, array $cfg, string $portalUrl, bool $
         </div>
         <div style='padding:24px;line-height:1.6;font-size:14px'>
             <p style='margin:0 0 12px'>Yth. <b>{$pic}</b>,</p>
-            <p style='margin:0 0 14px'>Berikut kami kirimkan rincian tagihan untuk <b>" . htmlspecialchars((string)$inv['nama_perusahaan']) . "</b>:</p>
+            <p style='margin:0 0 14px'>{$introHtml}</p>
             <table style='width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0'>
                 <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Nomor Faktur</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$no}</td></tr>
                 <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Total Tagihan</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$total}</td></tr>
@@ -430,6 +490,19 @@ function buildQuotationEmailHtml(array $quo, array $cfg, string $portalUrl, bool
         ? "<p style='margin:0 0 16px;color:#334155'>Dokumen resmi <b>Surat Penawaran Harga ({$no})</b> telah kami lampirkan dalam format <b>PDF</b> pada email ini. Silakan buka lampiran PDF untuk membaca rincian ruang lingkup, jadwal pengerjaan, dan penawaran investasi secara lengkap.</p>"
         : "<p style='margin:0 0 16px;color:#334155'>Silakan tinjau rincian ruang lingkup, jadwal pengerjaan, dan penawaran investasi melalui tautan di bawah ini.</p>";
 
+    $introHtml = renderEmailTemplateText(
+        'email_tpl_quotation_intro',
+        'Bersama ini kami kirimkan Surat Penawaran Harga (SPH) untuk {judul}.',
+        [
+            'nama_klien' => (string)($quo['nama_perusahaan'] ?? ''),
+            'nomor_dokumen' => (string)($quo['nomor_penawaran'] ?? ''),
+            'judul' => (string)($quo['judul'] ?? 'Surat Penawaran Harga'),
+            'jatuh_tempo' => (string)($quo['berlaku_hingga'] ?? '-'),
+            'nama_perusahaan' => (string)($cfg['company_name'] ?? 'CRUDWorks ERP'),
+        ],
+        $cfg
+    );
+
     return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;color:#1e293b;background:#ffffff'>
         <div style='background:#1e1b4b;color:#fff;padding:24px'>
             {$logoHtml}
@@ -437,7 +510,7 @@ function buildQuotationEmailHtml(array $quo, array $cfg, string $portalUrl, bool
         </div>
         <div style='padding:24px;line-height:1.6;font-size:14px'>
             <p style='margin:0 0 12px'>Yth. <b>{$pic}</b>,</p>
-            <p style='margin:0 0 14px'>Bersama ini kami kirimkan Surat Penawaran Harga (SPH) untuk <b>{$judul}</b>.</p>
+            <p style='margin:0 0 14px'>{$introHtml}</p>
             <table style='width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0'>
                 <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Nomor SPH</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$no}</td></tr>
                 <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Perihal</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$judul}</td></tr>
@@ -496,4 +569,98 @@ function buildPaymentReceiptEmailHtml(array $p, array $cfg, string $portalUrl = 
             <p style='font-size:12px;color:#64748b;margin:16px 0 0'>Hormat kami,<br><b>{$compName}</b></p>
         </div>
     </div>";
+}
+
+function buildContractEmailHtml(array $k, array $cfg, string $portalUrl = '', bool $hasLogo = false, bool $hasPdfAttachment = false): string
+{
+    $compName = htmlspecialchars((string)($cfg['company_name'] ?? 'CRUDWorks ERP'));
+    $pic = htmlspecialchars((string)($k['penanggung_jawab'] ?: $k['nama_perusahaan']));
+    $no = htmlspecialchars((string)$k['nomor_kontrak']);
+    $judul = htmlspecialchars((string)($k['judul_kontrak'] ?? 'Surat Perjanjian Kerja'));
+    $nilai = 'Rp ' . number_format((float)($k['nilai_kontrak'] ?? 0), 0, ',', '.');
+
+    $logoHtml = $hasLogo
+        ? "<div style='margin-bottom:12px'><img src='cid:company-logo' alt='{$compName}' style='max-height:36px;width:auto;display:inline-block;background:#ffffff;padding:6px 10px;border-radius:8px'></div>"
+        : "<div style='font-size:12px;opacity:.8;margin-bottom:6px'>{$compName}</div>";
+
+    $introHtml = renderEmailTemplateText(
+        'email_tpl_contract_intro',
+        'Bersama ini kami sampaikan Surat Perjanjian Kerja (SPK) {nomor_dokumen} untuk {judul}.',
+        [
+            'nama_klien' => (string)($k['nama_perusahaan'] ?? ''),
+            'nomor_dokumen' => (string)($k['nomor_kontrak'] ?? ''),
+            'judul' => (string)($k['judul_kontrak'] ?? ''),
+            'nama_perusahaan' => (string)($cfg['company_name'] ?? 'CRUDWorks ERP'),
+        ],
+        $cfg
+    );
+
+    $attachNote = $hasPdfAttachment
+        ? "<p style='margin:0 0 16px;color:#334155'>Dokumen resmi SPK (<b>{$no}</b>) telah kami lampirkan dalam format <b>PDF</b> pada email ini.</p>"
+        : '';
+
+    $ctaHtml = $portalUrl !== ''
+        ? "<p style='text-align:center;margin:24px 0'><a href='" . htmlspecialchars($portalUrl) . "' style='display:inline-block;background:#0284c7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:bold'>Buka Portal Klien &amp; Tanda Tangani SPK</a></p>"
+        : '';
+
+    return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;color:#1e293b;background:#ffffff'>
+        <div style='background:#0c4a6e;color:#fff;padding:24px'>{$logoHtml}<h2 style='margin:0;font-size:20px;line-height:1.3'>Kontrak / SPK Digital {$no}</h2></div>
+        <div style='padding:24px;line-height:1.6;font-size:14px'>
+            <p style='margin:0 0 12px'>Yth. <b>{$pic}</b>,</p>
+            <p style='margin:0 0 14px'>{$introHtml}</p>
+            <table style='width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0'>
+                <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Nomor SPK</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$no}</td></tr>
+                <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Perihal</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$judul}</td></tr>
+                <tr><td style='padding:10px 14px;color:#64748b'>Nilai Kontrak</td><td style='padding:10px 14px;text-align:right;font-weight:bold;color:#0284c7'>{$nilai}</td></tr>
+            </table>
+            {$attachNote}{$ctaHtml}
+            <p style='font-size:12px;color:#64748b;margin:16px 0 0'>Hormat kami,<br><b>{$compName}</b></p>
+        </div></div>";
+}
+
+function buildBastEmailHtml(array $b, array $cfg, string $portalUrl = '', bool $hasLogo = false, bool $hasPdfAttachment = false): string
+{
+    $compName = htmlspecialchars((string)($cfg['company_name'] ?? 'CRUDWorks ERP'));
+    $pic = htmlspecialchars((string)($b['pihak_kedua_nama'] ?: $b['client_nama']));
+    $no = htmlspecialchars((string)$b['nomor_bast']);
+    $proj = htmlspecialchars((string)($b['nama_project'] ?? 'Proyek'));
+    $tgl = htmlspecialchars((string)($b['tanggal_bast'] ?? '-'));
+
+    $logoHtml = $hasLogo
+        ? "<div style='margin-bottom:12px'><img src='cid:company-logo' alt='{$compName}' style='max-height:36px;width:auto;display:inline-block;background:#ffffff;padding:6px 10px;border-radius:8px'></div>"
+        : "<div style='font-size:12px;opacity:.8;margin-bottom:6px'>{$compName}</div>";
+
+    $introHtml = renderEmailTemplateText(
+        'email_tpl_bast_intro',
+        'Bersama ini kami sampaikan Berita Acara Serah Terima (BAST) {nomor_dokumen} untuk proyek {judul}.',
+        [
+            'nama_klien' => (string)($b['client_nama'] ?? ''),
+            'nomor_dokumen' => (string)($b['nomor_bast'] ?? ''),
+            'judul' => (string)($b['nama_project'] ?? ''),
+            'nama_perusahaan' => (string)($cfg['company_name'] ?? 'CRUDWorks ERP'),
+        ],
+        $cfg
+    );
+
+    $attachNote = $hasPdfAttachment
+        ? "<p style='margin:0 0 16px;color:#334155'>Dokumen resmi BAST (<b>{$no}</b>) telah kami lampirkan dalam format <b>PDF</b> pada email ini.</p>"
+        : '';
+
+    $ctaHtml = $portalUrl !== ''
+        ? "<p style='text-align:center;margin:24px 0'><a href='" . htmlspecialchars($portalUrl) . "' style='display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:bold'>Tinjau &amp; Sahkan BAST di Portal Klien</a></p>"
+        : '';
+
+    return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;color:#1e293b;background:#ffffff'>
+        <div style='background:#312e81;color:#fff;padding:24px'>{$logoHtml}<h2 style='margin:0;font-size:20px;line-height:1.3'>Berita Acara Serah Terima {$no}</h2></div>
+        <div style='padding:24px;line-height:1.6;font-size:14px'>
+            <p style='margin:0 0 12px'>Yth. <b>{$pic}</b>,</p>
+            <p style='margin:0 0 14px'>{$introHtml}</p>
+            <table style='width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0'>
+                <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Nomor BAST</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$no}</td></tr>
+                <tr><td style='padding:10px 14px;color:#64748b;border-bottom:1px solid #e2e8f0'>Proyek</td><td style='padding:10px 14px;text-align:right;font-weight:bold;border-bottom:1px solid #e2e8f0'>{$proj}</td></tr>
+                <tr><td style='padding:10px 14px;color:#64748b'>Tanggal BAST</td><td style='padding:10px 14px;text-align:right;font-weight:bold'>{$tgl}</td></tr>
+            </table>
+            {$attachNote}{$ctaHtml}
+            <p style='font-size:12px;color:#64748b;margin:16px 0 0'>Hormat kami,<br><b>{$compName}</b></p>
+        </div></div>";
 }

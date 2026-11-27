@@ -25,46 +25,46 @@ export async function openProjectBasts(projectId) {
     }
 
     modal.innerHTML = `
-        <div class="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 animate-fadeIn max-h-[92vh] overflow-y-auto space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div class="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[92vh] animate-fadeIn overflow-hidden">
+            <div class="px-6 sm:px-8 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-start justify-between gap-4 shrink-0">
                 <div class="space-y-1 min-w-0 flex-1">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Dokumen Hukum & Legalitas Serah Terima</span>
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Dokumen Hukum &amp; Legalitas Serah Terima</span>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                         <i class="ri-file-shield-2-line text-emerald-600 shrink-0"></i>
                         <span>Berita Acara Serah Terima (BAST)</span>
                     </h2>
-                    <p class="text-xs text-slate-500 leading-relaxed">Proyek: <b class="text-slate-800 dark:text-slate-200">${p.nama_project}</b> (${p.kode_project}) · Klien: <b>${p.nama_perusahaan}</b></p>
+                    <p class="text-xs text-slate-500 leading-relaxed">Proyek: <b class="text-slate-800 dark:text-slate-200">${App.escapeHtml(p.nama_project)}</b> (${App.escapeHtml(p.kode_project)}) · Klien: <b class="text-slate-700 dark:text-slate-300">${App.escapeHtml(p.nama_perusahaan)}</b></p>
                 </div>
                 <div class="flex items-center gap-2 shrink-0 self-end sm:self-start">
                     <button type="button" onclick="window.openBastEditor(${projectId})" class="whitespace-nowrap px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition">
                         <i class="ri-add-line text-sm"></i><span>Terbitkan BAST Baru</span>
                     </button>
-                    <button type="button" onclick="document.getElementById('project-bast-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <button type="button" onclick="document.getElementById('project-bast-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Tutup">
                         <i class="ri-close-line text-2xl"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="space-y-3">
+            <div class="p-6 sm:px-8 overflow-y-auto flex-1 space-y-3">
                 <div class="flex items-center justify-between text-xs text-slate-500">
                     <span class="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Daftar Dokumen BAST Diterbitkan</span>
-                    <span>Total Dokumen: <b>${basts.length}</b></span>
+                    <span>Total Dokumen: <b class="text-slate-900 dark:text-white">${basts.length}</b></span>
                 </div>
 
-                <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                <div class="space-y-3 text-xs">
                     ${basts.length === 0 ? `
-                        <div class="p-8 text-center text-slate-400 space-y-2">
+                        <div class="p-8 text-center text-slate-400 space-y-2 border border-slate-200 dark:border-slate-800 rounded-2xl">
                             <i class="ri-file-shield-2-line text-3xl opacity-30"></i>
                             <div>Belum ada dokumen BAST diterbitkan untuk proyek ini.</div>
-                            <div class="text-[11px] text-slate-500">Klik "Terbitkan BAST Baru" di atas atau melalui menu Termin & Milestone.</div>
+                            <div class="text-[11px] text-slate-500">Klik "Terbitkan BAST Baru" di atas atau melalui menu Termin &amp; Milestone.</div>
                         </div>
                     ` : basts.map(b => {
                         const isSigned = b.status === 'ditandatangani';
                         return `
-                            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
-                                <div class="space-y-1.5 min-w-0 flex-1">
+                            <div class="p-4 sm:p-5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/30 dark:bg-slate-800/20 hover:border-slate-300 dark:hover:border-slate-700 transition space-y-3.5">
+                                <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="font-mono font-bold text-sm text-slate-900 dark:text-white">${b.nomor_bast}</span>
+                                        <span class="font-mono font-bold text-sm text-slate-900 dark:text-white">${App.escapeHtml(b.nomor_bast)}</span>
                                         <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isSigned ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}">
                                             <i class="${isSigned ? 'ri-shield-check-line' : 'ri-edit-line'}"></i> ${isSigned ? 'Sah & Ditandatangani' : 'Draft BAST'}
                                         </span>
@@ -74,36 +74,51 @@ export async function openProjectBasts(projectId) {
                                             </span>
                                         ` : ''}
                                     </div>
-
-                                    <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                                        ${App.escapeHtml(b.judul_pekerjaan)}
-                                    </div>
-
-                                    <div class="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
-                                        <span><i class="ri-calendar-line"></i> Tanggal: <b>${App.formatDate(b.tanggal_bast)}</b></span>
-                                        <span><i class="ri-user-star-line"></i> Pihak 1: <b>${App.escapeHtml(b.pihak_pertama_nama)}</b> (${App.escapeHtml(b.pihak_pertama_jabatan)})</span>
-                                        <span><i class="ri-user-shared-line"></i> Pihak 2: <b>${App.escapeHtml(b.pihak_kedua_nama)}</b> (${App.escapeHtml(b.pihak_kedua_jabatan)})</span>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <button type="button" onclick="window.openBastEditor(${projectId}, ${b.id})" class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition" title="Edit Rincian BAST" aria-label="Edit Rincian BAST">
+                                            <i class="ri-edit-line text-base"></i>
+                                        </button>
+                                        <button type="button" onclick="window.deleteBast(${projectId}, ${b.id})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition" title="Hapus Dokumen BAST" aria-label="Hapus Dokumen BAST">
+                                            <i class="ri-delete-bin-line text-base"></i>
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <button type="button" onclick="window.downloadBastPdf(${b.id})" class="whitespace-nowrap px-3 py-1.5 bg-primary-50 hover:bg-primary-100 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition" title="Cetak atau Pratinjau Dokumen PDF">
-                                        <i class="ri-file-pdf-2-line"></i><span>Cetak PDF</span>
-                                    </button>
+                                <div class="font-bold text-slate-900 dark:text-white text-sm leading-snug">
+                                    ${App.escapeHtml(b.judul_pekerjaan)}
+                                </div>
 
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] text-slate-500 bg-white dark:bg-slate-900/70 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                    <div class="min-w-0">
+                                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Tanggal BAST</span>
+                                        <b class="text-slate-800 dark:text-slate-200 font-mono">${App.formatDate(b.tanggal_bast)}</b>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Pihak Pertama</span>
+                                        <b class="text-slate-800 dark:text-slate-200 truncate block">${App.escapeHtml(b.pihak_pertama_nama)}</b>
+                                        <span class="text-[10px] text-slate-400 truncate block">${App.escapeHtml(b.pihak_pertama_jabatan)}</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Pihak Kedua (Klien)</span>
+                                        <b class="text-slate-800 dark:text-slate-200 truncate block">${App.escapeHtml(b.pihak_kedua_nama)}</b>
+                                        <span class="text-[10px] text-slate-400 truncate block">${App.escapeHtml(b.pihak_kedua_jabatan)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <button type="button" onclick="window.downloadBastPdf(${b.id})" class="whitespace-nowrap px-3.5 py-1.5 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition" title="Cetak atau Pratinjau Dokumen PDF">
+                                            <i class="ri-file-pdf-2-line text-rose-600"></i><span>Cetak PDF</span>
+                                        </button>
+                                        <button type="button" onclick="window.sendBastEmail(${b.id})" class="whitespace-nowrap px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition" title="Kirim BAST + PDF via Email">
+                                            <i class="ri-mail-send-line"></i><span>Kirim Email</span>
+                                        </button>
+                                    </div>
                                     ${!isSigned ? `
-                                        <button type="button" onclick="window.signBast(${projectId}, ${b.id})" class="whitespace-nowrap px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-sm transition" title="Sahkan & Tandatangani">
-                                            <i class="ri-quill-pen-line"></i><span>Sahkan</span>
+                                        <button type="button" onclick="window.signBast(${projectId}, ${b.id})" class="whitespace-nowrap px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition" title="Sahkan & Tandatangani">
+                                            <i class="ri-quill-pen-line"></i><span>Sahkan BAST</span>
                                         </button>
                                     ` : ''}
-
-                                    <button type="button" onclick="window.openBastEditor(${projectId}, ${b.id})" class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition" title="Edit Rincian BAST">
-                                        <i class="ri-edit-line text-base"></i>
-                                    </button>
-
-                                    <button type="button" onclick="window.deleteBast(${projectId}, ${b.id})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition" title="Hapus Dokumen BAST">
-                                        <i class="ri-delete-bin-line text-base"></i>
-                                    </button>
                                 </div>
                             </div>
                         `;
@@ -111,8 +126,8 @@ export async function openProjectBasts(projectId) {
                 </div>
             </div>
 
-            <div class="flex justify-end pt-2">
-                <button type="button" onclick="document.getElementById('project-bast-modal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs transition">
+            <div class="px-6 sm:px-8 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0 bg-slate-50/50 dark:bg-slate-900">
+                <button type="button" onclick="document.getElementById('project-bast-modal').classList.add('hidden')" class="px-5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs transition">
                     Tutup
                 </button>
             </div>
@@ -292,6 +307,20 @@ export async function deleteBast(projectId, bastId) {
         App.toast(res.message, 'success');
         openProjectBasts(projectId);
     }
+}
+
+export async function sendBastEmail(bastId) {
+    const res = await App.api(`basts/${bastId}`);
+    if (!res || !res.success || !res.data) return;
+    const { promptSendEmail } = await import('../../core/email-sender.js');
+    const { generateBastPdf } = await import('../../core/pdf/bast.js');
+    await promptSendEmail({
+        title: `Kirim BAST ${res.data.nomor_bast || ''} via Email?`,
+        text: 'Dokumen PDF Berita Acara Serah Terima beserta tautan Portal Klien akan dikirimkan via SMTP.',
+        defaultCc: res.data.client_cc_email || '',
+        endpoint: `basts/${bastId}/send-email`,
+        buildPdf: () => generateBastPdf(res.data, 'bloburl')
+    });
 }
 
 export async function downloadBastPdf(bastId, output = 'bloburl') {

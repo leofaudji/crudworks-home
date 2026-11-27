@@ -170,6 +170,9 @@ function renderContractsTable() {
                                     <button data-pdf="${k.id}" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-rose-600" title="Pratinjau PDF SPK">
                                         <i class="ri-file-pdf-2-line"></i>
                                     </button>
+                                    <button data-email="${k.id}" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-sky-600" title="Kirim Email SPK + PDF">
+                                        <i class="ri-mail-send-line"></i>
+                                    </button>
                                     <button data-view="${k.id}" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300" title="Lihat Detail & Pasal">
                                         <i class="ri-eye-line"></i>
                                     </button>
@@ -193,10 +196,25 @@ function renderContractsTable() {
     `;
 
     wrap.querySelectorAll('[data-pdf]').forEach((btn) => btn.addEventListener('click', () => previewContractPdf(btn.dataset.pdf)));
+    wrap.querySelectorAll('[data-email]').forEach((btn) => btn.addEventListener('click', () => sendContractEmail(btn.dataset.email)));
     wrap.querySelectorAll('[data-view]').forEach((btn) => btn.addEventListener('click', () => viewContractDetail(btn.dataset.view)));
     wrap.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openContractModal(btn.dataset.edit)));
     wrap.querySelectorAll('[data-send]').forEach((btn) => btn.addEventListener('click', () => sendContract(btn.dataset.send)));
     wrap.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', () => deleteContract(btn.dataset.del)));
+}
+
+async function sendContractEmail(id) {
+    const res = await App.api(`contracts/${id}`);
+    if (!res?.success || !res.data) return;
+    const { promptSendEmail } = await import('../core/email-sender.js');
+    await promptSendEmail({
+        title: `Kirim SPK ${res.data.nomor_kontrak || ''} via Email?`,
+        text: 'Dokumen PDF Kontrak / SPK Digital beserta tautan Portal Klien akan dikirimkan via SMTP.',
+        defaultCc: res.data.client_cc_email || '',
+        endpoint: `contracts/${id}/send-email`,
+        buildPdf: () => generateContractPdf(res.data, 'bloburl'),
+        onSuccess: () => loadContracts()
+    });
 }
 
 async function previewContractPdf(id, mode = 'bloburl') {

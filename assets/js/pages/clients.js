@@ -149,6 +149,11 @@ export async function init(container) {
                             <input type="email" id="form-client-email" required placeholder="billing@perusahaan.com"
                                    class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                         </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1.5">CC Email (Opsional)</label>
+                            <input type="text" id="form-client-cc-email" placeholder="finance@klien.com, pic@klien.com"
+                                   class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
 
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-400 mb-1.5">Telepon / WhatsApp</label>
@@ -777,6 +782,8 @@ function openClientModal(client = null) {
         document.getElementById('form-client-perusahaan').value = client.nama_perusahaan;
         document.getElementById('form-client-pic').value = client.penanggung_jawab;
         document.getElementById('form-client-email').value = client.email;
+        const ccEl = document.getElementById('form-client-cc-email');
+        if (ccEl) ccEl.value = client.cc_email || '';
         document.getElementById('form-client-telepon').value = client.telepon || '';
         document.getElementById('form-client-npwp').value = client.npwp || '';
         document.getElementById('form-client-kota').value = client.kota || '';
@@ -810,6 +817,7 @@ async function handleSaveClient(e) {
         nama_perusahaan: document.getElementById('form-client-perusahaan').value.trim(),
         penanggung_jawab: document.getElementById('form-client-pic').value.trim(),
         email: document.getElementById('form-client-email').value.trim(),
+        cc_email: document.getElementById('form-client-cc-email')?.value.trim() || '',
         telepon: document.getElementById('form-client-telepon').value.trim(),
         npwp: document.getElementById('form-client-npwp').value.trim(),
         kota: document.getElementById('form-client-kota').value.trim(),

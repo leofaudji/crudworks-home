@@ -606,6 +606,7 @@ async function loadQuotations() {
             <td class="py-3.5 px-6 align-middle font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                 ${App.escapeHtml(q.nomor_penawaran)}
                 ${q.converted_invoice_no ? `<div class="text-[10px] text-indigo-600 font-sans">Faktur: <a href="#/invoices" class="hover:underline">${App.escapeHtml(q.converted_invoice_no)}</a></div>` : ''}
+                ${Number(q.view_count || 0) > 0 ? `<div class="text-[10px] text-sky-600 dark:text-sky-400 font-mono flex items-center gap-1 mt-0.5" title="Terakhir dilihat klien: ${q.last_viewed_at ? App.formatDateTime(q.last_viewed_at) : '-'}"><i class="ri-eye-line"></i><span>Dilihat ${q.view_count}x</span></div>` : ''}
             </td>
             <td class="py-3.5 px-4 align-middle font-mono text-slate-500 whitespace-nowrap">
                 ${App.formatDate(q.tanggal_penawaran)}
@@ -1037,36 +1038,17 @@ window.sendQuotationWA = async (id) => {
 };
 
 window.sendQuotationEmail = async (id) => {
-    if (!await App.confirm('Kirim Penawaran via Email?', 'Surat penawaran PDF beserta tautan E-Sign akan dikirimkan ke email klien via SMTP.')) return;
-    App.toast('Menyiapkan PDF & mengirim email penawaran...', 'info');
-
-    let payload = {};
-    try {
-        const detailRes = await App.api(`quotations/${id}`);
-        if (detailRes && detailRes.success && detailRes.data && typeof App.generateQuotationPdf === 'function') {
-            const pdfRes = await App.generateQuotationPdf(detailRes.data, 'bloburl');
-            if (pdfRes?.blob) {
-                const pdfBase64 = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
-                    reader.onerror = () => reject(new Error('Gagal membaca blob PDF'));
-                    reader.readAsDataURL(pdfRes.blob);
-                });
-                if (pdfRes.blobUrl) URL.revokeObjectURL(pdfRes.blobUrl);
-                if (pdfBase64) {
-                    payload = { pdf_base64: pdfBase64, pdf_filename: pdfRes.filename };
-                }
-            }
-        }
-    } catch (err) {
-        console.warn('Gagal menyiapkan lampiran PDF penawaran:', err);
-    }
-
-    const res = await App.api(`quotations/${id}/send-email`, { method: 'POST', body: payload });
-    if (res && res.success) {
-        App.toast(res.message, 'success');
-        loadQuotations();
-    }
+    const detailRes = await App.api(`quotations/${id}`);
+    const quoData = detailRes?.success ? detailRes.data : null;
+    const { promptSendEmail } = await import('../core/email-sender.js');
+    await promptSendEmail({
+        title: `Kirim Penawaran ${quoData?.nomor_penawaran || ''} via Email?`,
+        text: 'Surat penawaran PDF beserta tautan E-Sign akan dikirimkan ke email klien via SMTP.',
+        defaultCc: quoData?.client_cc_email || '',
+        endpoint: `quotations/${id}/send-email`,
+        buildPdf: () => (quoData && typeof App.generateQuotationPdf === 'function') ? App.generateQuotationPdf(quoData, 'bloburl') : null,
+        onSuccess: () => loadQuotations()
+    });
 };
 
 window.convertQuotationToInvoice = async (id, no) => {

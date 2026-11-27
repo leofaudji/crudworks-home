@@ -51,6 +51,43 @@ if ($method === 'POST' && $id && is_numeric($id) && $action === 'sign') {
     successResponse(['id' => (int)$id, 'status' => 'ditandatangani'], 'Dokumen BAST berhasil ditandatangani secara sah');
 }
 
+// 2b. Kirim BAST via Email SMTP + Lampiran PDF (POST /api/basts/{id}/send-email)
+if ($method === 'POST' && $id && is_numeric($id) && $action === 'send-email') {
+    authCheck();
+    checkPermission('bast.view');
+
+    $b = $db->fetch(
+        "SELECT b.*, p.nama_project, c.id as client_id, c.nama_perusahaan as client_nama, c.penanggung_jawab, c.email as client_email, c.cc_email as client_cc_email, c.portal_token
+         FROM project_basts b
+         JOIN projects p ON b.project_id = p.id
+         JOIN clients c ON b.client_id = c.id
+         WHERE b.id = ?",
+        [(int)$id]
+    );
+    if (!$b) errorResponse('Dokumen BAST tidak ditemukan', 404);
+    if (empty($b['client_email'])) errorResponse('Email klien belum diatur pada data pelanggan', 422);
+
+    $cfg = getAppSettingsMap();
+    $portalToken = trim((string)($b['portal_token'] ?? ''));
+    if ($portalToken === '') {
+        $portalToken = bin2hex(random_bytes(24));
+        $db->execute("UPDATE clients SET portal_token = ? WHERE id = ?", [$portalToken, (int)$b['client_id']]);
+    }
+    $portalUrl = buildPublicAppUrl('#/client-portal?token=' . urlencode($portalToken));
+    $attachments = extractPdfAttachmentFromParams($params, "BAST-{$b['nomor_bast']}.pdf");
+    $hasLogo = resolveCompanyEmailLogoPath($cfg) !== null;
+    $ccEmails = trim((string)($params['cc_email'] ?? $b['client_cc_email'] ?? ''));
+    $subject = "Berita Acara Serah Terima {$b['nomor_bast']} - " . ($cfg['company_name'] ?? 'CRUDWorks ERP');
+    $html = buildBastEmailHtml($b, $cfg, $portalUrl, $hasLogo, !empty($attachments));
+    $mailRes = sendErpEmail((string)$b['client_email'], (string)($b['pihak_kedua_nama'] ?: $b['penanggung_jawab'] ?: $b['client_nama']), $subject, $html, 'bast', (int)$id, $attachments, $ccEmails);
+    if (empty($mailRes['success'])) {
+        errorResponse($mailRes['message'] ?? 'Gagal mengirim email BAST', 500);
+    }
+
+    logActivity('bast.send_email', 'project_basts', (int)$id, "Mengirim BAST {$b['nomor_bast']} ke {$b['client_email']}");
+    successResponse(['sent_to' => $b['client_email']], 'BAST berhasil dikirim via SMTP ke ' . $b['client_email']);
+}
+
 // 3. List BASTs (Filtered)
 if ($method === 'GET') {
     authCheck();

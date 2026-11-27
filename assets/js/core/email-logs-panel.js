@@ -2,10 +2,13 @@
 import { App } from '../app.js';
 
 const TYPE_META = {
-    invoice: { label: 'Faktur', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
-    quotation: { label: 'Penawaran', cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
-    payment: { label: 'Kuitansi', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-    test: { label: 'Test SMTP', cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' }
+    invoice: { label: 'Faktur', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300', route: '#/invoices' },
+    quotation: { label: 'Penawaran', cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300', route: '#/quotations' },
+    payment: { label: 'Kuitansi', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', route: '#/payments' },
+    contract: { label: 'Kontrak SPK', cls: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300', route: '#/contracts' },
+    bast: { label: 'BAST', cls: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300', route: '#/projects' },
+    maintenance: { label: 'SLA / Domain', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', route: '#/maintenance' },
+    test: { label: 'Test SMTP', cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', route: '#/settings' }
 };
 
 export function mountEmailLogsPanel(containerEl, { perPage = 10, title = 'Riwayat Pengiriman Email' } = {}) {
@@ -23,9 +26,14 @@ export function mountEmailLogsPanel(containerEl, { perPage = 10, title = 'Riwaya
                     </h4>
                     <p class="text-xs text-slate-400">Catatan pengiriman email faktur, penawaran, dan uji coba SMTP beserta detail error jika gagal.</p>
                 </div>
-                <button type="button" data-el-refresh class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition">
-                    <i class="ri-refresh-line"></i><span>Segarkan</span>
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" data-el-reminders class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition" title="Kirim pengingat faktur jatuh tempo & perpanjangan SLA sekarang">
+                        <i class="ri-alarm-warning-line"></i><span>Jalankan Pengingat</span>
+                    </button>
+                    <button type="button" data-el-refresh class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                        <i class="ri-refresh-line"></i><span>Segarkan</span>
+                    </button>
+                </div>
             </div>
 
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -39,6 +47,9 @@ export function mountEmailLogsPanel(containerEl, { perPage = 10, title = 'Riwaya
                     <option value="invoice">Faktur Tagihan</option>
                     <option value="quotation">Surat Penawaran</option>
                     <option value="payment">Kuitansi Pembayaran</option>
+                    <option value="contract">Kontrak / SPK</option>
+                    <option value="bast">BAST Proyek</option>
+                    <option value="maintenance">SLA / Domain</option>
                     <option value="test">Test SMTP</option>
                 </select>
                 <select data-el-status class="px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold">
@@ -102,7 +113,9 @@ export function mountEmailLogsPanel(containerEl, { perPage = 10, title = 'Riwaya
                 const statusBadge = isSent
                     ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"><i class="ri-checkbox-circle-line"></i>Terkirim</span>`
                     : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"><i class="ri-error-warning-line"></i>Gagal</span>`;
-                const docTag = row.doc_number ? `<div class="text-[10px] font-mono text-slate-500 mt-0.5">${App.escapeHtml(row.doc_number)}</div>` : '';
+                const docTag = row.doc_number
+                    ? `<div class="text-[10px] font-mono mt-0.5"><a href="${tm.route || '#/dashboard'}" class="text-primary-600 hover:underline inline-flex items-center gap-0.5">${App.escapeHtml(row.doc_number)} <i class="ri-external-link-line text-[9px]"></i></a></div>`
+                    : '';
                 const errLine = (!isSent && row.error_message)
                     ? `<div class="mt-1 text-[11px] text-rose-600 dark:text-rose-400 truncate max-w-md cursor-pointer hover:underline" data-el-err-idx="${idx}" title="Klik untuk melihat detail error">${App.escapeHtml(row.error_message)}</div>`
                     : '';
@@ -176,6 +189,20 @@ export function mountEmailLogsPanel(containerEl, { perPage = 10, title = 'Riwaya
         load();
     });
     refreshEl.addEventListener('click', load);
+    containerEl.querySelector('[data-el-reminders]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (!await App.confirm('Jalankan Pengingat Jatuh Tempo?', 'Sistem akan mengirim email pengingat untuk faktur H-3, Hari-H, atau tunggakan (>=7 hari) serta SLA/Domain H-30 yang belum diingatkan.')) return;
+        const done = App.btnLoading(btn, true, 'Mengirim...');
+        try {
+            const res = await App.api('settings/run-reminders', { method: 'POST', body: {} });
+            if (res && res.success) {
+                App.toast(res.message, 'success');
+                load();
+            }
+        } finally {
+            done();
+        }
+    });
 
     load();
     return { reload: load };

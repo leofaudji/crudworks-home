@@ -477,7 +477,7 @@ switch ($id) {
 
         $pendingQuotations = $db->fetchAll(
             "SELECT q.id, q.nomor_penawaran, q.tanggal_penawaran, q.berlaku_hingga, q.total_penawaran,
-                    q.last_sent_at, q.view_count,
+                    q.last_sent_at,
                     DATEDIFF(CURDATE(), COALESCE(DATE(q.last_sent_at), q.tanggal_penawaran)) AS days_waiting,
                     c.nama_perusahaan, c.penanggung_jawab, c.telepon
              FROM quotations q

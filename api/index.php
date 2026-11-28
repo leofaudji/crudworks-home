@@ -465,6 +465,10 @@ try {
             require_once $controllerPath . 'SettingsController.php';
             break;
 
+        case 'templates':
+            require_once $controllerPath . 'TemplateController.php';
+            break;
+
         case 'audit':
             require_once $controllerPath . 'AuditController.php';
             break;

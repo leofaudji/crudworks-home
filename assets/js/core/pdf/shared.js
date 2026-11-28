@@ -3,8 +3,10 @@ import { formatDate, formatRupiah, terbilang, escapeHtml } from "../utils.js";
 export { terbilang, escapeHtml };
 
 const _PDF_SCRIPT_URLS = {
-    jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
-    autotable: 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js'
+    jspdf: 'assets/vendor/jspdf.umd.min.js',
+    autotable: 'assets/vendor/jspdf.plugin.autotable.min.js',
+    jspdfCdn: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
+    autotableCdn: 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js'
 };
 
 function _loadExternalScript(src) {
@@ -33,14 +35,22 @@ function _loadExternalScript(src) {
 
 export async function _ensurePdfLibs() {
     if (!window.jspdf?.jsPDF) {
-        await _loadExternalScript(_PDF_SCRIPT_URLS.jspdf);
+        try {
+            await _loadExternalScript(_PDF_SCRIPT_URLS.jspdf);
+        } catch (_) {
+            await _loadExternalScript(_PDF_SCRIPT_URLS.jspdfCdn);
+        }
     }
     const jsPDF = window.jspdf?.jsPDF;
     if (!jsPDF) {
         throw new Error('Library jsPDF gagal dimuat');
     }
     if (typeof jsPDF.API?.autoTable !== 'function') {
-        await _loadExternalScript(_PDF_SCRIPT_URLS.autotable);
+        try {
+            await _loadExternalScript(_PDF_SCRIPT_URLS.autotable);
+        } catch (_) {
+            await _loadExternalScript(_PDF_SCRIPT_URLS.autotableCdn);
+        }
     }
     await _preloadCompanyLogo();
     return jsPDF;
@@ -87,11 +97,35 @@ export async function _preloadCompanyLogo() {
     }
 }
 
-export function _drawCompanyLogo(doc, x, y, maxW = 46, maxH = 13, fallbackText = 'CRUDWORKS') {
+export function _drawCompanyLogo(doc, x, y, maxW = 46, maxH = 13, companyName = 'CRUDWorks') {
     const logoPath = String(window.App?.getSetting?.('company_logo', '') || '').trim();
+    const displayCompanyName = String(companyName || window.App?.getSetting?.('company_name', 'CRUDWorks') || 'CRUDWorks').trim();
+
     if (logoPath && _customLogoCache.url === logoPath && _customLogoCache.dataUrl && _customLogoCache.width > 0 && _customLogoCache.height > 0) {
         try {
             const ratio = _customLogoCache.width / _customLogoCache.height;
+            // Jika logo kustom berbentuk ikon/kotak (rasio < 2.4), tampilkan nama perusahaan di sebelahnya
+            if (ratio < 2.4) {
+                const iconH = Math.min(maxH, 11.5);
+                const iconW = iconH * ratio;
+                doc.addImage(_customLogoCache.dataUrl, 'PNG', x, y, iconW, iconH);
+
+                const textX = x + iconW + 3.5;
+                const textMaxW = Math.max(40, 82 - iconW);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(15, 23, 42);
+                const nameLines = doc.splitTextToSize(displayCompanyName, textMaxW);
+                const lineH = 4.6;
+                const textBlockH = nameLines.length * lineH;
+                let textY = y + Math.max(4.5, (iconH - textBlockH) / 2 + 3.5);
+                nameLines.forEach((line) => {
+                    doc.text(line, textX, textY);
+                    textY += lineH;
+                });
+                return Math.max(iconH, textBlockH + 1);
+            }
+
             let drawW = maxW;
             let drawH = drawW / ratio;
             if (drawH > maxH) {
@@ -115,7 +149,7 @@ export function _drawCompanyLogo(doc, x, y, maxW = 46, maxH = 13, fallbackText =
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.setTextColor(15, 23, 42);
-        doc.text(fallbackText, x, y + 6);
+        doc.text(displayCompanyName.toUpperCase(), x, y + 6);
         return 9.12;
     }
 }
@@ -162,7 +196,7 @@ export function _safeFormatIDR(val) {
  * Render Modern Typographic CRUDWORKS Wordmark (No blurry round image)
  */
 export function _drawDocumentWordmark(doc, margin, y, companyInfo, contentWidth) {
-    const logoH = _drawCompanyLogo(doc, margin, y, 46, 13, String(companyInfo?.name || 'CRUDWORKS').toUpperCase());
+    const logoH = _drawCompanyLogo(doc, margin, y, 46, 13, companyInfo?.name || 'CRUDWorks');
 
     const tagline = String(companyInfo.tagline || window.App?.getSetting?.('company_tagline', '') || '').trim();
     let compY = y + logoH + 3.2;
@@ -233,6 +267,68 @@ export function _applyDocumentWatermark(doc, statusKey, type = 'invoice') {
     }
 }
 
+function _parseStyledSegments(text) {
+    const tokens = [];
+    const regex = /(\*\*[^*]+\*\*|_[^_]+_)/g;
+    let lastIdx = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIdx) {
+            tokens.push({ text: text.slice(lastIdx, match.index), style: 'normal' });
+        }
+        const m = match[0];
+        if (m.startsWith('**')) {
+            tokens.push({ text: m.slice(2, -2), style: 'bold' });
+        } else {
+            tokens.push({ text: m.slice(1, -1), style: 'italic' });
+        }
+        lastIdx = match.index + m.length;
+    }
+    if (lastIdx < text.length) {
+        tokens.push({ text: text.slice(lastIdx), style: 'normal' });
+    }
+    return tokens;
+}
+
+function _drawInlineStyledText(doc, rawText, startX, startY, maxW, lineHeight, fontSize, textColor) {
+    const cleanText = String(rawText).replace(/\*\*([^*]+)\*\*/g, '$1').replace(/_([^_]+)_/g, '$1');
+    const hasMarkup = /\*\*[^*]+\*\*|_[^_]+_/.test(rawText);
+    if (!hasMarkup) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(fontSize);
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        const wrapped = doc.splitTextToSize(cleanText, maxW);
+        doc.text(cleanText, startX, startY, { maxWidth: maxW, align: 'justify', lineHeightFactor: 1.52 });
+        return wrapped.length * lineHeight;
+    }
+
+    const segments = _parseStyledSegments(rawText);
+    let curX = startX;
+    let curY = startY;
+    let lineCount = 1;
+    doc.setFontSize(fontSize);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+    segments.forEach((seg) => {
+        doc.setFont('helvetica', seg.style);
+        const words = seg.text.split(/(\s+)/);
+        words.forEach((word) => {
+            if (!word) return;
+            const wWidth = doc.getTextWidth(word);
+            if (curX + wWidth > startX + maxW && curX > startX && word.trim() !== '') {
+                curX = startX;
+                curY += lineHeight;
+                lineCount++;
+            }
+            if (curX === startX && word.trim() === '') return;
+            doc.text(word, curX, curY);
+            curX += wWidth;
+        });
+    });
+
+    return lineCount * lineHeight;
+}
+
 /**
  * Shared Minimalist Editorial Prose & Pasal Renderer (Seragam SPK, Penawaran & BAST)
  */
@@ -241,22 +337,27 @@ export function createMinimalProseRenderer(doc, { margin, contentWidth, pageWidt
         if (!text || !String(text).trim()) return;
         const fontSize = options.fontSize || 9.0;
         const lineHeight = options.lineHeight || 5.1;
-        const factor = options.factor || 1.52;
         const lines = String(text).trim().split('\n');
 
         lines.forEach((line) => {
-            const raw = line.trim().replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
-            if (!raw) {
-                setY(getY() + 2.2);
+            const rawTrimmed = line.trim();
+            if (!rawTrimmed || /^-{5,}$/.test(rawTrimmed)) {
+                if (/^-{5,}$/.test(rawTrimmed)) {
+                    doc.setDrawColor(226, 232, 240);
+                    doc.setLineWidth(0.25);
+                    doc.line(margin, getY() + 1.5, pageWidth - margin, getY() + 1.5);
+                }
+                setY(getY() + 2.4);
                 return;
             }
+            const rawClean = rawTrimmed.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/_([^_]+)_/g, '$1').replace(/\*([^*]+)\*/g, '$1');
 
-            const isTitle = /^(PASAL\s+\d+|BAB\s+[IVXLC]+)/i.test(raw) || /^[A-Z0-9\s.&()/—-]{4,}:$/.test(raw);
-            const numMatch = raw.match(/^(\d+\.|\([a-z0-9]+\))\s+(.*)/s);
-            const bulletMatch = raw.match(/^([•\-\*–])\s+(.*)/s);
+            const isTitle = /^(PASAL\s+\d+|BAB\s+[IVXLC]+)/i.test(rawClean) || /^[A-Z0-9\s.&()/—-]{4,}:$/.test(rawClean);
+            const numMatch = rawTrimmed.match(/^(\d+\.|\([a-z0-9]+\))\s+(.*)/s);
+            const bulletMatch = rawTrimmed.match(/^([•\-\*–])\s+(.*)/s);
 
             if (isTitle) {
-                const pasalMatch = raw.match(/^(PASAL\s+\d+)\s*[—–-]\s*(.+)$/i);
+                const pasalMatch = rawClean.match(/^(PASAL\s+\d+)\s*[—–-]\s*(.+)$/i);
                 ensureSpace(pasalMatch ? 32 : lineHeight + 14);
                 setY(getY() + 4.0);
                 doc.setTextColor(15, 23, 42);
@@ -275,7 +376,7 @@ export function createMinimalProseRenderer(doc, { margin, contentWidth, pageWidt
                         setY(getY() + lineHeight + 0.4);
                     });
                 } else {
-                    const titleLines = doc.splitTextToSize(raw, contentWidth);
+                    const titleLines = doc.splitTextToSize(rawClean, contentWidth);
                     titleLines.forEach((tl) => {
                         ensureSpace(lineHeight + 1.5);
                         doc.setFont('helvetica', 'bold');
@@ -294,21 +395,16 @@ export function createMinimalProseRenderer(doc, { margin, contentWidth, pageWidt
 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(fontSize);
-                const wrappedBody = doc.splitTextToSize(bodyText, targetW);
-                const blockHeight = wrappedBody.length * lineHeight;
-                ensureSpace(Math.min(blockHeight + 3.0, 26));
+                const estLines = doc.splitTextToSize(bodyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/_([^_]+)_/g, '$1'), targetW);
+                ensureSpace(Math.min(estLines.length * lineHeight + 3.0, 26));
 
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(fontSize);
                 doc.setTextColor(15, 23, 42);
                 doc.text(prefix, margin, getY() + 3.4);
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(fontSize);
-                doc.setTextColor(30, 41, 59);
-                doc.text(bodyText, bodyX, getY() + 3.4, { maxWidth: targetW, align: 'justify', lineHeightFactor: factor });
-
-                setY(getY() + blockHeight + 1.8);
+                const drawnH = _drawInlineStyledText(doc, bodyText, bodyX, getY() + 3.4, targetW, lineHeight, fontSize, [30, 41, 59]);
+                setY(getY() + drawnH + 1.8);
             } else if (bulletMatch) {
                 const bodyText = bulletMatch[2].trim();
                 const indentX = margin + 6.0;
@@ -318,34 +414,24 @@ export function createMinimalProseRenderer(doc, { margin, contentWidth, pageWidt
 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(fontSize);
-                const wrappedBody = doc.splitTextToSize(bodyText, targetW);
-                const blockHeight = wrappedBody.length * lineHeight;
-                ensureSpace(Math.min(blockHeight + 3.0, 26));
+                const estLines = doc.splitTextToSize(bodyText.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/_([^_]+)_/g, '$1'), targetW);
+                ensureSpace(Math.min(estLines.length * lineHeight + 3.0, 26));
 
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(fontSize);
                 doc.setTextColor(100, 116, 139);
-                doc.text('–', indentX, getY() + 3.4);
+                doc.text('•', indentX, getY() + 3.4);
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(fontSize);
-                doc.setTextColor(51, 65, 85);
-                doc.text(bodyText, bodyX, getY() + 3.4, { maxWidth: targetW, align: 'justify', lineHeightFactor: factor });
-
-                setY(getY() + blockHeight + 2.4);
+                const drawnH = _drawInlineStyledText(doc, bodyText, bodyX, getY() + 3.4, targetW, lineHeight, fontSize, [51, 65, 85]);
+                setY(getY() + drawnH + 2.4);
             } else {
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(fontSize);
-                doc.setTextColor(30, 41, 59);
-                const wrappedLine = doc.splitTextToSize(raw, contentWidth);
-                const blockHeight = wrappedLine.length * lineHeight;
-                ensureSpace(Math.min(blockHeight + 3.5, 26));
+                const estLines = doc.splitTextToSize(rawClean, contentWidth);
+                ensureSpace(Math.min(estLines.length * lineHeight + 3.5, 26));
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(fontSize);
-                doc.setTextColor(30, 41, 59);
-                doc.text(raw, margin, getY() + 3.4, { maxWidth: contentWidth, align: 'justify', lineHeightFactor: factor });
-                setY(getY() + blockHeight + 3.0);
+                const drawnH = _drawInlineStyledText(doc, rawTrimmed, margin, getY() + 3.4, contentWidth, lineHeight, fontSize, [30, 41, 59]);
+                setY(getY() + drawnH + 3.0);
             }
         });
         setY(getY() + 4.5);

@@ -41,7 +41,7 @@ export async function exportPdf({
     doc.rect(0, 4, pageWidth, 1.5, 'F');
 
     let y = 11.5;
-    const logoH = _drawCompanyLogo(doc, margin, y, 46, 13, String(companyName).toUpperCase());
+    const logoH = _drawCompanyLogo(doc, margin, y, 46, 13, companyName);
 
     // Right: Document Badge & Meta Info
     let rY = 11;

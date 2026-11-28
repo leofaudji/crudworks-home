@@ -1,5 +1,6 @@
 // assets/js/pages/settings.js
 import { App } from '../app.js';
+import { renderSettingsTemplatesSection } from '../core/template-library.js';
 
 let activeSection = 'company';
 let activeWaTab = 'invoice';
@@ -12,6 +13,7 @@ const SECTIONS = [
     { id: 'payment-methods', label: 'Rekening Bank', desc: 'Akun transfer & COA Kas', icon: 'ri-bank-card-line', color: 'text-emerald-600' },
     { id: 'coa-mapping', label: 'Integrasi Akuntansi (COA)', desc: 'Pemetaan akun otomatis ERP', icon: 'ri-book-2-line', color: 'text-sky-600' },
     { id: 'wa-templates', label: 'Template WhatsApp', desc: 'Pesan otomatis ke klien', icon: 'ri-whatsapp-line', color: 'text-green-600' },
+    { id: 'doc-templates', label: 'Template SPH & SPK', desc: 'Klausul dinamis dokumen', icon: 'ri-file-copy-2-line', color: 'text-violet-600' },
     { id: 'integrations', label: 'Gateway, API & Webhook', desc: 'Pembayaran online & integrasi', icon: 'ri-webhook-line', color: 'text-indigo-600' },
     { id: 'system-health', label: 'Kesehatan Sistem & Cache', desc: 'Status Redis, DB & hapus cache', icon: 'ri-pulse-line', color: 'text-rose-600' }
 ];
@@ -130,6 +132,11 @@ export async function init(container) {
 async function renderSection() {
     const cont = document.getElementById('settings-body');
     if (!cont) return;
+
+    if (activeSection === 'doc-templates') {
+        await renderSettingsTemplatesSection(cont);
+        return;
+    }
 
     const res = await App.api('settings');
     const s = (res && res.success) ? res.data : {};

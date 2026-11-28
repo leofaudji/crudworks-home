@@ -1070,3 +1070,22 @@ CREATE TABLE IF NOT EXISTS `password_resets` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_pr_user` (`user_id`, `expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pustaka Template Dokumen (SPH & SPK) & Klausul Dinamis
+CREATE TABLE IF NOT EXISTS `document_templates` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `nama_template` VARCHAR(150) NOT NULL,
+    `jenis` ENUM('sph', 'spk') NOT NULL DEFAULT 'sph',
+    `kategori` VARCHAR(80) NOT NULL DEFAULT 'Umum',
+    `judul_default` VARCHAR(200) NULL,
+    `salam_pembuka` TEXT NULL,
+    `ruang_lingkup_fitur` TEXT NULL,
+    `timeline_pengerjaan` TEXT NULL,
+    `isi_pasal` LONGTEXT NULL,
+    `garansi_hari` INT UNSIGNED NOT NULL DEFAULT 30,
+    `is_default` TINYINT(1) NOT NULL DEFAULT 0,
+    `status` ENUM('aktif', 'nonaktif') NOT NULL DEFAULT 'aktif',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_dt_jenis_status` (`jenis`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

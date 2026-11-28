@@ -1,5 +1,16 @@
 // assets/js/pages/quotations.js
 import { App } from '../app.js';
+import { registerQuotationActions } from '../core/quotation-actions.js';
+import { fetchDocumentTemplates, resolveTemplateVariables } from '../core/template-library.js';
+import {
+    DEFAULT_SALAM_PEMBUKA,
+    DEFAULT_RUANG_LINGKUP_FITUR,
+    DEFAULT_TIMELINE_PENGERJAAN,
+    DEFAULT_PASAL_HAK_KEWAJIBAN,
+    DEFAULT_SYARAT_KETENTUAN
+} from '../core/quotation-defaults.js';
+
+let sphTemplates = [];
 
 let state = {
     page: 1,
@@ -12,49 +23,6 @@ let state = {
 let clients = [];
 let projects = [];
 let services = [];
-
-const DEFAULT_SALAM_PEMBUKA = `Dengan hormat,
-
-Bersama surat ini, kami dari tim teknis & pengembangan mengajukan proposal penawaran kerja sama pengembangan dan implementasi sistem aplikasi sesuai kebutuhan operasional perusahaan Bapak/Ibu. Proposal ini disusun sebagai acuan ruang lingkup pekerjaan, daftar fitur utama, estimasi investasi biaya, serta hak dan kewajiban para pihak.`;
-
-const DEFAULT_RUANG_LINGKUP_FITUR = `1. Modul Autentikasi & Hak Akses Pengguna (RBAC)
-   - Manajemen akun staf, pembagian peran, serta log aktivitas keamanan.
-2. Modul Master Data & Operasional Utama
-   - Pengelolaan data inti, pencarian cepat, filter, dan ekspor laporan.
-3. Modul Transaksi, Tagihan & Pelaporan Keuangan
-   - Pencatatan transaksi otomatis, pembuatan dokumen PDF resmi, dan rekapitulasi laporan.
-4. Pengujian Sistem, Pelatihan Pengguna & Dokumentasi
-   - Uji coba UAT bersama tim klien, pelatihan penggunaan sistem, dan deploy ke server produksi.`;
-
-const DEFAULT_TIMELINE_PENGERJAAN = `1. Analisis Kebutuhan & Perancangan Desain (Minggu 1)
-- Penggalian proses bisnis klien, perancangan prototipe antarmuka UI/UX, dan penyusunan skema database.
-2. Pengembangan Inti Sistem & Integrasi Modul (Minggu 2 – 3)
-- Pengkodean modul utama aplikasi, logika bisnis, hak akses pengguna (RBAC), dan pengujian internal tim developer.
-3. Pengujian Bersama, UAT & Revisi Minor (Minggu 4)
-- User Acceptance Testing (UAT) bersama pihak klien, penyesuaian evaluasi alur kerja, dan persiapan rilis.
-4. Deployment Server, Pelatihan Staf & BAST (Minggu 4)
-- Pemasangan sistem di server produksi klien/cloud, pelatihan staf pengguna (*user training*), dan Berita Acara Serah Terima (BAST).
-5. Pendampingan, Garansi & Pemeliharaan Sistem (Minggu 5 – 6)
-- Pemantauan stabilitas sistem dan pendampingan penggunaan aplikasi selama masa pemeliharaan resmi.`;
-
-const DEFAULT_PASAL_HAK_KEWAJIBAN = `PASAL 1 — HAK DAN KEWAJIBAN PIHAK PERTAMA (PENYEDIA JASA)
-1. Pihak Pertama berkewajiban menyelesaikan pengembangan dan implementasi fitur sistem sesuai ruang lingkup yang disepakati dalam surat penawaran ini secara tepat waktu dan profesional.
-2. Pihak Pertama berkewajiban menjaga kerahasiaan seluruh data, informasi bisnis, dan kredensial server milik Pihak Kedua dengan standar keamanan terbaik.
-3. Pihak Pertama berhak menerima pembayaran penuh secara tepat waktu sesuai termin dan tahapan yang tercantum pada syarat pembayaran penawaran ini.
-
-PASAL 2 — LISENSI PEMAKAI AKHIR & KETENTUAN KODE SUMBER (SOURCE CODE)
-1. Pihak Kedua berhak memperoleh hak akses penggunaan sistem aplikasi semata-mata sebagai Pemakai Akhir (End-User License / Hak Pakai Operasional) untuk kebutuhan operasional bisnis internal Pihak Kedua.
-2. Pihak Kedua TIDAK MENERIMA dan TIDAK MEMILIKI hak kepemilikan atas Source Code (Kode Sumber), hak kekayaan intelektual (HAKI), algoritma, arsitektur, maupun kerangka dasar sistem perangkat lunak yang dibangun oleh Pihak Pertama.
-3. Seluruh Source Code, hak cipta, dan hak milik industri tetap menjadi hak milik mutlak dan eksklusif Pihak Pertama. Pihak Kedua dilarang keras menyalin, membongkar (reverse engineer), mendekompilasi, memodifikasi kode sumber tanpa izin tertulis, mendistribusikan ulang, menyewakan, atau menjual kembali aplikasi maupun bagian dari kode sistem kepada pihak ketiga mana pun.
-4. Pihak Kedua berkewajiban menunjuk perwakilan PIC resmi untuk koordinasi teknis, memberikan data/materi yang diperlukan tepat waktu, serta melakukan pengujian serah terima (UAT).
-5. Permintaan penambahan fitur di luar daftar ruang lingkup penawaran ini akan dicatat sebagai pekerjaan tambahan (Change Request) dengan estimasi biaya dan waktu terpisah.
-
-PASAL 3 — GARANSI SISTEM & DUKUNGAN PEMELIHARAAN
-1. Pihak Pertama memberikan garansi perbaikan kerusakan teknis (bug/error) secara cuma-cuma selama masa pemeliharaan terhitung sejak tanggal serah terima sistem (BAST), selama tidak terjadi perubahan alur atau modifikasi dari pihak luar.`;
-
-const DEFAULT_SYARAT_KETENTUAN = `1. Penawaran harga ini berlaku selama 14 (empat belas) hari kalender sejak tanggal diterbitkan.
-2. Pembayaran Uang Muka (DP) sebesar 50% dibayarkan setelah penawaran disetujui / SPK diterbitkan, dan pelunasan 50% setelah sistem siap serah terima (UAT).
-3. Estimasi waktu pengerjaan dimulai sejak pembayaran DP diterima dan kebutuhan materi/data awal dari klien tersedia.`;
 
 export async function init(container) {
     container.innerHTML = `
@@ -146,6 +114,9 @@ export async function init(container) {
                         <p class="text-[11px] text-slate-400 mt-0.5">Lengkapi setiap tab secara berurutan atau lompat langsung ke bagian yang ingin diubah.</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <select id="quo-template-select" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] font-semibold text-slate-700 dark:text-slate-200 max-w-[180px]" title="Terapkan template dari Pustaka Template">
+                            <option value="">-- Pilih Template SPH --</option>
+                        </select>
                         <button type="button" id="btn-fill-quo-template" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-primary-600 dark:text-primary-400 rounded-xl text-[11px] font-bold flex items-center gap-1 transition" title="Isi ulang naskah dengan template standar">
                             <i class="ri-magic-line"></i> <span class="hidden sm:inline">Template Standar</span>
                         </button>
@@ -415,6 +386,36 @@ export async function init(container) {
         document.getElementById('form-quo-syarat').value = DEFAULT_SYARAT_KETENTUAN;
         updateQuoTimelineDiagramPreview();
         App.toast('Template naskah proposal standar berhasil dimuat', 'info', 1800);
+    });
+
+    const quoTplSelect = document.getElementById('quo-template-select');
+    fetchDocumentTemplates('sph').then((list) => {
+        sphTemplates = list;
+        if (quoTplSelect && list.length) {
+            quoTplSelect.innerHTML = '<option value="">-- Pilih Template SPH --</option>' +
+                list.map((t) => `<option value="${t.id}">${App.escapeHtml(t.nama_template)}</option>`).join('');
+        }
+    });
+    quoTplSelect?.addEventListener('change', (e) => {
+        const tpl = sphTemplates.find((t) => Number(t.id) === Number(e.target.value));
+        if (!tpl) return;
+        const clientText = document.getElementById('form-quo-client')?.selectedOptions?.[0]?.textContent?.trim() || 'Klien';
+        const projSel = document.getElementById('form-quo-project');
+        const projText = (projSel && projSel.value) ? (projSel.selectedOptions?.[0]?.textContent?.trim() || 'Proyek') : 'Proyek';
+        const totalText = document.getElementById('quo-calc-total')?.textContent?.trim() || App.formatIDR(0);
+        const tglText = document.getElementById('form-quo-tanggal')?.value || '-';
+        const vars = {
+            nama_perusahaan: clientText.startsWith('--') ? 'Klien' : clientText,
+            nama_project: projText.startsWith('--') ? 'Proyek' : projText,
+            nilai_penawaran: totalText,
+            tanggal_penawaran: tglText
+        };
+        if (tpl.salam_pembuka) document.getElementById('form-quo-salam').value = resolveTemplateVariables(tpl.salam_pembuka, vars);
+        if (tpl.ruang_lingkup_fitur) document.getElementById('form-quo-fitur').value = resolveTemplateVariables(tpl.ruang_lingkup_fitur, vars);
+        if (tpl.timeline_pengerjaan) document.getElementById('form-quo-timeline').value = resolveTemplateVariables(tpl.timeline_pengerjaan, vars);
+        if (tpl.isi_pasal) document.getElementById('form-quo-pasal').value = resolveTemplateVariables(tpl.isi_pasal, vars);
+        updateQuoTimelineDiagramPreview();
+        App.toast(`Template "${tpl.nama_template}" diterapkan`, 'success', 1800);
     });
 
     // Interactive Editor Tabs
@@ -742,6 +743,24 @@ function openQuotationEditor(quo = null) {
     document.getElementById('form-quo-catatan').value = quo ? (quo.catatan_klien || '') : '';
     document.getElementById('form-quo-syarat').value = quo ? (quo.syarat_ketentuan || DEFAULT_SYARAT_KETENTUAN) : DEFAULT_SYARAT_KETENTUAN;
 
+    const quoTplSel = document.getElementById('quo-template-select');
+    if (quoTplSel) {
+        const defSph = !quo ? sphTemplates.find((t) => Number(t.is_default) === 1) : null;
+        quoTplSel.value = defSph ? String(defSph.id) : '';
+        if (defSph) {
+            const vars = {
+                nama_perusahaan: 'Klien',
+                nama_project: 'Proyek',
+                nilai_penawaran: App.formatIDR(0),
+                tanggal_penawaran: document.getElementById('form-quo-date')?.value || '-'
+            };
+            if (defSph.salam_pembuka) document.getElementById('form-quo-salam').value = resolveTemplateVariables(defSph.salam_pembuka, vars);
+            if (defSph.ruang_lingkup_fitur) document.getElementById('form-quo-fitur').value = resolveTemplateVariables(defSph.ruang_lingkup_fitur, vars);
+            if (defSph.timeline_pengerjaan) document.getElementById('form-quo-timeline').value = resolveTemplateVariables(defSph.timeline_pengerjaan, vars);
+            if (defSph.isi_pasal) document.getElementById('form-quo-pasal').value = resolveTemplateVariables(defSph.isi_pasal, vars);
+        }
+    }
+
     const diskonTipe = quo ? (quo.diskon_tipe || 'nominal') : 'nominal';
     document.getElementById('form-quo-diskon-tipe').value = diskonTipe;
     if (quo && diskonTipe === 'persen' && Number(quo.subtotal) > 0) {
@@ -972,145 +991,7 @@ async function handleSaveQuotation(e) {
     }
 }
 
-window.editQuotation = async (id) => {
-    const res = await App.api(`quotations/${id}`);
-    if (res && res.success && res.data) {
-        openQuotationEditor(res.data);
-    }
-};
 
-window.updateQuotationStatus = async (id, status) => {
-    const res = await App.api(`quotations/${id}/status`, {
-        method: 'POST',
-        body: { status }
-    });
-    if (res && res.success) {
-        App.toast(res.message, 'success');
-        await loadQuotations();
-    }
-};
-
-window.printQuotationPdf = async (id, output = 'bloburl') => {
-    try {
-        const res = await App.api(`quotations/${id}`);
-        if (!res || !res.success) {
-            App.toast('Gagal memuat penawaran harga', 'error');
-            return;
-        }
-        const quo = res.data;
-        const pdfRes = await App.generateQuotationPdf(quo, output);
-        if (output === 'bloburl' && pdfRes?.blobUrl) {
-            App.openPdfModal({
-                title: `Surat Penawaran — ${quo.nomor_penawaran}`,
-                filename: pdfRes.filename,
-                blobUrl: pdfRes.blobUrl,
-                onEdit: quo.status !== 'dikonversi' ? () => window.editQuotation(quo.id) : null,
-                editLabel: 'Edit Naskah & Nilai',
-                downloadWordFn: () => App.downloadQuotationWord(quo),
-                wordLabel: 'Unduh Format Word (.doc / Editable)'
-            });
-        } else if (output === 'download') {
-            App.toast('Dokumen PDF penawaran berhasil diunduh', 'success');
-        }
-    } catch (err) {
-        App.toast(err?.message || 'Gagal membuat dokumen penawaran PDF', 'error');
-    }
-};
-
-window.downloadQuotationWordDoc = async (id) => {
-    try {
-        const res = await App.api(`quotations/${id}`);
-        if (res && res.success && res.data) {
-            App.downloadQuotationWord(res.data);
-        } else {
-            App.toast('Gagal memuat data penawaran', 'error');
-        }
-    } catch (err) {
-        App.toast(err?.message || 'Gagal mengunduh dokumen Word', 'error');
-    }
-};
-
-window.sendQuotationWA = async (id) => {
-    const res = await App.api(`quotations/${id}`);
-    if (res && res.success) {
-        App.openWhatsAppQuotation(res.data);
-    }
-};
-
-window.sendQuotationEmail = async (id) => {
-    const detailRes = await App.api(`quotations/${id}`);
-    const quoData = detailRes?.success ? detailRes.data : null;
-    const { promptSendEmail } = await import('../core/email-sender.js');
-    await promptSendEmail({
-        title: `Kirim Penawaran ${quoData?.nomor_penawaran || ''} via Email?`,
-        text: 'Surat penawaran PDF beserta tautan E-Sign akan dikirimkan ke email klien via SMTP.',
-        defaultCc: quoData?.client_cc_email || '',
-        endpoint: `quotations/${id}/send-email`,
-        buildPdf: () => (quoData && typeof App.generateQuotationPdf === 'function') ? App.generateQuotationPdf(quoData, 'bloburl') : null,
-        onSuccess: () => loadQuotations()
-    });
-};
-
-window.convertQuotationToInvoice = async (id, no) => {
-    const conf = await App.confirm(
-        'Konversi Penawaran ke Faktur',
-        `Apakah Anda yakin ingin mengonversi penawaran "${no}" menjadi Faktur Tagihan resmi? Faktur baru akan otomatis diterbitkan.`
-    );
-    if (!conf) return;
-
-    const res = await App.api(`quotations/${id}/convert`, { method: 'POST' });
-    if (res && res.success) {
-        const ok = await App.confirm(
-            'Faktur Berhasil Diterbitkan!',
-            `${res.message}\nNomor Faktur: ${res.data.nomor_invoice}. Apakah Anda ingin langsung melihat daftar Faktur Tagihan?`
-        );
-        if (ok) window.location.hash = '#/invoices';
-        else await loadQuotations();
-    }
-};
-
-window.deleteQuotation = async (id, no) => {
-    const conf = await App.confirm('Hapus Penawaran', `Apakah Anda yakin ingin menghapus surat penawaran "${no}"?`);
-    if (!conf) return;
-
-    const res = await App.api(`quotations/${id}`, { method: 'DELETE' });
-    if (res && res.success) {
-        App.toast(res.message, 'success');
-        await loadQuotations();
-    }
-};
-
-window.changeQuoPage = (p) => {
-    state.page = p;
-    loadQuotations();
-};
-
-window.openPublicQuotation = (token) => {
-    window.open(`#/public-quotation?token=${encodeURIComponent(token)}`, '_blank');
-};
-
-window.copyPublicQuotationLink = (token) => {
-    const baseUrl = window.location.href.split('#')[0];
-    const fullUrl = `${baseUrl}#/public-quotation?token=${encodeURIComponent(token)}`;
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(fullUrl).then(() => {
-            App.toast('Tautan persetujuan & e-sign berhasil disalin ke clipboard!', 'success');
-        });
-    } else {
-        App.toast('Tautan: ' + fullUrl, 'info');
-    }
-};
-
-window.createContractFromQuotation = async (quotationId) => {
-    const ok = await App.confirmAction('Buat SPK Digital?', 'Sistem akan membuat dokumen Kontrak Kerja (SPK) dengan pasal standar dan mengirimkannya ke Portal Klien.');
-    if (!ok) return;
-    const res = await App.api('contracts/from-quotation', {
-        method: 'POST',
-        body: { quotation_id: quotationId }
-    });
-    if (res?.success) {
-        App.toast(res.message || 'SPK berhasil dibuat', 'success');
-    }
-};
+registerQuotationActions({ getOpenEditor: () => openQuotationEditor, getLoadQuotations: () => loadQuotations, getState: () => state });
 
 export default { init };

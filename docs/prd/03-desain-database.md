@@ -335,6 +335,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 #### Tabel `client_tickets` & `client_ticket_logs`
 - `client_tickets` menyimpan tiket gangguan & permintaan klien (`nomor_tiket`, `client_id`, `project_id`, `maintenance_id`, `kategori`, `prioritas`, `sumber_laporan`, `cakupan_biaya` [`sla_gratis`, `garansi`, `berbayar`], `total_durasi_menit`, `quotation_id`, `invoice_id`, `status`).
 - `client_ticket_logs` mencatat log aktivitas support internal per tiket (`ticket_id`, `actor_name`, `tipe_aktivitas`, `durasi_menit`, `is_billable`, `ringkasan`).
+- `document_templates` menyimpan pustaka template dokumen SPH & SPK beserta klausul dinamis (`nama_template`, `jenis` [`sph`, `spk`], `kategori`, `judul_default`, `salam_pembuka`, `ruang_lingkup_fitur`, `timeline_pengerjaan`, `isi_pasal`, `garansi_hari`, `is_default`, `status`).
 
 ---
 

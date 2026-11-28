@@ -1,11 +1,13 @@
 // CRUDWorks ERP — Service Worker
-const CACHE_NAME = 'crudworks-erp-v1.8.87';
+const CACHE_NAME = 'crudworks-erp-v1.8.95';
 const STATIC_ASSETS = [
     './',
     './index.html',
     './manifest.json',
     './assets/css/app.css',
     './assets/js/app.js',
+    './assets/vendor/jspdf.umd.min.js',
+    './assets/vendor/jspdf.plugin.autotable.min.js',
     './assets/images/logo.png',
     './assets/icons/icon.svg',
     './assets/icons/icon-192.png',

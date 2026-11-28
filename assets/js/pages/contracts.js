@@ -1,6 +1,7 @@
 // assets/js/pages/contracts.js — Manajemen Kontrak Kerja & SPK Digital (Seragam dengan Editor Penawaran)
 import { App } from '../app.js';
 import { generateContractPdf } from '../core/utils.js';
+import { fetchDocumentTemplates, resolveTemplateVariables } from '../core/template-library.js';
 
 let contracts = [];
 let clientsList = [];
@@ -288,6 +289,9 @@ async function openContractModal(editId = null) {
                     <p class="text-[11px] text-slate-400 mt-0.5">Lengkapi setiap tab secara berurutan atau lompat langsung ke bagian yang ingin diubah.</p>
                 </div>
                 <div class="flex items-center gap-2">
+                    <select id="spk-template-select" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] font-semibold text-slate-700 dark:text-slate-200 max-w-[180px]" title="Terapkan template dari Pustaka Template">
+                        <option value="">-- Pilih Template SPK --</option>
+                    </select>
                     <button type="button" id="btn-fill-spk-template" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-primary-600 dark:text-primary-400 rounded-xl text-[11px] font-bold flex items-center gap-1 transition">
                         <i class="ri-magic-line"></i> <span class="hidden sm:inline">Template Standar</span>
                     </button>
@@ -463,6 +467,65 @@ async function openContractModal(editId = null) {
         const garansi = document.getElementById('spk-garansi').value || 30;
         document.getElementById('spk-pasal').value = buildStandardSpkText(judul, nilai, garansi);
         App.toast('Template pasal standar SPK diterapkan', 'info');
+        switchTab('pasal');
+    });
+
+    const spkTplSelect = document.getElementById('spk-template-select');
+    let spkTemplates = [];
+    fetchDocumentTemplates('spk').then((list) => {
+        spkTemplates = list;
+        if (spkTplSelect && list.length) {
+            spkTplSelect.innerHTML = '<option value="">-- Pilih Template SPK --</option>' +
+                list.map((t) => `<option value="${t.id}">${App.escapeHtml(t.nama_template)}</option>`).join('');
+            const defSpk = !k ? list.find((t) => Number(t.is_default) === 1) : null;
+            if (defSpk) {
+                spkTplSelect.value = String(defSpk.id);
+                const defVars = {
+                    nama_perusahaan: 'Klien',
+                    penanggung_jawab: 'Bapak/Ibu Pimpinan',
+                    nilai_kontrak: App.formatIDR(document.getElementById('spk-nilai')?.value || 0),
+                    tanggal_mulai: document.getElementById('spk-mulai')?.value || '-',
+                    tanggal_selesai: document.getElementById('spk-selesai')?.value || '-',
+                    garansi_hari: Number(defSpk.garansi_hari ?? 30),
+                    judul_kontrak: document.getElementById('spk-judul')?.value.trim() || 'Perjanjian Kerja'
+                };
+                if (defSpk.judul_default && !document.getElementById('spk-judul').value.trim()) {
+                    document.getElementById('spk-judul').value = resolveTemplateVariables(defSpk.judul_default, defVars);
+                }
+                if (defSpk.isi_pasal) {
+                    document.getElementById('spk-pasal').value = resolveTemplateVariables(defSpk.isi_pasal, defVars);
+                    pasalManuallyEdited = true;
+                }
+            }
+        }
+    });
+    spkTplSelect?.addEventListener('change', (e) => {
+        const tpl = spkTemplates.find((t) => Number(t.id) === Number(e.target.value));
+        if (!tpl) return;
+        const clientId = document.getElementById('spk-client')?.value;
+        const clientObj = clientsList.find((c) => String(c.id) === String(clientId));
+        const clientName = clientObj?.nama_perusahaan || 'Klien';
+        const picName = clientObj?.penanggung_jawab || 'Bapak/Ibu Pimpinan';
+        const garansiVal = Number(tpl.garansi_hari ?? document.getElementById('spk-garansi')?.value ?? 30);
+        if (document.getElementById('spk-garansi')) document.getElementById('spk-garansi').value = garansiVal;
+
+        const baseVars = {
+            nama_perusahaan: clientName,
+            penanggung_jawab: picName,
+            nilai_kontrak: App.formatIDR(document.getElementById('spk-nilai')?.value || 0),
+            tanggal_mulai: document.getElementById('spk-mulai')?.value || '-',
+            tanggal_selesai: document.getElementById('spk-selesai')?.value || '-',
+            garansi_hari: garansiVal
+        };
+        if (tpl.judul_default && !document.getElementById('spk-judul').value.trim()) {
+            document.getElementById('spk-judul').value = resolveTemplateVariables(tpl.judul_default, baseVars);
+        }
+        baseVars.judul_kontrak = document.getElementById('spk-judul')?.value.trim() || 'Perjanjian Kerja';
+        if (tpl.isi_pasal) {
+            document.getElementById('spk-pasal').value = resolveTemplateVariables(tpl.isi_pasal, baseVars);
+            pasalManuallyEdited = true;
+        }
+        App.toast(`Template "${tpl.nama_template}" diterapkan`, 'success', 1800);
         switchTab('pasal');
     });
 
